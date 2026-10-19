@@ -4,6 +4,8 @@ class_name UIStyle
 
 const FONT_STENCIL := preload("res://assets/fonts/BlackOpsOne-Regular.ttf")
 const FONT_BODY := preload("res://assets/fonts/Oswald-Variable.ttf")
+const ICON_GRAVEMARK_PATH := "res://assets/icons/gravemark.png"
+const ICON_GRAVEMARK: Texture2D = preload("res://assets/icons/gravemark.png")
 
 # Palette: desaturated olive / rust / bone with blood-red accents.
 const BONE := Color(0.89, 0.85, 0.74)
@@ -336,3 +338,62 @@ static func card_blurb(c: Dictionary, max_chars: int = 60) -> String:
 	if s.length() > max_chars:
 		return s.substr(0, max_chars - 1) + "…"
 	return s
+
+
+## Compact Gravemark balance chip (icon + amount). Falls back to a drawn "G" glyph if the icon is missing.
+static func gravemark_tex() -> Texture2D:
+	if ICON_GRAVEMARK != null:
+		return ICON_GRAVEMARK
+	if ResourceLoader.exists(ICON_GRAVEMARK_PATH):
+		var t = load(ICON_GRAVEMARK_PATH)
+		if t is Texture2D:
+			return t
+	return null
+
+
+static func gravemark_icon(icon_size: int = 22) -> Control:
+	var tex := gravemark_tex()
+	if tex:
+		var tr := TextureRect.new()
+		tr.name = "GravemarkIcon"
+		tr.texture = tex
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.custom_minimum_size = Vector2(icon_size, icon_size)
+		tr.size = Vector2(icon_size, icon_size)
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		return tr
+	var g := PanelContainer.new()
+	g.name = "GravemarkGlyph"
+	g.add_theme_stylebox_override("panel", cut_box(RUST.darkened(0.2), BONE, 2, 4))
+	g.custom_minimum_size = Vector2(icon_size, icon_size)
+	var gl := label("G", maxi(10, icon_size - 8), BONE, true)
+	gl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	gl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	g.add_child(gl)
+	return g
+
+
+static func gravemark_chip(amount: int, icon_size: int = 22) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.name = "GravemarkChip"
+	var st := cut_box(Color(INK, 0.9), RUST, 2, 8)
+	st.set_content_margin_all(6)
+	p.add_theme_stylebox_override("panel", st)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 6)
+	h.alignment = BoxContainer.ALIGNMENT_CENTER
+	p.add_child(h)
+	h.add_child(gravemark_icon(icon_size))
+	var amt := label(str(amount), maxi(14, icon_size - 2), BONE, true)
+	amt.name = "GravemarkAmount"
+	h.add_child(amt)
+	return p
+
+
+static func set_gravemark_chip_amount(chip: PanelContainer, amount: int) -> void:
+	if chip == null:
+		return
+	var amt := chip.find_child("GravemarkAmount", true, false) as Label
+	if amt:
+		amt.text = str(amount)

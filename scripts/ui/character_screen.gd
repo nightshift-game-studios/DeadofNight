@@ -39,6 +39,7 @@ var _last_card_power: Dictionary = {} ## Item Power comparison of the last card 
 var _stash_label: Label ## carried_count()/stash_cap in the header
 var _hint_label: Label ## footer controls + mark-all-seen hint
 var _seen_bound: bool = false
+var _gm_chip: PanelContainer ## Gravemark balance in the header
 
 
 func _ready() -> void:
@@ -105,6 +106,12 @@ func _ready() -> void:
 	_stash_label.name = "StashCount"
 	sh.add_child(_stash_label)
 	header.add_child(stash_plate)
+	var sp_gm := Control.new()
+	sp_gm.custom_minimum_size.x = 10
+	header.add_child(sp_gm)
+	_gm_chip = UIStyle.gravemark_chip(0, 20)
+	_gm_chip.name = "GravemarkChip"
+	header.add_child(_gm_chip)
 	var sp2 := Control.new()
 	sp2.custom_minimum_size.x = 12
 	header.add_child(sp2)
@@ -350,6 +357,7 @@ func refresh() -> void:
 	_class_label.text = player.player_class.display_name.to_upper() if player.player_class else "SURVIVOR"
 	_refresh_avg_ip(inv)
 	_refresh_stash_count(inv)
+	_refresh_gravemark()
 	_hide_tooltip()
 	# Free immediately so rebuilt nodes keep stable names (Slot_secondary vs @Slot_secondary@2).
 	for host in [_left, _right, _consumables, _stats_grid]:
@@ -836,6 +844,14 @@ func _on_seen_changed(_item = null) -> void:
 	_refresh_stash_count(player.inventory)
 
 
+func _refresh_gravemark() -> void:
+	if _gm_chip == null:
+		return
+	var prog := get_node_or_null("/root/Progress")
+	var n := int(prog.gravemark_balance()) if prog and prog.has_method("gravemark_balance") else 0
+	UIStyle.set_gravemark_chip_amount(_gm_chip, n)
+
+
 func _refresh_stash_count(inv: Inventory) -> void:
 	if _stash_label == null:
 		return
@@ -1047,6 +1063,27 @@ func _show_tooltip(item: GearItem, equipped: bool) -> void:
 			pt.add_child(d)
 			pr.add_child(pt)
 			b.add_child(pr)
+	# Armory: Rework tier + equipped attachments (per weapon TYPE)
+	if w:
+		var ArmoryScr = load("res://scripts/armory/armory.gd")
+		var arch := str(w.archetype)
+		var tier_n: int = int(ArmoryScr.upgrade_tier(arch))
+		var loadout: Dictionary = ArmoryScr.loadout(arch)
+		b.add_child(_divider())
+		var type_n := str(w.type_name())
+		var rework := "BASE" if tier_n <= 0 else "REWORK %s" % UIStyle.roman(tier_n)
+		b.add_child(UIStyle.label("%s  //  applies to all %ss" % [rework, type_n], 12, UIStyle.OLIVE.lightened(0.35), true))
+		if not loadout.is_empty():
+			var parts: PackedStringArray = []
+			for slot in loadout:
+				var aid := str(loadout[slot])
+				var att: Dictionary = ArmoryScr.attachment(aid)
+				var aname := str(att.get("name", aid)) if not att.is_empty() else aid
+				parts.append("%s: %s" % [str(slot).to_upper(), aname])
+			var pl := UIStyle.label("  ".join(parts), 11, UIStyle.BONE_DIM)
+			pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			pl.custom_minimum_size.x = CARD_W - 28
+			b.add_child(pl)
 	# Flavor text in an accent colour
 	if item.flavor != "":
 		b.add_child(_divider())

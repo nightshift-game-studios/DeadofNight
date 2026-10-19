@@ -18,7 +18,7 @@ const AUDIO_BUSES := ["Master", "Music", "SFX", "UI", "Ambience"]
 const BINDABLE := [
 	"move_forward", "move_back", "move_left", "move_right",
 	"sprint", "crouch", "jump",
-	"shoot", "aim", ## aim may be added by Skillz; we create it if missing so RMB rebind works
+	"shoot", "ads", ## ADS action (RMB); migrated from legacy "aim" in settings.cfg
 	"reload", "grenade", "melee", "ability", "interact",
 	"weapon_1", "weapon_2", "weapon_3",
 	"inventory", "skill_tree", "map_next",
@@ -27,7 +27,7 @@ const BINDABLE := [
 const BIND_LABELS := {
 	"move_forward": "Move Forward", "move_back": "Move Back", "move_left": "Move Left", "move_right": "Move Right",
 	"sprint": "Sprint", "crouch": "Slide / Crouch", "jump": "Jump",
-	"shoot": "Fire", "aim": "Aim Down Sights", "reload": "Reload",
+	"shoot": "Fire", "ads": "Aim Down Sights", "reload": "Reload",
 	"grenade": "Grenade", "melee": "Melee", "ability": "Ability", "interact": "Interact",
 	"weapon_1": "Weapon 1", "weapon_2": "Weapon 2", "weapon_3": "Weapon 3",
 	"inventory": "Loadout", "skill_tree": "Skills", "map_next": "Map",
@@ -81,19 +81,21 @@ static func get_or_create(from: Node) -> Node:
 
 
 func _ready() -> void:
-	_ensure_aim_action()
+	_ensure_ads_action()
 	_snapshot_default_binds()
 	load_from_disk()
 	apply_all()
 	_ready_done = true
 
 
-func _ensure_aim_action() -> void:
-	if not InputMap.has_action("aim"):
-		InputMap.add_action("aim")
+## ADS reads InputMap action "ads". Create it with RMB if missing.
+func _ensure_ads_action() -> void:
+	if not InputMap.has_action("ads"):
+		InputMap.add_action("ads")
 		var mb := InputEventMouseButton.new()
 		mb.button_index = MOUSE_BUTTON_RIGHT
-		InputMap.action_add_event("aim", mb)
+		InputMap.action_add_event("ads", mb)
+	# Legacy "aim" action: leave in InputMap if present but drop from BINDABLE; migration copies binds to ads.
 
 
 func _snapshot_default_binds() -> void:
@@ -151,6 +153,14 @@ func _save_bindings(cfg: ConfigFile) -> void:
 
 
 func _load_bindings(cfg: ConfigFile) -> void:
+	# Migrate legacy bind:aim → bind:ads once (Skillz ADS reads "ads").
+	if cfg.has_section_key(BIND_SECTION, "aim") and not cfg.has_section_key(BIND_SECTION, "ads"):
+		cfg.set_value(BIND_SECTION, "ads", cfg.get_value(BIND_SECTION, "aim"))
+		cfg.erase_section_key(BIND_SECTION, "aim")
+		cfg.save(SAVE_PATH)
+	elif cfg.has_section_key(BIND_SECTION, "aim"):
+		cfg.erase_section_key(BIND_SECTION, "aim")
+		cfg.save(SAVE_PATH)
 	for a in BINDABLE:
 		if not InputMap.has_action(a) or not cfg.has_section_key(BIND_SECTION, a):
 			continue

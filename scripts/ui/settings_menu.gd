@@ -188,7 +188,7 @@ func _build_controls() -> void:
 	hint.custom_minimum_size.x = 700
 	_body.add_child(hint)
 	for a in SettingsScript.BINDABLE:
-		if a == "aim" and not InputMap.has_action("aim"):
+		if a == "ads" and not InputMap.has_action("ads"):
 			continue
 		_body.add_child(_bind_row(a))
 

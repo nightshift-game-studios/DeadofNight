@@ -152,6 +152,7 @@ func _build() -> void:
 	detail.add_child(_play_btn)
 	_diff_note = UIStyle.label(HARD_NOTE, 12, UIStyle.BONE_DIM)
 	_diff_note.name = "DiffNote"
+	_diff_note.visible = false
 	_diff_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_diff_note.custom_minimum_size.x = 600
 	detail.add_child(_diff_note)
@@ -269,6 +270,8 @@ func select_row(id: String) -> void:
 	else:
 		_play_btn.text = ("RESTART ON %s" if cur else "LOAD %s") % _name.text
 	_play_btn.disabled = not MapRegistry.is_valid(id)
+	if _diff_note:
+		_diff_note.visible = map_difficulty(id) == "hard"
 
 
 ## Selects `id` in MapRegistry and restarts the match on it through main.restart_with_map.
@@ -437,7 +440,14 @@ static func _short_hint(m: Dictionary) -> String:
 	for d in m.doors:
 		for a in d.opens:
 			areas[a] = true
-	return "%d DOORS (%d-%d) // %d AREAS TO OPEN" % [m.doors.size(), costs.min(), costs.max(), areas.size()]
+	var n: int = m.doors.size()
+	var door_word := "1 DOOR" if n == 1 else "%d DOORS" % n
+	var lo: int = int(costs.min())
+	var hi: int = int(costs.max())
+	var cost_s := str(lo) if lo == hi else "%d-%d" % [lo, hi]
+	var an: int = areas.size()
+	var area_word := "1 AREA TO OPEN" if an == 1 else "%d AREAS TO OPEN" % an
+	return "%s (%s) // %s" % [door_word, cost_s, area_word]
 
 
 ## Door / area hint lines: [[text, colour]].

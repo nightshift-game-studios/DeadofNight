@@ -51,8 +51,8 @@ func _go() -> void:
 	await process_frame
 	for id in ["play", "kit", "armory", "settings", "quit"]:
 		check(home._btns.has(id) and home._btns[id] is Button, "home button '%s'" % id)
-	check(home._currency_chip != null and not home._currency_chip.visible,
-		"rare-currency chip present but hidden until API")
+	check(home._currency_chip != null and home._currency_chip.visible,
+		"Gravemark chip visible on home")
 	check(home._map_picker != null and home._settings != null
 		and home._armory != null and home._kit_screen != null,
 		"home hosts map picker, settings, armory, kit")
@@ -70,7 +70,13 @@ func _go() -> void:
 		if row and row.find_child("DiffBadge", true, false):
 			badge_n += 1
 	check(badge_n == mp._ids.size(), "every map row has a difficulty badge (%d)" % badge_n)
-	check(mp._diff_note != null and str(mp._diff_note.text).contains("Hard:"), "hard-mode note shown")
+	check(mp._diff_note != null and str(mp._diff_note.text).contains("Hard:"), "hard-mode note label exists")
+	mp.select_row("arena")
+	await process_frame
+	check(not mp._diff_note.visible, "Hard note hidden on Easy")
+	mp.select_row("lockout_substation")
+	await process_frame
+	check(mp._diff_note.visible, "Hard note shown on Hard map")
 	# Play selects map + requests scene change (stubbed)
 	var play_sig := []
 	home.play_requested.connect(func(id): play_sig.append(id))
@@ -111,22 +117,18 @@ func _go() -> void:
 	await process_frame
 	check(home.save_stash_calls > before_save and prog.has_stash(), "kit equip + close saves stash")
 
-	# --- Armory placeholder adapter
-	var ArmoryAPI = load("res://scripts/ui/armory_api.gd")
-	var api = ArmoryAPI.new()
-	check(api.currency_balance() == 120 and api.currency_name != "", "armory currency_balance + name")
-	var ups: Array = api.list_upgrades()
-	check(ups.size() >= 2 and ups[0].has("summary") and ups[0].has("cost"), "armory list_upgrades shape")
-	var atts: Array = api.list_attachments("sidearm")
-	check(atts.size() >= 1 and atts[0].has("slot"), "armory list_attachments shape")
-	var uid := str(ups[0].id)
-	var bal0: int = api.currency_balance()
-	check(api.can_afford(uid) and api.purchase(uid) and api.currency_balance() == bal0 - int(ups[0].cost),
-		"armory purchase deducts currency")
-	check(not api.can_afford("u_locked"), "locked / COMING SOON upgrade not affordable")
+	# --- Armory (real Skillz backend via menu)
+	var ArmoryScr = load("res://scripts/armory/armory.gd")
+	var api = ArmoryScr.new()
+	check(api.currency_name == "Gravemark", "armory currency_name Gravemark")
+	prog.gravemarks = 50
+	prog.currency_changed.emit(50)
+	await process_frame
+	check(int(home._currency_label.text) == 50 or home._currency_chip.find_child("GravemarkAmount", true, false).text == "50",
+		"home Gravemark chip updates on currency_changed")
 	home._armory.open()
 	await process_frame
-	check(home._armory.visible, "armory menu opens")
+	check(home._armory.visible and home._armory.api != null, "armory menu opens with real API")
 	home._armory.close()
 
 	# --- Quit calls save_stash (quit stubbed)

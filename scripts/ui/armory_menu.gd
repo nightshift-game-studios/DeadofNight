@@ -1,15 +1,28 @@
 extends MenuBase
-## Armory shell (Pass 5). Placeholder data via ArmoryAPI — clearly marked COMING SOON.
-## Tabs: Upgrades / Attachments. Real Skillz API drops in behind ArmoryAPI later.
+## Armory (Pass 5+): Gravemark currency, per-type Rework I–V, attachments by slot.
+## Talks to Skillz Armory (scripts/armory/armory.gd). Keyboard / controller nav.
+## Buy: short confirm panel (Enter confirms, Esc cancels). Hold Enter 0.55s also buys.
 
-const ArmoryAPIScript := preload("res://scripts/ui/armory_api.gd")
+const ArmoryScr := preload("res://scripts/armory/armory.gd")
+const ICON_GM := "res://assets/icons/gravemark.png"
 
 var api: RefCounted
-var _tabs: HBoxContainer
-var _body: VBoxContainer
-var _bal: Label
-var _tab: String = "upgrades"
-var _tab_btns: Dictionary = {}
+var _weapon_id: String = "sidearm"
+var _left: VBoxContainer ## weapon list
+var _right: VBoxContainer ## upgrades + attachments
+var _bal_chip: PanelContainer
+var _title_sub: Label
+var _confirm_overlay: Control ## full-rect dim + centered card (NOT a panel child — PanelContainer stretches kids)
+var _confirm: PanelContainer ## compact ~460x200 card
+var _confirm_label: Label
+var _confirm_cost_row: HBoxContainer
+var _confirm_cost: Label
+var _pending_id: String = ""
+var _pending_kind: String = "" ## "buy" | "equip" | "unequip"
+var _hold_t: float = 0.0
+var _holding: bool = false
+var _weapon_btns: Dictionary = {} ## id -> Button
+var _focusables: Array = [] ## Controls for nav dump
 
 
 func _init() -> void:
@@ -19,138 +32,524 @@ func _init() -> void:
 
 func _ready() -> void:
 	super._ready()
-	panel.custom_minimum_size = Vector2(720, 480)
+	panel.custom_minimum_size = Vector2(1040, 620)
 	if api == null:
-		api = ArmoryAPIScript.new()
-	if api.has_signal("currency_changed") and not api.currency_changed.is_connected(_on_bal):
-		api.currency_changed.connect(_on_bal)
+		api = ArmoryScr.new()
+	_wire_api()
 	_build()
+	refresh()
+
+
+func _wire_api() -> void:
+	if api == null:
+		return
+	if api.has_signal("currency_changed") and not api.currency_changed.is_connected(_on_currency):
+		api.currency_changed.connect(_on_currency)
+	if api.has_signal("armory_changed") and not api.armory_changed.is_connected(_on_armory):
+		api.armory_changed.connect(_on_armory)
+
+
+func _on_currency(_b: int = 0) -> void:
+	_refresh_balance()
+
+
+func _on_armory(_kind: String = "", _id: String = "") -> void:
+	if visible:
+		refresh()
 
 
 func _build() -> void:
 	clear_content()
+	_weapon_btns.clear()
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 12)
 	content.add_child(head)
-	head.add_child(UIStyle.label("ARMORY", 28, UIStyle.BONE, true))
-	var soon := PanelContainer.new()
-	soon.add_theme_stylebox_override("panel", UIStyle.cut_box(UIStyle.BLOOD.darkened(0.2), UIStyle.BONE, 2, 6))
-	soon.add_child(UIStyle.label("COMING SOON", 12, UIStyle.BONE, true))
-	head.add_child(soon)
+	var titles := VBoxContainer.new()
+	titles.add_theme_constant_override("separation", -2)
+	head.add_child(titles)
+	titles.add_child(UIStyle.label("ARMORY", 28, UIStyle.BONE, true))
+	_title_sub = UIStyle.label("REWORK + ATTACHMENTS", 12, UIStyle.RUST.lightened(0.2), true)
+	titles.add_child(_title_sub)
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(sp)
-	_bal = UIStyle.label("", 14, UIStyle.RUST.lightened(0.25), true)
-	head.add_child(_bal)
-	content.add_child(UIStyle.label("Placeholder catalogue — purchases won't carry into a live match yet.", 12, UIStyle.BONE_DIM))
+	_bal_chip = UIStyle.gravemark_chip(0, 24)
+	head.add_child(_bal_chip)
 	var line := ColorRect.new()
 	line.color = Color(UIStyle.RUST, 0.7)
 	line.custom_minimum_size = Vector2(0, 3)
 	content.add_child(line)
-	_tabs = HBoxContainer.new()
-	_tabs.add_theme_constant_override("separation", 6)
-	content.add_child(_tabs)
-	for id_lab in [["upgrades", "UPGRADES"], ["attachments", "ATTACHMENTS"]]:
-		var b := Button.new()
-		b.text = id_lab[1]
-		b.focus_mode = Control.FOCUS_ALL
-		b.add_theme_font_override("font", UIStyle.body_bold())
-		b.add_theme_font_size_override("font_size", 14)
-		b.pressed.connect(_select_tab.bind(id_lab[0]))
-		b.mouse_entered.connect(_ui_snd.bind("ui_hover"))
-		_tabs.add_child(b)
-		_tab_btns[id_lab[0]] = b
-	_body = VBoxContainer.new()
-	_body.add_theme_constant_override("separation", 6)
-	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	content.add_child(_body)
+
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 14)
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content.add_child(body)
+
+	var left_wrap := VBoxContainer.new()
+	left_wrap.custom_minimum_size.x = 220
+	left_wrap.add_theme_constant_override("separation", 6)
+	body.add_child(left_wrap)
+	left_wrap.add_child(UIStyle.label("WEAPONS", 14, UIStyle.RUST, true))
+	var scroll_l := ScrollContainer.new()
+	scroll_l.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll_l.custom_minimum_size = Vector2(220, 420)
+	left_wrap.add_child(scroll_l)
+	_left = VBoxContainer.new()
+	_left.add_theme_constant_override("separation", 4)
+	_left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll_l.add_child(_left)
+
+	var right_scroll := ScrollContainer.new()
+	right_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_child(right_scroll)
+	_right = VBoxContainer.new()
+	_right.add_theme_constant_override("separation", 8)
+	_right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right_scroll.add_child(_right)
+
+	# Confirm overlay on CanvasLayer root (self), NOT inside panel — PanelContainer
+	# stretches every direct child to fill, which blew the old card across the armory.
+	_confirm_overlay = Control.new()
+	_confirm_overlay.name = "BuyConfirmOverlay"
+	_confirm_overlay.visible = false
+	_confirm_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_confirm_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_confirm_overlay)
+	var dim := ColorRect.new()
+	dim.name = "ConfirmDim"
+	dim.color = Color(0.02, 0.02, 0.015, 0.72)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	_confirm_overlay.add_child(dim)
+	var center := CenterContainer.new()
+	center.name = "ConfirmCenter"
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_confirm_overlay.add_child(center)
+	_confirm = PanelContainer.new()
+	_confirm.name = "BuyConfirm"
+	_confirm.custom_minimum_size = Vector2(460, 200)
+	var cst := UIStyle.cut_box(Color(0.07, 0.06, 0.05, 0.98), UIStyle.RUST.lightened(0.12), 4, 16)
+	cst.set_content_margin_all(18)
+	_confirm.add_theme_stylebox_override("panel", cst)
+	center.add_child(_confirm)
+	var cv := VBoxContainer.new()
+	cv.add_theme_constant_override("separation", 12)
+	cv.alignment = BoxContainer.ALIGNMENT_CENTER
+	_confirm.add_child(cv)
+	_confirm_label = UIStyle.label("Buy?", 17, UIStyle.BONE, true)
+	_confirm_label.name = "ConfirmTitle"
+	_confirm_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_confirm_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_confirm_label.custom_minimum_size.x = 400
+	cv.add_child(_confirm_label)
+	_confirm_cost_row = HBoxContainer.new()
+	_confirm_cost_row.name = "ConfirmCostRow"
+	_confirm_cost_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_confirm_cost_row.add_theme_constant_override("separation", 8)
+	cv.add_child(_confirm_cost_row)
+	_confirm_cost = UIStyle.label("0  →  0", 15, UIStyle.RUST.lightened(0.25), true)
+	_confirm_cost.name = "ConfirmCost"
+	_confirm_cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_confirm_cost_row.add_child(_confirm_cost)
+	var ch := HBoxContainer.new()
+	ch.name = "ConfirmButtons"
+	ch.alignment = BoxContainer.ALIGNMENT_CENTER
+	ch.add_theme_constant_override("separation", 14)
+	cv.add_child(ch)
+	var yes := _btn("CONFIRM", _confirm_yes)
+	yes.name = "ConfirmYes"
+	yes.custom_minimum_size = Vector2(140, 44)
+	yes.add_theme_stylebox_override("normal", UIStyle.cut_box(UIStyle.RUST.darkened(0.12), UIStyle.BONE, 2, 10))
+	yes.add_theme_stylebox_override("hover", UIStyle.cut_box(UIStyle.RUST, UIStyle.BONE, 2, 10))
+	yes.add_theme_stylebox_override("pressed", UIStyle.cut_box(UIStyle.RUST.darkened(0.25), UIStyle.BONE, 2, 10))
+	yes.add_theme_color_override("font_color", UIStyle.BONE)
+	var no := _btn("CANCEL", _confirm_no)
+	no.name = "ConfirmNo"
+	no.custom_minimum_size = Vector2(120, 44)
+	ch.add_child(yes)
+	ch.add_child(no)
+	var hint := UIStyle.label("hold ENTER 0.55s to confirm  ·  ESC cancel", 11, UIStyle.BONE_DIM)
+	hint.name = "ConfirmHint"
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cv.add_child(hint)
+
 	var foot := HBoxContainer.new()
 	foot.add_theme_constant_override("separation", 6)
 	content.add_child(foot)
+	foot.add_child(UIStyle.key_cap("↑↓", 11))
+	foot.add_child(UIStyle.label("NAV", 11, UIStyle.BONE_DIM))
+	foot.add_child(UIStyle.key_cap("ENTER", 11))
+	foot.add_child(UIStyle.label("BUY / EQUIP", 11, UIStyle.BONE_DIM))
 	foot.add_child(UIStyle.key_cap("ESC", 11))
 	foot.add_child(UIStyle.label("BACK", 11, UIStyle.BONE_DIM))
-	_select_tab("upgrades")
 
 
-func _on_bal(_n: int = 0) -> void:
-	_refresh_bal()
+func _btn(text: String, cb: Callable) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_ALL
+	b.add_theme_font_override("font", UIStyle.FONT_STENCIL)
+	b.add_theme_font_size_override("font_size", 14)
+	b.add_theme_color_override("font_color", UIStyle.BONE)
+	b.add_theme_stylebox_override("normal", UIStyle.cut_box(Color(UIStyle.INK, 0.9), UIStyle.BONE_DIM, 2, 8))
+	b.add_theme_stylebox_override("hover", UIStyle.cut_box(Color(0.16, 0.12, 0.08, 0.95), UIStyle.RUST, 2, 8))
+	b.add_theme_stylebox_override("disabled", UIStyle.cut_box(Color(0.08, 0.08, 0.07, 0.9), Color(0.44, 0.41, 0.34), 2, 8))
+	b.pressed.connect(cb)
+	b.mouse_entered.connect(_ui_snd.bind("ui_hover"))
+	return b
 
 
-func _refresh_bal() -> void:
-	if _bal == null or api == null:
-		return
-	_bal.text = "%s  %d" % [str(api.currency_name).to_upper(), int(api.currency_balance())]
+func _refresh_balance() -> void:
+	var n := int(api.currency_balance()) if api else 0
+	UIStyle.set_gravemark_chip_amount(_bal_chip, n)
 
 
-func _select_tab(id: String) -> void:
-	_tab = id
-	for k in _tab_btns:
-		var b: Button = _tab_btns[k]
-		var on: bool = k == id
-		b.add_theme_stylebox_override("normal", UIStyle.cut_box(
-			UIStyle.OLIVE_DARK if on else Color(UIStyle.INK, 0.9),
-			UIStyle.RUST if on else UIStyle.BONE_DIM, 2, 6))
-		b.add_theme_color_override("font_color", UIStyle.BONE)
+func open() -> void:
+	_wire_api()
+	super.open()
 	refresh()
 
 
 func refresh() -> void:
-	_refresh_bal()
-	if _body == null:
+	_refresh_balance()
+	_rebuild_weapons()
+	_rebuild_detail()
+
+
+func _rebuild_weapons() -> void:
+	if _left == null:
 		return
-	for c in _body.get_children():
+	for c in _left.get_children():
 		c.queue_free()
-	if _tab == "attachments":
-		_fill_attachments()
+	_weapon_btns.clear()
+	var weapons: Array = api.list_weapons() if api else []
+	if weapons.is_empty():
+		_left.add_child(UIStyle.label("no weapons", 13, UIStyle.BONE_DIM))
+		return
+	if _weapon_id == "" or not weapons.any(func(w): return str(w.id) == _weapon_id):
+		_weapon_id = str(weapons[0].id)
+	for w in weapons:
+		var id := str(w.id)
+		var b := Button.new()
+		b.focus_mode = Control.FOCUS_ALL
+		b.custom_minimum_size = Vector2(200, 48)
+		var on: bool = id == _weapon_id
+		b.add_theme_stylebox_override("normal", UIStyle.cut_box(
+			UIStyle.OLIVE_DARK if on else Color(UIStyle.INK, 0.9),
+			UIStyle.RUST if on else UIStyle.BONE_DIM, 2, 8))
+		b.add_theme_stylebox_override("hover", UIStyle.cut_box(Color(0.16, 0.12, 0.08, 0.95), UIStyle.RUST, 2, 8))
+		b.add_theme_stylebox_override("focus", UIStyle.cut_box(Color(0.16, 0.12, 0.08, 0.95), UIStyle.RUST, 3, 8))
+		var v := VBoxContainer.new()
+		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		v.add_theme_constant_override("separation", -2)
+		b.add_child(v)
+		v.add_child(UIStyle.label(str(w.get("name", id)).to_upper(), 14, UIStyle.BONE, true))
+		var tier := int(w.get("tier", 0))
+		var tier_s := "BASE" if tier <= 0 else "REWORK %s" % UIStyle.roman(tier)
+		v.add_child(UIStyle.label(tier_s, 11, UIStyle.OLIVE.lightened(0.35)))
+		b.pressed.connect(_select_weapon.bind(id))
+		b.mouse_entered.connect(_ui_snd.bind("ui_hover"))
+		_left.add_child(b)
+		_weapon_btns[id] = b
+	_wire_weapon_neighbors()
+
+
+func _wire_weapon_neighbors() -> void:
+	var keys: Array = _weapon_btns.keys()
+	for i in keys.size():
+		var b: Button = _weapon_btns[keys[i]]
+		var up: Button = _weapon_btns[keys[(i - 1 + keys.size()) % keys.size()]]
+		var dn: Button = _weapon_btns[keys[(i + 1) % keys.size()]]
+		b.focus_neighbor_top = b.get_path_to(up)
+		b.focus_neighbor_bottom = b.get_path_to(dn)
+
+
+func _select_weapon(id: String) -> void:
+	_weapon_id = id
+	_ui_snd("ui_hover")
+	refresh()
+
+
+func _weapon_type_name() -> String:
+	for w in api.list_weapons():
+		if str(w.id) == _weapon_id:
+			return str(w.get("name", _weapon_id))
+	return _weapon_id.replace("_", " ").capitalize()
+
+
+func _rebuild_detail() -> void:
+	if _right == null:
+		return
+	for c in _right.get_children():
+		c.queue_free()
+	var type_name := _weapon_type_name()
+	_right.add_child(UIStyle.label("%s UPGRADES — applies to all %ss" % [type_name.to_upper(), type_name], 15, UIStyle.RUST, true))
+	var ups: Array = api.list_upgrades(_weapon_id)
+	if ups.is_empty():
+		_right.add_child(UIStyle.label("no upgrade track", 12, UIStyle.BONE_DIM))
 	else:
-		_fill_upgrades()
+		_right.add_child(_upgrade_track(ups[0]))
+	_right.add_child(UIStyle.label("ATTACHMENTS", 15, UIStyle.RUST, true))
+	var slots: Array = api.list_slots(_weapon_id)
+	for sl in slots:
+		_right.add_child(_slot_section(str(sl.id), str(sl.name), str(sl.get("equipped", ""))))
 
 
-func _fill_upgrades() -> void:
-	for e in api.list_upgrades():
-		_body.add_child(_row(e, true))
-
-
-func _fill_attachments() -> void:
-	for wid in ["sidearm", "smg"]:
-		_body.add_child(UIStyle.label(wid.to_upper(), 13, UIStyle.RUST, true))
-		for e in api.list_attachments(wid):
-			var row := _row(e, false)
-			row.set_meta("weapon_id", wid)
-			_body.add_child(row)
-
-
-func _row(e: Dictionary, is_upgrade: bool) -> PanelContainer:
+func _upgrade_track(u: Dictionary) -> PanelContainer:
 	var p := PanelContainer.new()
-	p.add_theme_stylebox_override("panel", UIStyle.cut_box(Color(UIStyle.INK, 0.85), UIStyle.BONE_DIM, 2, 8))
+	p.name = "UpgradeTrack"
+	p.add_theme_stylebox_override("panel", UIStyle.cut_box(Color(UIStyle.INK, 0.88), UIStyle.OLIVE, 2, 10))
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	p.add_child(v)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 10)
+	v.add_child(head)
+	head.add_child(UIStyle.label(str(u.get("name", "Rework")).to_upper(), 16, UIStyle.BONE, true))
+	var lvl := int(u.get("current_level", u.get("level", 0)))
+	head.add_child(UIStyle.label("NOW  %s" % (UIStyle.roman(lvl) if lvl > 0 else "—"), 13, UIStyle.OLIVE.lightened(0.4), true))
+	var sp := Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(sp)
+	var maxed: bool = bool(u.get("maxed", false))
+	var buy := _btn("MAXED" if maxed else "BUY %s  %d" % [str(u.get("next_tier_name", "")), int(u.get("cost", 0))],
+		func(): _ask_buy(str(u.id), "upgrade"))
+	buy.disabled = maxed or not bool(u.get("can_afford", false))
+	if buy.disabled and not maxed:
+		buy.tooltip_text = _disable_reason(str(u.id), true)
+	head.add_child(buy)
+	v.add_child(UIStyle.label(str(u.get("summary", "")), 12, UIStyle.BONE_DIM))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 4)
+	v.add_child(row)
+	for t in u.get("tiers", []):
+		var ti := int(t.get("tier", 0))
+		var cell := PanelContainer.new()
+		var cur: bool = ti == lvl
+		var done: bool = ti <= lvl
+		var col := UIStyle.RUST if cur else (UIStyle.OLIVE if done else UIStyle.BONE_DIM)
+		cell.add_theme_stylebox_override("panel", UIStyle.cut_box(
+			Color(col, 0.35 if cur else 0.15), col, 2 if cur else 1, 6))
+		cell.custom_minimum_size = Vector2(110, 0)
+		var cv := VBoxContainer.new()
+		cv.add_theme_constant_override("separation", -2)
+		cell.add_child(cv)
+		cv.add_child(UIStyle.label(str(t.get("name", UIStyle.roman(ti))), 13, UIStyle.BONE if done or cur else UIStyle.BONE_DIM, true))
+		cv.add_child(UIStyle.label("%d GM  ·  +%d IP" % [int(t.get("cost", 0)), int(t.get("item_power", 0))], 10, UIStyle.BONE_DIM))
+		var sum := str(t.get("summary", ""))
+		if sum != "":
+			var sl := UIStyle.label(sum, 10, UIStyle.BONE_DIM)
+			sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			sl.custom_minimum_size.x = 100
+			cv.add_child(sl)
+		row.add_child(cell)
+	return p
+
+
+func _slot_section(slot_id: String, slot_name: String, equipped_id: String) -> VBoxContainer:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	box.name = "Slot_" + slot_id
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 8)
+	box.add_child(head)
+	head.add_child(UIStyle.label(slot_name.to_upper(), 13, UIStyle.OLIVE.lightened(0.3), true))
+	if equipped_id != "":
+		head.add_child(UIStyle.label("EQUIPPED", 10, UIStyle.GOOD, true))
+		var uq := _btn("UNEQUIP", func(): _do_unequip(slot_id))
+		head.add_child(uq)
+	var atts: Array = api.list_attachments(_weapon_id, slot_id)
+	if atts.is_empty():
+		box.add_child(UIStyle.label("none for this weapon", 11, UIStyle.BONE_DIM))
+	for a in atts:
+		box.add_child(_att_row(a))
+	return box
+
+
+func _att_row(a: Dictionary) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.set_meta("att_id", str(a.id))
+	var st := str(a.get("state", "available"))
+	var border := UIStyle.GOOD if st == "equipped" else (UIStyle.OLIVE if st == "owned" else (UIStyle.BLOOD.darkened(0.2) if st == "locked" else UIStyle.BONE_DIM))
+	p.add_theme_stylebox_override("panel", UIStyle.cut_box(Color(UIStyle.INK, 0.85), border, 2, 8))
 	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 10)
+	h.add_theme_constant_override("separation", 8)
 	p.add_child(h)
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.add_theme_constant_override("separation", -1)
 	h.add_child(v)
-	v.add_child(UIStyle.label(str(e.get("name", e.get("id", "?"))).to_upper(), 14, UIStyle.BONE, true))
-	var sum := str(e.get("summary", ""))
-	v.add_child(UIStyle.label(sum, 12, UIStyle.BONE_DIM))
-	var meta := ""
-	if is_upgrade:
-		meta = "LV %d/%d" % [int(e.get("current_level", 0)), int(e.get("max_level", 1))]
+	var nh := HBoxContainer.new()
+	nh.add_theme_constant_override("separation", 6)
+	v.add_child(nh)
+	nh.add_child(UIStyle.label(str(a.get("name", a.id)).to_upper(), 13, UIStyle.BONE, true))
+	nh.add_child(UIStyle.label("T%d" % int(a.get("tier", 1)), 10, UIStyle.RUST.lightened(0.3), true))
+	if bool(a.get("unique", false)):
+		nh.add_child(UIStyle.label("UNIQUE", 9, UIStyle.BLOOD.lightened(0.3), true))
+	v.add_child(UIStyle.label(str(a.get("summary", "")), 11, UIStyle.BONE_DIM))
+	var drawback := str(a.get("drawback", ""))
+	if drawback != "":
+		v.add_child(UIStyle.label(drawback, 11, UIStyle.BLOOD.lightened(0.25)))
+	var reqs: Array = a.get("requirements", [])
+	var preqs: Array = a.get("purchase_requirements", [])
+	if not reqs.is_empty():
+		v.add_child(UIStyle.label("Need: " + ", ".join(reqs), 10, UIStyle.RUST.lightened(0.2)))
+	elif not bool(a.get("owned", false)) and not preqs.is_empty():
+		v.add_child(UIStyle.label("Buy needs: " + ", ".join(preqs), 10, UIStyle.RUST.lightened(0.2)))
+	var actions := VBoxContainer.new()
+	actions.add_theme_constant_override("separation", 4)
+	h.add_child(actions)
+	actions.add_child(UIStyle.label("%d" % int(a.get("cost", 0)), 14, UIStyle.RUST.lightened(0.25), true))
+	var owned: bool = bool(a.get("owned", false))
+	var equipped: bool = bool(a.get("equipped", false))
+	if not owned:
+		var buy := _btn("BUY", func(): _ask_buy(str(a.id), "attachment"))
+		buy.disabled = not bool(a.get("can_afford", false))
+		if buy.disabled:
+			buy.tooltip_text = _disable_reason(str(a.id), false)
+		actions.add_child(buy)
+	elif equipped:
+		actions.add_child(UIStyle.label("ON", 12, UIStyle.GOOD, true))
 	else:
-		meta = "OWNED" if bool(e.get("owned", false)) else str(e.get("slot", "")).to_upper()
-	h.add_child(UIStyle.label(meta, 12, UIStyle.OLIVE.lightened(0.3), true))
-	var cost := int(e.get("cost", 0))
-	var buy := Button.new()
-	buy.text = "%d" % cost
-	buy.focus_mode = Control.FOCUS_ALL
-	buy.disabled = not api.can_afford(str(e.get("id", "")))
-	buy.add_theme_font_override("font", UIStyle.body_bold())
-	buy.add_theme_stylebox_override("normal", UIStyle.cut_box(UIStyle.PANEL, UIStyle.RUST, 2, 6))
-	buy.pressed.connect(func():
-		if api.purchase(str(e.id)):
-			_ui_snd("ui_equip")
-			refresh()
-		else:
-			_ui_snd("ui_hover"))
-	buy.mouse_entered.connect(_ui_snd.bind("ui_hover"))
-	h.add_child(buy)
+		var eq := _btn("EQUIP", func(): _do_equip(str(a.id), str(a.get("slot", ""))))
+		eq.disabled = not a.get("requirements", []).is_empty()
+		if eq.disabled:
+			eq.tooltip_text = "Need: " + ", ".join(a.get("requirements", []))
+		actions.add_child(eq)
 	return p
+
+
+func _disable_reason(id: String, is_upgrade: bool) -> String:
+	if api == null:
+		return "unavailable"
+	if is_upgrade:
+		if not api.can_afford(id):
+			return "Need %d Gravemarks" % int(api.cost(id))
+		return "unavailable"
+	# attachment
+	if api.is_owned(id):
+		return "already owned"
+	var preq: Array = []
+	for a in api.list_attachments(_weapon_id):
+		if str(a.id) == id:
+			preq = a.get("purchase_requirements", [])
+			break
+	if not preq.is_empty():
+		return "Need: " + ", ".join(preq)
+	if not api.can_afford(id):
+		return "Need %d Gravemarks" % int(api.cost(id))
+	return "unavailable"
+
+
+func _ask_buy(id: String, kind: String) -> void:
+	_pending_id = id
+	_pending_kind = "buy"
+	var cost := int(api.cost(id)) if api else 0
+	var bal := int(api.currency_balance()) if api else 0
+	var label := id
+	if kind == "upgrade":
+		for u in api.list_upgrades(_weapon_id):
+			if str(u.id) == id:
+				var nm := str(u.get("name", id))
+				var tier := str(u.get("next_tier_name", ""))
+				label = ("%s %s" % [nm, tier]).strip_edges() if tier != "" else nm
+				break
+	else:
+		for a in api.list_attachments(_weapon_id):
+			if str(a.id) == id:
+				label = str(a.get("name", id))
+				break
+	_confirm_label.text = "Spend %d Gravemarks on %s?" % [cost, label]
+	# Cost / balance line with Gravemark icon: 100 → 97
+	for c in _confirm_cost_row.get_children():
+		_confirm_cost_row.remove_child(c)
+		c.queue_free()
+	_confirm_cost_row.add_child(UIStyle.gravemark_icon(20))
+	_confirm_cost = UIStyle.label("%d  →  %d" % [bal, maxi(bal - cost, 0)], 15, UIStyle.RUST.lightened(0.25), true)
+	_confirm_cost.name = "ConfirmCost"
+	_confirm_cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_confirm_cost_row.add_child(_confirm_cost)
+	_show_confirm(true)
+	_ui_snd("ui_hover")
+	_hold_t = 0.0
+	_holding = false
+
+
+func _show_confirm(on: bool) -> void:
+	if _confirm_overlay:
+		_confirm_overlay.visible = on
+	if _confirm:
+		_confirm.visible = on
+	if not on:
+		_holding = false
+		_hold_t = 0.0
+
+func _confirm_yes() -> void:
+	_execute_pending()
+
+
+func _confirm_no() -> void:
+	_pending_id = ""
+	_show_confirm(false)
+
+
+func _execute_pending() -> void:
+	if _pending_id == "" or api == null:
+		_show_confirm(false)
+		return
+	var ok := false
+	if _pending_kind == "buy":
+		ok = bool(api.purchase(_pending_id))
+	_show_confirm(false)
+	_pending_id = ""
+	if ok:
+		_ui_snd("ui_equip")
+	else:
+		_ui_snd("ui_hover")
+	refresh()
+
+
+func _do_equip(id: String, slot: String) -> void:
+	if api and api.equip_attachment(_weapon_id, slot, id):
+		_ui_snd("ui_equip")
+		refresh()
+
+
+func _do_unequip(slot: String) -> void:
+	if api and api.unequip(_weapon_id, slot):
+		_ui_snd("ui_scrap_dismantle")
+		refresh()
+
+
+func _process(delta: float) -> void:
+	if not visible or not _confirm.visible:
+		_holding = false
+		_hold_t = 0.0
+		return
+	if Input.is_action_pressed("ui_accept"):
+		_holding = true
+		_hold_t += delta
+		if _hold_t >= 0.55:
+			_execute_pending()
+	else:
+		if _holding and _hold_t > 0.0 and _hold_t < 0.55:
+			pass # tap handled by confirm button / ui_accept press
+		_holding = false
+		_hold_t = 0.0
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not visible:
+		return
+	if _confirm.visible:
+		if event.is_action_pressed("ui_cancel") or event.is_action_pressed("toggle_mouse"):
+			get_viewport().set_input_as_handled()
+			_confirm_no()
+			return
+		if event.is_action_pressed("ui_accept"):
+			get_viewport().set_input_as_handled()
+			_confirm_yes()
+			return
+	super._unhandled_input(event)

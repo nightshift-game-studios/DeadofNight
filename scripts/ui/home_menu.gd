@@ -15,6 +15,7 @@ const MapPickerScript := preload("res://scripts/ui/map_picker.gd")
 const SettingsMenuScript := preload("res://scripts/ui/settings_menu.gd")
 const ArmoryMenuScript := preload("res://scripts/ui/armory_menu.gd")
 const KitProxyScript := preload("res://scripts/ui/kit_proxy.gd")
+const ArmoryScr := preload("res://scripts/armory/armory.gd")
 const MAIN_SCENE := "res://scenes/main.tscn"
 const HARD_NOTE := "Hard: tougher zombies, better rare-currency drops."
 
@@ -34,6 +35,7 @@ var _settings: MenuBase
 var _armory: MenuBase
 var _kit_screen: MenuBase
 var _kit_proxy: Node
+var _armory_api: RefCounted ## Armory instance for live Gravemark balance
 var _focus_order: Array = [] ## button ids for keyboard wrap
 
 
@@ -89,17 +91,10 @@ func _build() -> void:
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(sp)
-	_currency_chip = PanelContainer.new()
+	_currency_chip = UIStyle.gravemark_chip(0, 26)
 	_currency_chip.name = "CurrencyChip"
-	_currency_chip.visible = false # shown when a real currency_balance() API is wired
-	_currency_chip.add_theme_stylebox_override("panel", UIStyle.cut_box(Color(UIStyle.INK, 0.9), UIStyle.RUST, 2, 8))
-	var ch := HBoxContainer.new()
-	ch.add_theme_constant_override("separation", 8)
-	_currency_chip.add_child(ch)
-	ch.add_child(UIStyle.label("MARKS", 11, UIStyle.BONE_DIM, true))
-	_currency_label = UIStyle.label("0", 22, UIStyle.BONE, true)
-	_currency_label.name = "CurrencyBalance"
-	ch.add_child(_currency_label)
+	_currency_chip.visible = true
+	_currency_label = _currency_chip.find_child("GravemarkAmount", true, false) as Label
 	head.add_child(_currency_chip)
 
 	var line := ColorRect.new()
@@ -165,6 +160,15 @@ func _build() -> void:
 	_armory = ArmoryMenuScript.new()
 	_armory.name = "HomeArmory"
 	add_child(_armory)
+
+	_armory_api = ArmoryScr.new()
+	if _armory_api.has_signal("currency_changed"):
+		_armory_api.currency_changed.connect(_on_currency_changed)
+	_on_currency_changed(int(_armory_api.currency_balance()))
+	# Also listen on Progress directly (match drops while home is not shown still refresh on return)
+	var prog := get_node_or_null("/root/Progress")
+	if prog and prog.has_signal("currency_changed") and not prog.currency_changed.is_connected(_on_currency_changed):
+		prog.currency_changed.connect(_on_currency_changed)
 
 	_wire_focus_neighbors()
 
@@ -287,7 +291,18 @@ func restart_with_map(id: String) -> bool:
 	return start_match(id)
 
 
-## Rare-currency header: call when Skillz wires currency_balance().
+func _on_currency_changed(n: int = -1) -> void:
+	var bal := n
+	if bal < 0:
+		var prog := get_node_or_null("/root/Progress")
+		bal = int(prog.gravemark_balance()) if prog and prog.has_method("gravemark_balance") else 0
+	UIStyle.set_gravemark_chip_amount(_currency_chip, bal)
+	if _currency_chip:
+		_currency_chip.visible = true
+
+
+## Public: force-refresh the header Gravemark chip.
 func set_currency_balance(n: int, visible_chip: bool = true) -> void:
-	_currency_label.text = str(n)
-	_currency_chip.visible = visible_chip
+	UIStyle.set_gravemark_chip_amount(_currency_chip, n)
+	if _currency_chip:
+		_currency_chip.visible = visible_chip

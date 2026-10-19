@@ -50,6 +50,8 @@ var _cards_strip: HBoxContainer ## owned Field Cards, top-left under the horde c
 var _unseen_chip: PanelContainer ## compact "TAB !" + count when stash has unseen loot
 var _unseen_count_label: Label
 var _seen_bound: bool = false
+var _gm_chip: PanelContainer ## compact Gravemark balance (top-left)
+var _gm_bound: bool = false
 var _player_ref: Node ## bound via the "player" group (overshield / charges signals)
 var _bind_t: float = 0.0
 
@@ -151,6 +153,13 @@ func _ready() -> void:
 	_unseen_count_label.name = "UnseenCount"
 	uh.add_child(_unseen_count_label)
 	root.add_child(_unseen_chip)
+
+	_gm_chip = UIStyle.gravemark_chip(0, 18)
+	_gm_chip.name = "GravemarkHud"
+	_gm_chip.position = Vector2(24, 88)
+	_gm_chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_gm_chip.visible = false
+	root.add_child(_gm_chip)
 	var rs := get_node_or_null("/root/RunState")
 	if rs:
 		rs.cards_changed.connect(refresh_cards)
@@ -390,8 +399,10 @@ func _bind_player() -> void:
 		p.ability_charges_changed.connect(set_ability_charges)
 		set_ability_charges(int(p.get("ability_charges")), int(p.get("ability_charges_max")))
 	_bind_seen(p)
+	_bind_gravemark()
 	refresh_cards()
 	refresh_unseen_hint()
+	refresh_gravemark()
 
 
 ## Overshield segment: steel block right of the health bar, sized by cap vs max health, hidden at 0.
@@ -449,6 +460,68 @@ func _on_seen_changed(_item = null) -> void:
 
 
 ## Compact "TAB !" + count when the stash has unseen loot. Declutter: hide when zero.
+
+func _bind_gravemark() -> void:
+	if _gm_bound:
+		return
+	var prog := get_node_or_null("/root/Progress")
+	if prog == null:
+		return
+	if prog.has_signal("currency_changed") and not prog.currency_changed.is_connected(_on_gm_bal):
+		prog.currency_changed.connect(_on_gm_bal)
+	if prog.has_signal("gravemark_gained") and not prog.gravemark_gained.is_connected(_on_gm_gained):
+		prog.gravemark_gained.connect(_on_gm_gained)
+	_gm_bound = true
+
+
+func _on_gm_bal(n: int = 0) -> void:
+	refresh_gravemark(n)
+
+
+func _on_gm_gained(amount: int, source: String) -> void:
+	add_gravemark_loot(amount, source)
+	refresh_gravemark()
+
+
+func refresh_gravemark(n: int = -1) -> void:
+	if _gm_chip == null:
+		return
+	var prog := get_node_or_null("/root/Progress")
+	var bal := n if n >= 0 else (int(prog.gravemark_balance()) if prog and prog.has_method("gravemark_balance") else 0)
+	UIStyle.set_gravemark_chip_amount(_gm_chip, bal)
+	_gm_chip.visible = bal > 0
+
+
+## Compact loot-feed line for chest / kill Gravemark drops.
+func add_gravemark_loot(amount: int, source: String = "") -> void:
+	if _loot_feed == null or amount <= 0:
+		return
+	var row := PanelContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_stylebox_override("panel", UIStyle.cut_box(Color(UIStyle.INK, 0.75), UIStyle.RUST, 2, 6))
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 6)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(h)
+	if ResourceLoader.exists("res://assets/icons/gravemark.png"):
+		var tr := TextureRect.new()
+		tr.texture = load("res://assets/icons/gravemark.png")
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.custom_minimum_size = Vector2(18, 18)
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		h.add_child(tr)
+	var src := source.to_upper() if source != "" else "DROP"
+	h.add_child(UIStyle.label("+%d GRAVEMARK  //  %s" % [amount, src], 12, UIStyle.RUST.lightened(0.3), true))
+	_loot_feed.add_child(row)
+	while _loot_feed.get_child_count() > 5:
+		_loot_feed.get_child(0).free()
+	var t := create_tween()
+	t.tween_interval(3.5)
+	t.tween_property(row, "modulate:a", 0.0, 0.6)
+	t.tween_callback(row.queue_free)
+
+
 func refresh_unseen_hint() -> void:
 	if _unseen_chip == null:
 		return
