@@ -155,7 +155,9 @@ static func ip_plate(ip: int, size: int = 13, tint: Color = BONE, tab_text: Stri
 	m.add_theme_constant_override("margin_top", -2)
 	m.add_theme_constant_override("margin_bottom", -2)
 	m.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	m.add_child(label(str(ip), size, tint))
+	var num := label(str(ip), size, tint)
+	num.name = "IPNumber"
+	m.add_child(num)
 	h.add_child(m)
 	return p
 
@@ -397,3 +399,79 @@ static func set_gravemark_chip_amount(chip: PanelContainer, amount: int) -> void
 	var amt := chip.find_child("GravemarkAmount", true, false) as Label
 	if amt:
 		amt.text = str(amount)
+
+
+# ------------------------------------------------------------------ Item Power breakdown (Armory §1a)
+
+## "290 rolled + 22 Rework" from Armory.item_power_breakdown(); the Rework part is dropped when the bonus is 0.
+static func ip_breakdown_text(bd: Dictionary) -> String:
+	var base := int(bd.get("base_rolled", bd.get("total", 0)))
+	var bonus := int(bd.get("rework_bonus", 0))
+	if bonus <= 0:
+		return "%d rolled" % base
+	return "%d rolled + %d Rework" % [base, bonus]
+
+
+## Big "312 IP" total over a small breakdown line. Nodes: IPTotal (Label), IPBreakdown (Label).
+static func ip_breakdown_block(bd: Dictionary, big: int = 28, small: int = 11,
+		align: HorizontalAlignment = HORIZONTAL_ALIGNMENT_CENTER) -> VBoxContainer:
+	var v := VBoxContainer.new()
+	v.name = "IPBreakdownBlock"
+	v.add_theme_constant_override("separation", -4)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 4)
+	top.alignment = BoxContainer.ALIGNMENT_CENTER if align == HORIZONTAL_ALIGNMENT_CENTER else \
+		(BoxContainer.ALIGNMENT_END if align == HORIZONTAL_ALIGNMENT_RIGHT else BoxContainer.ALIGNMENT_BEGIN)
+	v.add_child(top)
+	var n := label(str(int(bd.get("total", 0))), big, BONE, true, 0)
+	n.name = "IPTotal"
+	top.add_child(n)
+	var ip := label("IP", maxi(10, big / 2), BONE_DIM, true)
+	ip.size_flags_vertical = Control.SIZE_SHRINK_END
+	top.add_child(ip)
+	var bl := label(ip_breakdown_text(bd), small, OLIVE.lightened(0.4) if int(bd.get("rework_bonus", 0)) > 0 else BONE_DIM)
+	bl.name = "IPBreakdown"
+	bl.horizontal_alignment = align
+	v.add_child(bl)
+	return v
+
+
+# ------------------------------------------------------------------ attachment icons
+
+## res://assets/icons/att_<id>.png when it exists, else null.
+static func attachment_tex(att_id: String) -> Texture2D:
+	var path := "res://assets/icons/att_%s.png" % att_id
+	if att_id != "" and ResourceLoader.exists(path):
+		var t = load(path)
+		if t is Texture2D:
+			return t
+	return null
+
+
+## Attachment icon: the real att_<id>.png (TextureRect "AttIcon") or a chamfered letter glyph ("AttGlyph":
+## first letter of the slot, or of the id) when there is no art yet.
+static func attachment_icon(att_id: String, icon_size: int = 36, slot: String = "") -> Control:
+	var tex := attachment_tex(att_id)
+	if tex:
+		var tr := TextureRect.new()
+		tr.name = "AttIcon"
+		tr.texture = tex
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.custom_minimum_size = Vector2(icon_size, icon_size)
+		tr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		return tr
+	var g := PanelContainer.new()
+	g.name = "AttGlyph"
+	g.add_theme_stylebox_override("panel", cut_box(OLIVE_DARK, BONE_DIM, 2, 6))
+	g.custom_minimum_size = Vector2(icon_size, icon_size)
+	g.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	g.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var src := slot if slot != "" else att_id
+	var gl := label(src.substr(0, 1).to_upper() if src != "" else "?", maxi(10, icon_size / 2), BONE_DIM, true)
+	gl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	gl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	g.add_child(gl)
+	return g

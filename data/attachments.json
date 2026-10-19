@@ -1,6 +1,6 @@
 {
 	"version": 1,
-	"_help": "Weapon attachments (Skillz). Bought once with Gravemark (account-wide unlock), then equipped per weapon archetype: every weapon of that archetype uses the archetype's loadout. classes[archetype].slots = slots it has (DESI_ATTACHMENTS.md §1); optic_cap limits optic size (micro<short<mid<long). attachment.classes = optional allow list (default: every class with that slot). tier 1/2/3: equipping needs the weapon's upgrade tier >= tier_requires[tier] (0/2/4). mods (WeaponItem, multiply unless *_add): damage_mult rpm_mult mag_mult reload_mult (time) spread_mult (all fire) hip_spread_mult (not ADS) recoil_mult range_mult (falloff start) swap_mult (time) pellets_add headshot_add reserve_mags_add. ads (AdsProfile): fov (ADS FOV override; the narrowest wins) move_mult spread_mult (multiply the ADS penalties). flags = presentation hooks for player.gd/HUD (tracer_hidden, flash_mult, scope_overlay, outline_elites, heartbeat_counter, bipod, flashlight, mine_lamp). effects = SkillEffect defs (same format as skill_tree.json) run by the player's SkillRunner only while a weapon of that archetype is in hand. slots[].hides = default gun meshes (Desi split guns) a fitted part hides; an attachment \"hides\" overrides it ([] = hide nothing). Flashlight parts (mine_lamp) carry light_energy / light_range / light_angle / light_attenuation / light_color for the camera SpotLight3D (Armory.flashlight_config).",
+	"_help": "Weapon attachments (Skillz). Bought once with Gravemark (account-wide unlock), then equipped per weapon archetype: every weapon of that archetype uses the archetype's loadout. classes[archetype].slots = slots it has (DESI_ATTACHMENTS.md §1); optic_cap limits optic size (micro<short<mid<long). attachment.classes = optional allow list (default: every class with that slot). tier 1/2/3: equipping needs the weapon's upgrade tier >= tier_requires[tier] (0/2/4). mods (WeaponItem, multiply unless *_add): damage_mult rpm_mult mag_mult reload_mult (time) spread_mult (all fire) hip_spread_mult (not ADS) recoil_mult range_mult (falloff start) swap_mult (time) pellets_add headshot_add reserve_mags_add. ads (AdsProfile): fov (ADS FOV override; the narrowest wins) move_mult spread_mult (multiply the ADS penalties). flags = presentation hooks for player.gd/HUD (tracer_hidden, flash_mult, scope_overlay, outline_elites, heartbeat_counter, bipod, flashlight, mine_lamp). effects = SkillEffect defs (same format as skill_tree.json) run by the player's SkillRunner only while a weapon of that archetype is in hand. slots[].hides = default gun meshes (Desi split guns) a fitted part hides; an attachment \"hides\" overrides it ([] = hide nothing); \"hides_by_class\" {archetype: [...]} overrides both for that archetype (Sawn Stub on the shotgun also hides IronSights). Flashlight parts (mine_lamp, lantern_rail; F toggles the beam) carry light_energy / light_range / light_angle / light_attenuation / light_color for the camera SpotLight3D (Armory.flashlight_config).",
 	"slots": [
 		{
 			"id": "optic",
@@ -329,6 +329,7 @@
 			"drawback": "No zoom: ADS keeps the iron-sight FOV.",
 			"icon": "att_heartbeat_counter",
 			"model": "res://assets/models/attachments/optic/heartbeat_counter.glb",
+			"hides": [],
 			"mods": {},
 			"ads": {},
 			"flags": {
@@ -630,7 +631,14 @@
 						"range": 6.0
 					}
 				}
-			]
+			],
+			"hides_by_class": {
+				"shotgun": [
+					"DefaultBarrel",
+					"DefaultMuzzle",
+					"IronSights"
+				]
+			}
 		},
 		{
 			"id": "fluted_cooler",
@@ -842,7 +850,8 @@
 						"damage_frac": 1.2,
 						"radius": 3.0,
 						"icd": 6.0,
-						"knockback": 5.0
+						"knockback": 5.0,
+						"from": "LauncherMuzzle"
 					}
 				}
 			],
@@ -862,7 +871,7 @@
 			"cost": 6,
 			"unique": true,
 			"summary": "Flashlight beam that staggers what it finds.",
-			"description": "Gun hits slow zombies 35% for 1 s.",
+			"description": "Gun hits slow zombies 35% for 1 s. Press F for its beam.",
 			"drawback": "",
 			"icon": "att_lantern_rail",
 			"model": "res://assets/models/attachments/grip/lantern_rail.glb",
@@ -894,6 +903,15 @@
 				"smg",
 				"shotgun",
 				"sniper_rifle"
+			],
+			"light_energy": 7.0,
+			"light_range": 24.0,
+			"light_angle": 24.0,
+			"light_attenuation": 1.1,
+			"light_color": [
+				1.0,
+				0.86,
+				0.62
 			]
 		},
 		{
@@ -1139,7 +1157,6 @@
 				"pulse_rifle",
 				"smg",
 				"sidearm",
-				"hand_cannon",
 				"sniper_rifle"
 			]
 		},

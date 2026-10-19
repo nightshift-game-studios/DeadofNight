@@ -40,6 +40,12 @@ var _stash_label: Label ## carried_count()/stash_cap in the header
 var _hint_label: Label ## footer controls + mark-all-seen hint
 var _seen_bound: bool = false
 var _gm_chip: PanelContainer ## Gravemark balance in the header
+var _last_card_ip: Dictionary = {} ## Armory.item_power_breakdown() of the last weapon card shown (for tests)
+var _tooltip_item: GearItem ## item on the open card, so IP can re-render on armory/inventory changes
+var _tooltip_equipped: bool = false
+var _ip_prog_bound: bool = false
+var _ip_cache: Dictionary = {} ## item_id -> displayed (total) Item Power; cleared on refresh / armory / inventory changes
+var _ip_inv: Inventory ## inventory whose changed signal drives card IP refresh
 
 
 func _ready() -> void:
@@ -353,6 +359,7 @@ func refresh() -> void:
 	if player == null:
 		return
 	var inv: Inventory = player.inventory
+	_ip_cache.clear()
 	_bind_seen(inv)
 	_class_label.text = player.player_class.display_name.to_upper() if player.player_class else "SURVIVOR"
 	_refresh_avg_ip(inv)
@@ -443,9 +450,10 @@ func _refresh_avg_ip(inv: Inventory) -> void:
 		var g: GearItem = inv.equipped[s]
 		if g:
 			n += 1
-			lo = mini(lo, g.item_power)
-			hi = maxi(hi, g.item_power)
-	_avg_ip_label.text = str(inv.average_item_power())
+			var ip := display_ip(g)
+			lo = mini(lo, ip)
+			hi = maxi(hi, ip)
+	_avg_ip_label.text = str(average_display_ip(inv))
 	_avg_ip_sub.text = "%d PIECES\nRANGE %d-%d" % [n, lo, hi] if n > 0 else "NO GEAR"
 
 
@@ -489,7 +497,8 @@ func _slot_row(inv: Inventory, s: String, mirrored: bool) -> Control:
 			meta.alignment = BoxContainer.ALIGNMENT_END
 		var maker_l := UIStyle.label(g.manufacturer.to_upper(), 11, g.manufacturer_color)
 		maker_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		var plate := UIStyle.ip_plate(g.item_power, 12)
+		var plate := UIStyle.ip_plate(display_ip(g), 12)
+		plate.name = "SlotIP"
 		if mirrored:
 			meta.add_child(maker_l)
 			meta.add_child(plate)
@@ -611,8 +620,9 @@ func _tile(item: GearItem, sz: Vector2, equipped: bool) -> Button:
 		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(dot)
 	# Item Power plate, bottom-right corner; stash tiles tint the number vs what's equipped
-	var pc: Dictionary = {} if equipped or player == null else player.inventory.compare_power(item)
-	var plate := UIStyle.ip_plate(item.item_power, 12 if sz.x > 60 else 10, UIStyle.ip_tint(int(pc.get("delta", 0))))
+	var pc: Dictionary = {} if equipped or player == null else compare_display_ip(player.inventory, item)
+	var plate := UIStyle.ip_plate(display_ip(item), 12 if sz.x > 60 else 10, UIStyle.ip_tint(int(pc.get("delta", 0))))
+	plate.name = "TileIP"
 	plate.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	plate.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	plate.grow_vertical = Control.GROW_DIRECTION_BEGIN
@@ -830,11 +840,132 @@ func armor_models_shown() -> Dictionary:
 
 ## Borderlands-style item card anchored beside the cursor.
 func _bind_seen(inv: Inventory) -> void:
+	_bind_ip_sources(inv)
 	if _seen_bound:
 		return
 	if not inv.seen_changed.is_connected(_on_seen_changed):
 		inv.seen_changed.connect(_on_seen_changed)
 	_seen_bound = true
+
+
+## Item Power on the weapon card = rolled + Rework bonus; re-render on Progress.armory_changed (upgrade) and
+## Inventory.changed (new / swapped item). Armory itself doesn't emit for breakdowns.
+func _bind_ip_sources(inv: Inventory) -> void:
+	if not _ip_prog_bound:
+		var prog := get_node_or_null("/root/Progress")
+		if prog and prog.has_signal("armory_changed") and not prog.armory_changed.is_connected(_on_ip_source_changed):
+			prog.armory_changed.connect(_on_ip_source_changed)
+			_ip_prog_bound = true
+	if inv == _ip_inv:
+		return
+	if _ip_inv and is_instance_valid(_ip_inv) and _ip_inv.changed.is_connected(_on_ip_source_changed):
+		_ip_inv.changed.disconnect(_on_ip_source_changed)
+	_ip_inv = inv
+	if inv and not inv.changed.is_connected(_on_ip_source_changed):
+		inv.changed.connect(_on_ip_source_changed)
+
+
+func _on_ip_source_changed(_a = null, _b = null) -> void:
+	_ip_cache.clear()
+	if not visible:
+		return
+	if player and _ip_inv == player.inventory and _avg_ip_label:
+		_refresh_avg_ip(player.inventory)
+		_refresh_ip_plates(player.inventory)
+	if _tooltip == null or not _tooltip.visible or _tooltip_item == null:
+		return
+	var fixed := _tooltip_fixed
+	var at := _tooltip.position
+	_show_tooltip(_tooltip_item, _tooltip_equipped)
+	if fixed:
+		_tooltip_fixed = true
+		_tooltip.position = at
+
+
+## Item Power shown everywhere on this screen: weapons = breakdown total (rolled + Rework), armor = rolled.
+func display_ip(item: GearItem) -> int:
+	if item == null:
+		return 0
+	var w := item as WeaponItem
+	if w == null:
+		return item.item_power
+	var key := w.item_id if w.item_id != "" else str(w.get_instance_id())
+	if _ip_cache.has(key):
+		return int(_ip_cache[key])
+	var t := int(weapon_ip_breakdown(w).get("total", w.item_power))
+	_ip_cache[key] = t
+	return t
+
+
+## Average of display_ip() over equipped gear (empty slots ignored), same rounding as Inventory.average_item_power().
+func average_display_ip(inv: Inventory) -> int:
+	var t := 0
+	var n := 0
+	for s in inv.equipped:
+		if inv.equipped[s]:
+			t += display_ip(inv.equipped[s])
+			n += 1
+	return int(round(float(t) / max(n, 1)))
+
+
+## Inventory.compare_power() shape, on display_ip() totals.
+func compare_display_ip(inv: Inventory, item: GearItem) -> Dictionary:
+	var cur: GearItem = inv.equipped.get(item.slot)
+	if cur == null or cur == item:
+		return {}
+	var d := display_ip(item) - display_ip(cur)
+	return {"label": "Item Power", "delta": float(d), "better": d > 0, "worse": d < 0, "text": "%+d" % d if d != 0 else ""}
+
+
+## Update slot / tile IP plates in place (no rebuild) after an armory or inventory change.
+func _refresh_ip_plates(inv: Inventory) -> void:
+	for side in [_left, _right]:
+		if side == null:
+			continue
+		for wrap in side.get_children():
+			if not wrap.has_meta("slot"):
+				continue
+			var g: GearItem = inv.equipped.get(str(wrap.get_meta("slot")))
+			var sp: Node = wrap.find_child("SlotIP", true, false)
+			if sp and g:
+				_set_plate_number(sp, display_ip(g))
+			_refresh_tile_plates(wrap, inv)
+
+
+func _refresh_tile_plates(n: Node, inv: Inventory) -> void:
+	if n is Button and n.has_meta("gear"):
+		var g: GearItem = n.get_meta("gear")
+		var tp: Node = n.find_child("TileIP", false, false)
+		if tp and g:
+			_set_plate_number(tp, display_ip(g))
+			if inv.equipped.get(g.slot) != g:
+				var num: Node = tp.find_child("IPNumber", true, false)
+				if num is Label:
+					(num as Label).add_theme_color_override("font_color",
+						UIStyle.ip_tint(int(compare_display_ip(inv, g).get("delta", 0))))
+	for c in n.get_children():
+		_refresh_tile_plates(c, inv)
+
+
+func _set_plate_number(plate: Node, n: int) -> void:
+	var num: Node = plate.find_child("IPNumber", true, false)
+	if num is Label:
+		(num as Label).text = str(n)
+
+
+## Armory.item_power_breakdown(item_id); falls back to rolled + power_bonus(type) for items Armory can't find
+## (e.g. a card shown for an item that isn't in the inventory or stash).
+func weapon_ip_breakdown(w: WeaponItem) -> Dictionary:
+	var ArmoryScr = load("res://scripts/armory/armory.gd")
+	var bd: Dictionary = {}
+	if ArmoryScr and w.item_id != "":
+		bd = ArmoryScr.item_power_breakdown(w.item_id)
+	if bd.is_empty() or str(bd.get("source", "")) != "item":
+		var bonus: int = int(ArmoryScr.power_bonus(str(w.archetype))) if ArmoryScr else 0
+		bd = {"base_rolled": w.item_power, "rework_bonus": bonus, "total": w.item_power + bonus,
+			"archetype": str(w.archetype), "item_id": w.item_id, "tier": int(ArmoryScr.upgrade_tier(str(w.archetype))) if ArmoryScr else 0,
+			"source": "card"}
+	return bd
 
 
 func _on_seen_changed(_item = null) -> void:
@@ -916,6 +1047,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _show_tooltip(item: GearItem, equipped: bool) -> void:
 	_tooltip_fixed = false
+	_tooltip_item = item
+	_tooltip_equipped = equipped
 	for c in _tooltip.get_children():
 		_tooltip.remove_child(c)
 		c.queue_free()
@@ -977,7 +1110,7 @@ func _show_tooltip(item: GearItem, equipped: bool) -> void:
 	tag.add_child(UIStyle.label(item.rarity_name().to_upper(), 13, UIStyle.INK, true))
 	banner.add_child(tag)
 	# Item Power block, top-right of the banner, with delta vs equipped
-	var pc: Dictionary = {} if equipped or player == null else player.inventory.compare_power(item)
+	var pc: Dictionary = {} if equipped or player == null else compare_display_ip(player.inventory, item)
 	_last_card_power = pc
 	banner.add_child(_card_ip_box(item, pc))
 
@@ -1045,7 +1178,7 @@ func _show_tooltip(item: GearItem, equipped: bool) -> void:
 	if item.roll_quality >= 0.0:
 		b.add_child(UIStyle.roll_bar(item.roll_quality, item.item_power, 120))
 	if cmp.size() > 0:
-		b.add_child(UIStyle.label("VS EQUIPPED: %s  //  IP %d" % [cur.display_name.to_upper(), cur.item_power], 11, UIStyle.BONE_DIM))
+		b.add_child(UIStyle.label("VS EQUIPPED: %s  //  IP %d" % [cur.display_name.to_upper(), display_ip(cur)], 11, UIStyle.BONE_DIM))
 	# Perks
 	if item.perks.size() > 0:
 		b.add_child(_divider())
@@ -1107,8 +1240,12 @@ func _card_ip_box(item: GearItem, pc: Dictionary) -> Control:
 	st.set_content_margin_all(0)
 	st.content_margin_bottom = 3
 	box.add_theme_stylebox_override("panel", st)
-	box.position = Vector2(CARD_W - 104, 8)
-	box.custom_minimum_size.x = 94
+	var wi := item as WeaponItem
+	var bd: Dictionary = weapon_ip_breakdown(wi) if wi else {}
+	_last_card_ip = bd
+	var wide: bool = not bd.is_empty()
+	box.position = Vector2(CARD_W - (148 if wide else 104), 8)
+	box.custom_minimum_size.x = 138 if wide else 94
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", -4)
 	box.add_child(v)
@@ -1122,9 +1259,15 @@ func _card_ip_box(item: GearItem, pc: Dictionary) -> Control:
 	tl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tab.add_child(tl)
 	v.add_child(tab)
-	var n := UIStyle.label(str(item.item_power), 32, UIStyle.BONE, true, 0)
-	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(n)
+	if wide:
+		# "312 IP" big (rolled + Rework) over "290 rolled + 22 Rework"
+		var blk := UIStyle.ip_breakdown_block(bd, 32, 11)
+		blk.name = "CardIPBreakdown"
+		v.add_child(blk)
+	else:
+		var n := UIStyle.label(str(item.item_power), 32, UIStyle.BONE, true, 0)
+		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(n)
 	var dh := HBoxContainer.new()
 	dh.alignment = BoxContainer.ALIGNMENT_CENTER
 	if pc.is_empty():

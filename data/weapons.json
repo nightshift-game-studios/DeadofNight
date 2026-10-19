@@ -53,7 +53,7 @@
 			"id": "hand_cannon",
 			"type": "Hand Cannon",
 			"slot": "primary",
-			"model": "res://assets/models/weapons/weapon_pistol.glb",
+			"model": "res://assets/models/weapons/weapon_hand_cannon.glb",
 			"model_legacy": "res://assets/models/guns/hand_cannon.glb",
 			"view": {
 				"length": 0.3,
@@ -378,7 +378,8 @@
 			"id": "rocket_launcher",
 			"type": "Rocket Launcher",
 			"slot": "heavy",
-			"model": "res://assets/models/guns/rocket_launcher.glb",
+			"model": "res://assets/models/weapons/weapon_rocket_launcher.glb",
+			"model_legacy": "res://assets/models/guns/rocket_launcher.glb",
 			"view": {
 				"length": 0.6,
 				"offset": [
@@ -401,7 +402,8 @@
 			"projectile": {
 				"speed": 32.0,
 				"radius": 5.0,
-				"knockback": 12.0
+				"knockback": 12.0,
+				"model": "res://assets/models/weapons/rocket_projectile.glb"
 			},
 			"stats": {
 				"impact": 85,

@@ -1,6 +1,9 @@
 extends SceneTree
 ## Art wiring pass (Skillz, 2026-10-19): Desi's boss GLBs + clips + sockets, Echo Walker height, split-mesh guns per
 ## archetype, WeaponRig attachment show/hide, Mine Lamp light_energy, Armory.item_power_breakdown.
+## Art pass 2 (Desi batch 2): revolver + rocket launcher + rocket_projectile, DefaultBarrel, 38/38 attachment GLBs,
+## per-gun barrel scale, uniques (Gravesight / Heartbeat / Second Mouth / Lantern Rail / Bonesaw), ADS sight line,
+## scout stock + revolver front-sight fixes, every referenced res://assets path exists, Gravemark pickup model.
 ##   godot --headless --path . -s res://tests/art_test.gd   (exit code = failures)
 ## Uses its own save file, never the real one.
 
@@ -157,9 +160,9 @@ func _run() -> void:
 	check(absf(ea.size.y * em.scale.y - 1.526) < 0.1 and ez.has_meta("boss_echo"), "echo stands ~1.526 m (%.3f), tagged boss_echo" % (ea.size.y * em.scale.y))
 
 	# ------------------------------------------------------------ guns per archetype
-	var want := {"sidearm": "weapon_pistol", "hand_cannon": "weapon_pistol", "auto_rifle": "weapon_assault_rifle",
+	var want := {"sidearm": "weapon_pistol", "hand_cannon": "weapon_hand_cannon", "auto_rifle": "weapon_assault_rifle",
 		"scout_rifle": "weapon_scout_rifle", "smg": "weapon_smg", "shotgun": "weapon_shotgun", "pulse_rifle": "weapon_lmg",
-		"sniper_rifle": "weapon_sniper"}
+		"sniper_rifle": "weapon_sniper", "rocket_launcher": "weapon_rocket_launcher"}
 	var wdata: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/weapons.json"))
 	var by_arch := {}
 	for a in wdata.archetypes:
@@ -167,11 +170,18 @@ func _run() -> void:
 	for arch in want:
 		var mp := str(by_arch[arch].model)
 		check(mp == "res://assets/models/weapons/%s.glb" % want[arch] and ResourceLoader.exists(mp), "%s -> %s" % [arch, want[arch]])
-	check(ResourceLoader.exists(str(by_arch.rocket_launcher.model)), "rocket launcher keeps its legacy model (no split gun yet)")
+	check(str(by_arch.rocket_launcher.get("model_legacy", "")) == "res://assets/models/guns/rocket_launcher.glb"
+		and str(by_arch.hand_cannon.get("model_legacy", "")) == "res://assets/models/guns/hand_cannon.glb", "old gun paths kept as model_legacy (launcher + hand cannon)")
+	check(str(by_arch.rocket_launcher.projectile.get("model", "")) == "res://assets/models/weapons/rocket_projectile.glb"
+		and ResourceLoader.exists(str(by_arch.rocket_launcher.projectile.model)), "rocket_launcher.projectile.model = rocket_projectile.glb")
 	var sockets_full := ["Muzzle", "SightPoint", "Rail", "Underbarrel", "MagWell", "Stock", "Barrel"]
-	for g in ["weapon_assault_rifle", "weapon_scout_rifle", "weapon_sniper", "weapon_shotgun", "weapon_smg", "weapon_lmg", "weapon_pistol"]:
+	var need_by := {"weapon_pistol": ["Muzzle", "SightPoint", "Rail", "MagWell"],
+		"weapon_hand_cannon": ["Muzzle", "SightPoint", "Rail", "MagWell", "Barrel"],
+		"weapon_rocket_launcher": ["Muzzle", "SightPoint", "Rail", "MagWell", "Underbarrel"]}
+	for g in ["weapon_assault_rifle", "weapon_scout_rifle", "weapon_sniper", "weapon_shotgun", "weapon_smg", "weapon_lmg", "weapon_pistol",
+			"weapon_hand_cannon", "weapon_rocket_launcher"]:
 		var gm: Node3D = (load("res://assets/models/weapons/%s.glb" % g) as PackedScene).instantiate()
-		var need: Array = ["Muzzle", "SightPoint", "Rail", "MagWell"] if g == "weapon_pistol" else sockets_full
+		var need: Array = need_by.get(g, sockets_full)
 		var miss := need.filter(func(s): return Rig.find_node(gm, s) == null)
 		check(miss.is_empty() and Rig.find_node(gm, "Body") != null and Rig.find_node(gm, "IronSights") != null, "%s sockets + Body/IronSights (missing %s)" % [g, miss])
 		gm.free()
@@ -181,14 +191,14 @@ func _run() -> void:
 	for a in A.data().attachments:
 		if Rig.has_model(str(a.id)):
 			shipped += 1
-	check(shipped == 17, "17 attachment GLBs wired (16 + mine_lamp), got %d" % shipped)
+	check(shipped == 38 and A.data().attachments.size() == 38, "38/38 attachment GLBs wired (batch 2 complete), got %d" % shipped)
 	check(ResourceLoader.exists("res://assets/icons/att_mine_lamp.png"), "att_mine_lamp.png copied to assets/icons")
 	check(Rig.hides_for("crows_eye_3x") == ["IronSights", "DefaultOptic"] and Rig.hides_for("hush_can") == ["DefaultMuzzle"]
 		and Rig.hides_for("fence_post") == ["DefaultGrip"] and Rig.hides_for("mine_lamp") == [], "slot hides (Mine Lamp hides nothing)")
 	var pl: Dictionary = Rig.plan({"optic": "crows_eye_3x", "muzzle": "hush_can", "grip": "mine_lamp", "mag": "fat_drum"})
 	check(pl.attach.optic.socket == "Rail" and pl.attach.muzzle.socket == "Muzzle" and pl.attach.grip.socket == "Underbarrel"
-		and pl.missing == ["fat_drum"] and not pl.hide.has("DefaultMag") and not pl.hide.has("DefaultGrip"),
-		"plan: sockets Rail/Muzzle/Underbarrel; unshipped mag listed missing, DefaultMag kept")
+		and pl.attach.mag.socket == "MagWell" and pl.missing.is_empty() and pl.hide.has("DefaultMag") and not pl.hide.has("DefaultGrip"),
+		"plan: sockets Rail/Muzzle/Underbarrel/MagWell; nothing missing, fat_drum hides DefaultMag, lamp keeps DefaultGrip")
 
 	var holder := Node3D.new()
 	world.add_child(holder)
@@ -199,8 +209,9 @@ func _run() -> void:
 	check(rig.attached.optic.get_parent() == Rig.find_node(ar, "Rail") and rig.attached.muzzle.get_parent() == Rig.find_node(ar, "Muzzle")
 		and rig.attached.grip.get_parent() == Rig.find_node(ar, "Underbarrel"), "attachments instanced on Rail / Muzzle / Underbarrel")
 	check(not Rig.find_node(ar, "IronSights").visible and not Rig.find_node(ar, "DefaultMuzzle").visible, "optic hides IronSights, can hides DefaultMuzzle")
-	check(Rig.find_node(ar, "DefaultMag").visible and Rig.find_node(ar, "DefaultStock").visible and Rig.find_node(ar, "Body").visible,
-		"DefaultMag (no GLB yet), DefaultStock, Body stay visible")
+	check(not Rig.find_node(ar, "DefaultMag").visible and rig.attached.mag.get_parent() == Rig.find_node(ar, "MagWell")
+		and Rig.find_node(ar, "DefaultStock").visible and Rig.find_node(ar, "Body").visible and Rig.find_node(ar, "DefaultBarrel").visible,
+		"Fat Drum on MagWell hides DefaultMag; DefaultStock, DefaultBarrel, Body stay visible")
 	check(rig.muzzle != null and rig.attached.muzzle.is_ancestor_of(rig.muzzle) and rig.muzzle.global_position.x > Rig.find_node(ar, "Muzzle").global_position.x + 0.05,
 		"effective muzzle = the can's front Muzzle (tracers start at the end of the can)")
 	check(rig.sight != null and rig.attached.optic.is_ancestor_of(rig.sight), "ADS sight point = the optic's SightPoint")
@@ -209,7 +220,7 @@ func _run() -> void:
 		"attachments inherit the gun's view scale (identity snap, real metres)")
 	Rig.clear(ar)
 	await process_frame
-	check(Rig.visible_parts(ar) == ["Body", "IronSights", "DefaultMag", "DefaultMuzzle", "DefaultStock"] and Rig.find_node(ar, "Att_optic") == null,
+	check(Rig.visible_parts(ar) == ["Body", "IronSights", "DefaultMag", "DefaultMuzzle", "DefaultStock", "DefaultBarrel"] and Rig.find_node(ar, "Att_optic") == null,
 		"clear() removes parts and shows every default again")
 	var sn: Node3D = (load("res://assets/models/weapons/weapon_sniper.glb") as PackedScene).instantiate()
 	holder.add_child(sn)
@@ -259,7 +270,371 @@ func _run() -> void:
 	var api = A.new()
 	check(api.item_power_breakdown("auto_rifle").total == 147, "also callable on Gooey's Armory instance")
 
+	await _art_pass2(A, Rig, prog, world, holder, by_arch)
+
 	world.queue_free()
 	DirAccess.remove_absolute(prog.save_path)
 	print("ART TEST: %s (%d passed, %d failed)" % ["OK" if _fails == 0 else "FAILED", _passes, _fails])
 	quit(_fails)
+
+
+# ================================================================== art pass 2 (Desi batch 2)
+
+const GUN := "res://assets/models/weapons/%s.glb"
+
+
+func _gun(holder: Node3D, g: String) -> Node3D:
+	var m: Node3D = (load(GUN % g) as PackedScene).instantiate()
+	holder.add_child(m)
+	return m
+
+
+## Same fit as player._build_view_model: Camera3D > Gun (hip offset) > Model > holder (yaw 90) > model scaled to view.length.
+func _view_gun(world: Node3D, g: String, length: float) -> Dictionary:
+	var cam := Camera3D.new()
+	world.add_child(cam)
+	var gun := Node3D.new()
+	cam.add_child(gun)
+	gun.position = Vector3(0.2, -0.2, -0.45)
+	var mr := Node3D.new()
+	gun.add_child(mr)
+	var model: Node3D = (load(GUN % g) as PackedScene).instantiate()
+	var a := ModelUtil.get_aabb(model)
+	var s := length / maxf(a.size.x, 0.001)
+	var h := Node3D.new()
+	h.rotation_degrees.y = 90.0
+	mr.add_child(h)
+	h.add_child(model)
+	model.scale = Vector3.ONE * s
+	model.position = -a.get_center() * s
+	return {"cam": cam, "gun": gun, "model": model, "scale": s}
+
+
+func _scan_asset_refs() -> Dictionary:
+	var files: Array = []
+	for f in DirAccess.get_files_at("res://data"):
+		if f.ends_with(".json"):
+			files.append("res://data/" + f)
+	_walk_gd("res://scripts", files)
+	var rx := RegEx.new()
+	rx.compile("res://assets/[A-Za-z0-9_./%-]+")
+	var refs := {}
+	for f in files:
+		var txt := FileAccess.get_file_as_string(f)
+		for m in rx.search_all(txt):
+			var pth := m.get_string().rstrip(".")
+			if "%" in pth or pth.ends_with("/") or pth.ends_with("_"): # format strings / dirs / prefixes ("att_")
+				continue
+			if not refs.has(pth):
+				refs[pth] = f
+	return refs
+
+
+func _walk_gd(dir: String, out: Array) -> void:
+	for f in DirAccess.get_files_at(dir):
+		if f.ends_with(".gd"):
+			out.append(dir + "/" + f)
+	for d in DirAccess.get_directories_at(dir):
+		_walk_gd(dir + "/" + d, out)
+
+
+func _wait(sec: float) -> void:
+	await create_timer(sec).timeout
+
+
+func _art_pass2(A, Rig, prog: Node, world: Node3D, holder: Node3D, by_arch: Dictionary) -> void:
+	var Ads = load("res://scripts/combat/ads_profile.gd")
+	# ------------------------------------------------------------ every referenced asset path exists
+	var refs := _scan_asset_refs()
+	var missing: Array = []
+	for pth in refs:
+		if not FileAccess.file_exists(pth) and not ResourceLoader.exists(pth):
+			missing.append("%s (%s)" % [pth, refs[pth]])
+	check(refs.size() >= 80 and missing.is_empty(), "every res://assets path in data/*.json + scripts exists (%d refs, missing %s)" % [refs.size(), missing])
+	var no_import: Array = []
+	for a in A.data().attachments:
+		var mp := str(a.model)
+		if mp != "res://assets/models/attachments/%s/%s.glb" % [a.slot, a.id] or not FileAccess.file_exists(mp + ".import"):
+			no_import.append(a.id)
+	for g in ["weapon_hand_cannon", "weapon_rocket_launcher", "rocket_projectile"]:
+		if not FileAccess.file_exists((GUN % g) + ".import"):
+			no_import.append(g)
+	check(no_import.is_empty(), "attachments/<slot>/<id>.glb + new guns all imported (.import present; bad %s)" % [no_import])
+
+	# ------------------------------------------------------------ DefaultBarrel on the 6 rifle-class guns
+	var exp_s := {"weapon_assault_rifle": 1.00, "weapon_scout_rifle": 1.16, "weapon_shotgun": 1.16, "weapon_lmg": 1.36,
+		"weapon_sniper": 1.68, "weapon_smg": 0.68, "weapon_hand_cannon": 0.31}
+	for g in ["weapon_assault_rifle", "weapon_scout_rifle", "weapon_shotgun", "weapon_lmg", "weapon_sniper", "weapon_smg"]:
+		var m := _gun(holder, g)
+		var db: Node3D = Rig.find_node(m, "DefaultBarrel")
+		var r: Dictionary = Rig.apply(m, "auto_rifle", {"barrel": "gutter_ported_barrel"})
+		check(db is MeshInstance3D and not db.visible and not Rig.find_node(m, "DefaultMuzzle").visible and Rig.find_node(m, "Body").visible
+			and r.hidden.has("DefaultBarrel"), "%s: DefaultBarrel split out, a barrel hides it + DefaultMuzzle, Body stays" % g)
+		Rig.clear(m)
+		check(db.visible, "%s: clear() shows DefaultBarrel again" % g)
+
+	# ------------------------------------------------------------ barrel scale per gun + muzzle on the scaled muzzle
+	for g in exp_s:
+		var m := _gun(holder, g)
+		m.scale = Vector3.ONE * 0.6
+		var s: float = Rig.barrel_scale(m)
+		check(absf(s - float(exp_s[g])) < 0.006, "%s barrel scale %.3f ~ %.2f ((Muzzle.x - Barrel.x) / 0.50)" % [g, s, exp_s[g]])
+		var r: Dictionary = Rig.apply(m, "auto_rifle", {"barrel": "fluted_cooler", "muzzle": "flare_cage"})
+		var b: Node3D = r.attached.barrel
+		var bmesh: Node3D = Rig.find_node(b, "Mesh")
+		var bm: Node3D = Rig.find_node(b, "Muzzle")
+		check(is_equal_approx(r.barrel_scale, s) and absf(bmesh.scale.x - s) < 1e-4 and is_equal_approx(b.scale.x, 1.0)
+			and absf(bm.position.x - 0.5 * s) < 1e-4, "%s: barrel Mesh.scale.x = %.3f and Muzzle.x = 0.50 x s, root unscaled" % [g, s])
+		var gun_mz: Node3D = Rig.find_node(m, "Muzzle")
+		var dev: Node3D = r.attached.muzzle
+		check(dev.get_parent() == bm and dev.global_position.distance_to(gun_mz.global_position) < 0.002,
+			"%s: muzzle device on the barrel's scaled Muzzle = the gun's Muzzle socket (%.4f m off)" % [g, dev.global_position.distance_to(gun_mz.global_position)])
+		check(r.muzzle != null and dev.is_ancestor_of(r.muzzle) or r.muzzle == dev, "%s: tracer muzzle = the device on the scaled barrel" % g)
+		var r2: Dictionary = Rig.apply(m, "auto_rifle", {"barrel": "long_spine_barrel"})
+		var lm: Node3D = Rig.find_node(r2.attached.barrel, "Muzzle")
+		check(absf(Rig.gun_point(m, lm).x - (Rig.gun_point(m, Rig.find_node(m, "Barrel")).x + 0.62 * s)) < 1e-4 and r2.muzzle == lm,
+			"%s: Long Spine (0.62) muzzle = Barrel.x + 0.62 x s; tracers start there" % g)
+
+	# ------------------------------------------------------------ revolver
+	var hc := _gun(holder, "weapon_hand_cannon")
+	var cyl: Node3D = Rig.find_node(hc, "Cylinder")
+	check(cyl is MeshInstance3D and Rig.find_node(hc, "MagWell").get_parent() == cyl and Rig.find_node(hc, "DefaultMag").get_parent() == cyl,
+		"revolver: Cylinder mesh, MagWell + DefaultMag ride on it")
+	var hr: Dictionary = Rig.apply(hc, "hand_cannon", {"optic": "pinhole", "barrel": "fluted_cooler", "mag": "speedloader_ring",
+		"grip": "fence_post", "stock": "padded_stock"})
+	check(hr.skipped.has("grip") and hr.skipped.has("stock") and not hr.attached.has("grip") and not hr.attached.has("stock")
+		and Rig.find_node(hc, "Att_grip") == null and hr.missing.is_empty(), "revolver: no Underbarrel/Stock socket -> grip + stock skipped cleanly (%s)" % [hr.skipped])
+	check(hr.attached.mag.get_parent() == Rig.find_node(hc, "MagWell") and cyl.is_ancestor_of(hr.attached.mag), "speedloader sits in the cylinder (spins with it)")
+	Rig.apply(hc, "hand_cannon", {"barrel": "fluted_cooler"})
+	var irons: Node3D = Rig.find_node(hc, "IronSights") as MeshInstance3D
+	var ia: AABB = Rig.gun_xform(hc, irons) * irons.get_aabb()
+	check(irons.visible and not Rig.find_node(hc, "DefaultBarrel").visible and ia.end.x > 0.19,
+		"revolver front sight is in IronSights and stays visible with a barrel fitted (IronSights to x %.3f)" % ia.end.x)
+	Rig.apply(hc, "hand_cannon", {"barrel": "sawn_stub"})
+	check(irons.visible, "revolver + Sawn Stub keeps IronSights (only the shotgun hides them)")
+	var hr2: Dictionary = Rig.apply(hc, "hand_cannon", {})
+	hr2 = Rig.apply(hc, "hand_cannon", {"muzzle": "flare_cage"})
+	var c0: float = cyl.rotation.x
+	Rig.on_fire(hr2, 5)
+	await _wait(0.15)
+	check(absf(cyl.rotation.x - c0 - deg_to_rad(60.0)) < 0.01, "on_fire: cylinder turns one chamber (60 deg on local X)")
+	Rig.on_fire(hr2, 4)
+	await _wait(0.15)
+	check(absf(cyl.rotation.x - c0 - deg_to_rad(120.0)) < 0.01, "second shot: 120 deg")
+	Rig.on_reload(hr2, 0.2)
+	await _wait(0.3)
+	check(absf(cyl.rotation.x - c0 - deg_to_rad(120.0) - TAU) < 0.02, "on_reload: one full cylinder spin")
+	Rig.clear(hc)
+	check(is_equal_approx(cyl.rotation.x, 0.0), "clear() restores the cylinder rest pose")
+	# Revolver ADS sight line through AdsProfile.
+	var v := _view_gun(world, "weapon_hand_cannon", float(by_arch.hand_cannon.view.length))
+	var vr: Dictionary = Rig.apply(v.model, "hand_cannon", {})
+	var sl: Vector3 = Rig.sight_line(vr)
+	check(sl.is_equal_approx(Vector3(-0.0035, 0.0793, 0.0)), "revolver sight line = its SightPoint (y 0.0793, real notch line, not bore 0.055)")
+	var ads_pos: Vector3 = Ads.ads_gun_position(Rig.ads_offset(vr, v.gun), "hand_cannon")
+	v.gun.position = ads_pos
+	var eye: float = Ads.ads_eye_distance("hand_cannon")
+	var sp_cam: Vector3 = v.cam.to_local((vr.sight as Node3D).global_position)
+	check(sp_cam.distance_to(Vector3(0, 0, -eye)) < 1e-4, "ADS pose puts the revolver SightPoint on the screen centre (%s, eye %.2f)" % [sp_cam, eye])
+	# Front blade top = highest IronSights vertex ahead of x 0.15 (the rear sight's ears are taller than the notch line).
+	var fb := Vector3(0, -INF, 0)
+	var arr: Array = irons.mesh.surface_get_arrays(0)
+	for vtx in arr[Mesh.ARRAY_VERTEX]:
+		var gp: Vector3 = Rig.gun_xform(hc, irons) * vtx
+		if gp.x > 0.15 and gp.y > fb.y:
+			fb = gp
+	var front_top: Vector3 = v.cam.to_local((v.model as Node3D).global_transform * fb)
+	check(absf(front_top.y) < 0.0015 and front_top.z < sp_cam.z, "front blade top sits on the sight line too (y %.4f m in camera space)" % front_top.y)
+	var bore_cam: Vector3 = v.cam.to_local(Rig.find_node(v.model, "Muzzle").global_position)
+	check(bore_cam.y < -0.003, "bore sits below the eye line (%.4f): revolver ADS is 'slightly higher', as Desi noted" % bore_cam.y)
+	check(is_equal_approx(Ads.ads_fov("hand_cannon"), 65.0) and Ads.family_for_archetype("hand_cannon") == "sidearm", "hand cannon keeps the sidearm ADS FOV 65")
+	var vr2: Dictionary = Rig.apply(v.model, "hand_cannon", {"optic": "pinhole"})
+	v.gun.position = Ads.ads_gun_position(Rig.ads_offset(vr2, v.gun), "hand_cannon")
+	check(v.cam.to_local((vr2.sight as Node3D).global_position).distance_to(Vector3(0, 0, -eye)) < 1e-4 and vr2.attached.optic.is_ancestor_of(vr2.sight),
+		"with a Pinhole the optic's SightPoint takes the screen centre")
+	# AR irons (bore-height SightPoint): top of IronSights on the centre line.
+	var va := _view_gun(world, "weapon_assault_rifle", float(by_arch.auto_rifle.view.length))
+	var var_: Dictionary = Rig.apply(va.model, "auto_rifle", {})
+	va.gun.position = Ads.ads_gun_position(Rig.ads_offset(var_, va.gun), "auto_rifle")
+	var ai: Node3D = Rig.find_node(va.model, "IronSights") as MeshInstance3D
+	var aa: AABB = Rig.gun_xform(va.model, ai) * ai.get_aabb()
+	check(absf(Rig.sight_line(var_).y - aa.end.y) < 1e-4 and absf(va.cam.to_local((va.model as Node3D).global_transform * Rig.sight_line(var_)).y) < 1e-4,
+		"bore-height SightPoint guns (AR) align the IronSights top on the centre line")
+
+	# ------------------------------------------------------------ scout stock fix
+	var sc := _gun(holder, "weapon_scout_rifle")
+	var body: Node3D = Rig.find_node(sc, "Body") as MeshInstance3D
+	var body_rear: float = (Rig.gun_xform(sc, body) * body.get_aabb()).position.x
+	var ssock: Node3D = Rig.find_node(sc, "Stock")
+	check(absf(ssock.position.x - (-0.06)) < 0.001 and absf(ssock.position.x - body_rear) < 0.002,
+		"scout Stock socket moved to x -0.060 = the receiver's rear face (%.3f)" % body_rear)
+	for st in ["wire_stock", "padded_stock", "ratchet_stock"]:
+		var sr: Dictionary = Rig.apply(sc, "scout_rifle", {"stock": st})
+		var front := -INF
+		for mi in (sr.attached.stock as Node3D).find_children("*", "MeshInstance3D", true, false):
+			front = maxf(front, (Rig.gun_xform(sc, mi) * (mi as MeshInstance3D).get_aabb()).end.x)
+		check(absf(front - body_rear) < 0.012, "scout + %s seats flush on the receiver (gap %.3f m)" % [st, body_rear - front])
+
+	# ------------------------------------------------------------ rocket launcher + projectile
+	var rl := _gun(holder, "weapon_rocket_launcher")
+	var rr: Dictionary = Rig.apply(rl, "rocket_launcher", {"optic": "crows_eye_3x", "mag": "quickpull_clip", "barrel": "sawn_stub", "stock": "wire_stock"})
+	check(rr.rocket != null and rr.rocket.visible and rr.skipped.has("barrel") and rr.skipped.has("stock") and rr.attached.has("mag"),
+		"launcher: Rocket found, no Barrel/Stock socket -> skipped; mag on MagWell")
+	Rig.on_fire(rr, 0)
+	check(not rr.rocket.visible, "on_fire hides the loaded Rocket")
+	Rig.on_reload(rr, 0.2)
+	check(rr.rocket.visible, "on_reload shows it again")
+	Rig.on_fire(rr, 1, 0.1)
+	check(not rr.rocket.visible, "fire with rounds left: hidden...")
+	await _wait(0.2)
+	check(rr.rocket.visible, "...and re-chambered after the fire interval")
+	Rig.on_fire(rr, 0)
+	Rig.on_reload(rr, 0.0)
+	check(rr.rocket.visible, "on_reload(time 0) (reload finished early) shows it")
+	var RocketScr = load("res://scripts/combat/rocket.gd")
+	var rk = RocketScr.new()
+	rk.model_path = str(by_arch.rocket_launcher.projectile.model)
+	world.add_child(rk)
+	check(rk.visual != null and rk.visual.find_child("Rocket", true, false) is MeshInstance3D and rk.exhaust != null
+		and rk.find_children("*", "CylinderMesh", true, false).is_empty(), "rocket.gd instances rocket_projectile.glb (Exhaust found, no CylinderMesh)")
+	var nose: Node3D = rk.visual.find_child("Nose", true, false)
+	rk.look_at(rk.global_position + Vector3(1, 0, 0), Vector3.UP)
+	check(nose != null and (nose.global_position - rk.global_position).normalized().dot(Vector3(1, 0, 0)) > 0.99,
+		"projectile nose points along the flight direction (-Z = look_at forward, no extra rotation)")
+	rk.queue_free()
+	var rk2 = RocketScr.new()
+	world.add_child(rk2)
+	check(rk2.visual == null and rk2.get_child_count() >= 2, "rocket.gd without a model path keeps the procedural cylinder")
+	rk2.queue_free()
+
+	# ------------------------------------------------------------ uniques
+	var g1 := _gun(holder, "weapon_assault_rifle")
+	var gr: Dictionary = Rig.apply(g1, "auto_rifle", {"optic": "gravesight", "grip": "second_mouth"})
+	var lens: Node3D = Rig.find_node(gr.attached.optic, "Lens") as MeshInstance3D
+	var base_e: float = (lens.mesh.surface_get_material(0) as StandardMaterial3D).emission_energy_multiplier if lens.mesh.surface_get_material(0) else (lens.get_active_material(0) as StandardMaterial3D).emission_energy_multiplier
+	check(bool(A.attachment("gravesight").flags.outline_elites) and gr.glow.size() == 2 and absf(Rig.glow_energy(gr) - base_e * Rig.GLOW_ON) < 0.01,
+		"Gravesight: outline_elites drives the Lens glow (%.2f -> %.2f)" % [base_e, Rig.glow_energy(gr)])
+	Rig.set_glow(gr, 0.0)
+	var g2 := _gun(holder, "weapon_assault_rifle")
+	var gr2: Dictionary = Rig.apply(g2, "auto_rifle", {"optic": "gravesight"})
+	check(absf(Rig.glow_energy(gr) - base_e * Rig.GLOW_OFF) < 0.01 and absf(Rig.glow_energy(gr2) - base_e * Rig.GLOW_ON) < 0.01,
+		"glow is per instance (dimming one Gravesight leaves the other lit)")
+	check(gr.launcher != null and str(gr.launcher.name) == "LauncherMuzzle" and str(gr.launcher.get_parent().name) == "Tube",
+		"Second Mouth: rig.launcher = Tube/LauncherMuzzle")
+	var se: Dictionary = A.attachment("second_mouth").effects[0]
+	check(str(se.params.get("from", "")) == "LauncherMuzzle", "second_mouth effect fires from LauncherMuzzle (data)")
+	var stub_src := GDScript.new()
+	stub_src.source_code = "extends Node3D\nvar _gun_rig: Dictionary = {}\nvar player\n"
+	stub_src.reload()
+	var stub: Node3D = stub_src.new()
+	world.add_child(stub)
+	stub.set("_gun_rig", gr)
+	stub.set("player", stub) # doubles as the SkillRunner (effect.player = runner.player)
+	var eff = load("res://scripts/skills/effects/on_event_explode.gd").new()
+	eff.params = se.params
+	eff.runner = stub
+	var lp = eff.launch_point()
+	check(lp is Vector3 and (lp as Vector3).distance_to(gr.launcher.global_position) < 1e-5, "on_event_explode.launch_point() = LauncherMuzzle world position")
+	var tube: Node3D = gr.anim.get("tube")
+	var t0: Vector3 = tube.position
+	Rig.on_reload(gr, 0.4)
+	var tmax := -INF
+	for i in 40:
+		await process_frame
+		tmax = maxf(tmax, tube.position.x)
+	await _wait(0.3)
+	check(tmax > t0.x + 0.01, "Second Mouth tube racks +X on reload (peak +%.3f)" % (tmax - t0.x))
+	check(tube.position.distance_to(t0) < 0.002, "...and returns")
+	# Heartbeat Counter
+	check(Rig.hides_for("heartbeat_counter") == [] and A.attachment("heartbeat_counter").hides == [], "Heartbeat Counter hides [] (data)")
+	var hb_g := _gun(holder, "weapon_smg")
+	var hbr: Dictionary = Rig.apply(hb_g, "smg", {"optic": "heartbeat_counter"})
+	check(Rig.find_node(hb_g, "IronSights").visible and hbr.hidden.is_empty() and hbr.sight == Rig.find_node(hb_g, "SightPoint"),
+		"Heartbeat keeps the iron sights + iron ADS sight point")
+	var lbl: Label3D = hbr.heartbeat
+	check(lbl != null and str(lbl.get_parent().name) == "ScreenAnchor", "Heartbeat Label3D sits on ScreenAnchor")
+	var foes: Array = []
+	for i in 4:
+		var e := Node3D.new()
+		e.add_to_group("enemies")
+		world.add_child(e)
+		e.global_position = hb_g.global_position + Vector3(2.0 + i, 0, 0) if i < 3 else hb_g.global_position + Vector3(25, 0, 0)
+		foes.append(e)
+	check(lbl.refresh() == 3 and lbl.text == "3", "Heartbeat counts enemies within 10 m (3 near, 1 at 25 m)")
+	for e in foes:
+		e.queue_free()
+	# Lantern Rail beam (same Glass / BeamHint as the Mine Lamp)
+	var lr_g := _gun(holder, "weapon_shotgun")
+	var lrr: Dictionary = Rig.apply(lr_g, "shotgun", {"grip": "lantern_rail"})
+	check(lrr.lamp != null and lrr.lamp == lrr.attached.grip and Rig.find_node(lrr.lamp, "Glass") != null and Rig.find_node(lrr.lamp, "BeamHint") != null,
+		"Lantern Rail sets rig.lamp (Glass + BeamHint)")
+	prog.gravemarks = 999
+	A.buy_attachment("lantern_rail")
+	A.equip("auto_rifle", "lantern_rail")
+	var lfc: Dictionary = A.flashlight_config("auto_rifle")
+	check(A.has_flashlight("auto_rifle") and A.has_mine_lamp("auto_rifle") and lfc.color is Color
+		and lfc.color.is_equal_approx(Color(1.0, 0.86, 0.62)) and is_equal_approx(float(lfc.light_angle), 24.0),
+		"Lantern Rail equipped: F beam enabled (has_mine_lamp) with its own warm light values")
+	A.equip("auto_rifle", "mine_lamp")
+	check(is_equal_approx(float(A.flashlight_config("auto_rifle").light_angle), 28.0), "Mine Lamp back: its own beam values")
+	# Bonesaw reach
+	var bexp := {"weapon_assault_rifle": 0.26, "weapon_smg": 0.18, "weapon_shotgun": 0.28, "weapon_lmg": 0.46, "weapon_scout_rifle": 0.38}
+	for g in bexp:
+		var bg := _gun(holder, g)
+		var br: Dictionary = Rig.apply(bg, "auto_rifle", {"grip": "bonesaw_bayonet"})
+		var blade: Node3D = Rig.find_node(br.attached.grip, "Blade")
+		var want: float = Rig.find_node(bg, "Muzzle").position.x - Rig.find_node(bg, "Underbarrel").position.x - 0.10
+		check(absf(blade.position.x - want) < 1e-4 and absf(want - float(bexp[g])) < 1e-4, "%s Bonesaw Blade.x = Muzzle.x - Underbarrel.x - 0.10 = %.2f" % [g, want])
+
+	# ------------------------------------------------------------ decisions
+	var sg := _gun(holder, "weapon_shotgun")
+	var sgr: Dictionary = Rig.apply(sg, "shotgun", {"barrel": "sawn_stub"})
+	check(not Rig.find_node(sg, "IronSights").visible and sgr.hidden.has("IronSights") and not Rig.find_node(sg, "DefaultBarrel").visible
+		and Rig.hides_for("sawn_stub", "barrel", "shotgun") == ["DefaultBarrel", "DefaultMuzzle", "IronSights"], "shotgun + Sawn Stub hides the bead (hides_by_class)")
+	var ss2 := _gun(holder, "weapon_smg")
+	Rig.apply(ss2, "smg", {"barrel": "sawn_stub"})
+	check(Rig.find_node(ss2, "IronSights").visible and Rig.hides_for("sawn_stub") == ["DefaultBarrel", "DefaultMuzzle"], "Sawn Stub on other guns keeps IronSights")
+	check(not A.is_compatible("ember_window_mag", "hand_cannon") and A.is_compatible("ember_window_mag", "sidearm")
+		and A.is_compatible("ember_window_mag", "auto_rifle"), "Ember Window Mag: hand_cannon dropped from its classes")
+
+	# ------------------------------------------------------------ optional part animations
+	var ed := _gun(holder, "weapon_assault_rifle")
+	var edr: Dictionary = Rig.apply(ed, "auto_rifle", {"mag": "echo_drum", "stock": "ratchet_stock"})
+	var dial: Node3D = edr.anim.get("dial")
+	var d0: float = dial.rotation.z
+	Rig.on_fire(edr, 10)
+	var slider: Node3D = edr.anim.get("slider")
+	var s0: Vector3 = slider.position
+	Rig.set_ads(edr, true)
+	await _wait(0.2)
+	check(absf(dial.rotation.z - d0) > 0.3 and slider.position.x < s0.x - 0.015, "Echo Drum dial ticks on fire, Ratchet Stock slider extends on ADS")
+	Rig.set_ads(edr, false)
+	var spr: Dictionary = Rig.apply(hc, "hand_cannon", {"mag": "speedloader_ring"})
+	var spl: Node3D = spr.anim.get("speedloader")
+	Rig.on_reload(spr, 0.2)
+	var mid_x: float = spl.position.x
+	await _wait(0.2)
+	check(mid_x < -0.02 and absf(spl.position.x) < 1e-3, "speedloader seats from 3 cm behind on reload")
+
+	# ------------------------------------------------------------ Gravemark pickup model
+	var GP = load("res://scripts/items/gravemark_pickup.gd")
+	var pm := str(A.cfg().currency.pickup_model)
+	check(pm == "res://assets/models/pickups/gravemark.glb" and ResourceLoader.exists(pm) and GP.pickup_model_path() == pm,
+		"armory.json pickup_model = gravemark.glb (copied + imported)")
+	var tok: Node3D = GP.spawn(world, Vector3(3, 0, 3), 2)
+	await process_frame
+	check(tok != null and tok.get_node_or_null("Model") != null and tok.get_node("Model").find_child("StampGlow", true, false) != null,
+		"Gravemark token spawns Desi's gravemark.glb (StampGlow inlay)")
+	check(GP.spawn(null, Vector3.ZERO, 1) == null, "spawn() is a no-op without a scene (tests / headless)")
+	var old_scene = current_scene
+	current_scene = world
+	var boss := Node3D.new()
+	boss.set_meta("is_boss", true)
+	boss.set_meta("boss_id", "bellwether")
+	world.add_child(boss)
+	prog.match_gravemarks = 0
+	var before := world.get_children().filter(func(c): return c.get_script() == GP).size()
+	var paid: int = A.on_zombie_died(boss, 7)
+	var after := world.get_children().filter(func(c): return c.get_script() == GP).size()
+	check(paid > 0 and after > before, "boss kill pays %d and pops a Gravemark token in the scene" % paid)
+	current_scene = old_scene

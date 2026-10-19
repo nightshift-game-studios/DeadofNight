@@ -4,6 +4,8 @@ extends SkillEffect
 ## min_fall) | grenade_frac x your grenade's damage (and its radius).
 ## params: radius, knockback, chance, icd, at ("target" | "player"), chain/decay/max_depth (blast kills
 ## from this effect chain again for decay x the previous blast, up to max_depth links).
+## from: name of a node on the player's fitted gun attachments (player._gun_rig, WeaponRig) the blast visibly launches
+## from, e.g. "LauncherMuzzle" (Second Mouth's Tube/LauncherMuzzle): a tracer streaks from it to the blast.
 
 var _ready_at: float = -INF
 
@@ -52,10 +54,35 @@ func on_event(_name: StringName, ctx: Dictionary) -> void:
 		pos = player.global_position + Vector3(0, 0.6, 0)
 	var extra := {"source": "skill", "depth": int(ctx.get("depth", 0)) + 1, "skill": source_id,
 		"chain_owner": get_instance_id(), "chain_depth": link, "chain_damage": dmg}
-	last_blast = {"damage": dmg, "link": link, "depth": extra.depth}
+	var origin = launch_point()
+	if origin is Vector3 and player.is_inside_tree():
+		Effects.spawn_tracer(player.get_tree().current_scene, origin, pos, Color(1.0, 0.55, 0.25, 0.9))
+	last_blast = {"damage": dmg, "link": link, "depth": extra.depth, "from": origin}
 	blasts += 1
 	player.skill_explosion(pos, radius, dmg, float(p("knockback", 4.0)), extra)
 
 
 var last_blast: Dictionary = {} ## tests / debugging
 var blasts: int = 0
+
+
+## World position of params.from on the player's view-model attachments (WeaponRig rig.launcher first), else null.
+func launch_point():
+	var nm := str(params.get("from", ""))
+	if nm == "" or player == null or not is_instance_valid(player):
+		return null
+	var rig = player.get("_gun_rig")
+	if not (rig is Dictionary):
+		return null
+	var n = rig.get("launcher")
+	if not (n is Node3D and is_instance_valid(n) and str(n.name) == nm):
+		n = null
+		for slot in rig.get("attached", {}):
+			var a = rig.attached[slot]
+			if a is Node3D and is_instance_valid(a):
+				n = (a as Node3D).find_child(nm, true, false)
+				if n:
+					break
+	if n is Node3D and (n as Node3D).is_inside_tree():
+		return (n as Node3D).global_position
+	return null

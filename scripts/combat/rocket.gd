@@ -11,6 +11,11 @@ var weapon: WeaponItem
 var _life: float = 4.0
 var _trail_t: float = 0.0
 var _color := Color(1.0, 0.5, 0.2)
+## weapons.json rocket_launcher.projectile.model (Desi's rocket_projectile.glb, nose along -Z = look_at forward, so no
+## rotation; Exhaust empty at the tail carries the glow/trail). "" or missing -> the old procedural cylinder.
+var model_path: String = ""
+var exhaust: Node3D
+var visual: Node3D
 
 
 static func fire(player: Node, w: WeaponItem, origin: Vector3, dir: Vector3, dmg: float) -> Rocket:
@@ -22,6 +27,7 @@ static func fire(player: Node, w: WeaponItem, origin: Vector3, dir: Vector3, dmg
 	r.damage = dmg
 	r.shooter = player
 	r.weapon = w
+	r.model_path = str(p.get("model", ""))
 	r._color = GearDB.element_color(w.element) if w.element != "ballistic" else Color(1.0, 0.5, 0.2)
 	player.get_tree().current_scene.add_child(r)
 	r.global_position = origin
@@ -30,6 +36,23 @@ static func fire(player: Node, w: WeaponItem, origin: Vector3, dir: Vector3, dmg
 
 
 func _ready() -> void:
+	if model_path != "" and ResourceLoader.exists(model_path):
+		visual = (load(model_path) as PackedScene).instantiate() as Node3D
+		visual.name = "RocketModel"
+		add_child(visual)
+		for gi in visual.find_children("*", "GeometryInstance3D", true, false):
+			(gi as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		exhaust = visual.find_child("Exhaust", true, false) as Node3D
+		var glow_m := OmniLight3D.new()
+		glow_m.light_color = _color
+		glow_m.light_energy = 2.0
+		glow_m.omni_range = 3.0
+		if exhaust:
+			exhaust.add_child(glow_m)
+		else:
+			glow_m.position.z = 0.3
+			add_child(glow_m)
+		return
 	var body := MeshInstance3D.new()
 	var cm := CylinderMesh.new()
 	cm.top_radius = 0.03
@@ -68,7 +91,7 @@ func _physics_process(delta: float) -> void:
 	_trail_t -= delta
 	if _trail_t <= 0.0:
 		_trail_t = 0.03
-		_puff(from)
+		_puff(exhaust.global_position if exhaust and is_instance_valid(exhaust) else from)
 
 
 func _puff(at: Vector3) -> void:

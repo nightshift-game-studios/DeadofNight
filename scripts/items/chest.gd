@@ -2,8 +2,8 @@ class_name Chest
 extends StaticBody3D
 ## Loot chest. Press E to open; rolls the "chest" loot table (data/loot_tables.json)
 ## and pops the drops out as loot shards. main.gd re-arms every chest each round.
-## Also rolls the chest Gravemark source (Armory.on_chest_opened); the World pickup is stubbed: it pays straight into
-## Progress (Progress.gravemark_gained fires for HUD popups).
+## Also rolls the chest Gravemark source (Armory.on_chest_opened); it pays straight into
+## Progress and pops Desi's gravemark.glb token (scripts/items/gravemark_pickup.gd, cosmetic) (Progress.gravemark_gained fires for HUD popups).
 
 signal opened(chest: Chest)
 
@@ -49,7 +49,9 @@ func interact(_player: Node) -> void:
 	# Gravemark (Skillz): small chance x difficulty, max 1 per round / 2 per match from chests (data/armory.json).
 	var A = load("res://scripts/armory/armory.gd")
 	if A:
-		A.on_chest_opened(round_number)
+		var gm: int = A.on_chest_opened(round_number)
+		if gm > 0: # Desi's gravemark.glb token (cosmetic; already paid)
+			load("res://scripts/items/gravemark_pickup.gd").spawn(get_tree().current_scene, global_position, gm)
 	var t := create_tween()
 	t.tween_property(model, "scale", Vector3(1.1, 0.9, 1.1), 0.08)
 	t.tween_property(model, "scale", Vector3.ONE, 0.2)

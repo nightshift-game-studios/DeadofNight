@@ -362,9 +362,15 @@ static func flag(arch: String, key: String, fallback = false):
 	return _entry(arch).flags.get(key, fallback)
 
 
-## True when the archetype's loadout has Mine Lamp equipped (and tier-unlocked). Player F-toggle reads this.
+## True when the archetype's loadout has an F-toggle beam part equipped (and tier-unlocked): Mine Lamp, or since art
+## pass 2 the Lantern Rail (flags.flashlight). Player F-toggle reads this (name kept so player.gd needs no change).
 static func has_mine_lamp(arch: String) -> bool:
-	return bool(flag(arch, "mine_lamp", false))
+	return has_flashlight(arch)
+
+
+## Any equipped part with flags.flashlight (Mine Lamp, Lantern Rail).
+static func has_flashlight(arch: String) -> bool:
+	return bool(flag(arch, "flashlight", false)) or bool(flag(arch, "mine_lamp", false))
 
 
 ## SkillRunner: [{arch, id, def}] for every effect of every equipped attachment (gated to that archetype in hand).
@@ -378,7 +384,8 @@ static func flashlight_config(arch: String) -> Dictionary:
 	if not has_mine_lamp(arch):
 		return {}
 	var a := attachment(str(loadout(arch).get("grip", "mine_lamp")))
-	if not bool(a.get("flags", {}).get("mine_lamp", false)):
+	var af: Dictionary = a.get("flags", {})
+	if not (bool(af.get("mine_lamp", false)) or bool(af.get("flashlight", false))):
 		a = attachment("mine_lamp")
 	return flashlight_values(a)
 
@@ -604,6 +611,18 @@ static func award(n: int, source: String) -> int:
 ## main.gd _on_zombie_died (MAIN_HOOKS §9). Bosses: BossCatalog reward x drop mult for the first boss of a round,
 ## extra_boss_amount for later ones; echoes pay nothing; elites / specials / regulars roll their chance.
 static func on_zombie_died(zombie: Object, round_number: int = 0, roll: float = -1.0) -> int:
+	var paid := _zombie_payout(zombie, round_number, roll)
+	if paid > 0 and zombie is Node3D and (zombie as Node3D).is_inside_tree():
+		# Desi's gravemark.glb token pops out of the body and flies to the player (cosmetic, already paid).
+		var z := zombie as Node3D
+		load(PICKUP_SCRIPT).spawn(z.get_tree().current_scene, z.global_position, paid)
+	return paid
+
+
+const PICKUP_SCRIPT := "res://scripts/items/gravemark_pickup.gd"
+
+
+static func _zombie_payout(zombie: Object, round_number: int = 0, roll: float = -1.0) -> int:
 	_see_round(round_number)
 	if zombie == null:
 		return 0

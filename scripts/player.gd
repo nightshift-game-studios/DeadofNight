@@ -656,7 +656,9 @@ func _update_view(delta: float, sprinting: bool) -> void:
 	_gun_kick = _gun_kick.lerp(Vector3.ZERO, clamp(12.0 * delta, 0.0, 1.0))
 	var swap_dip := Vector3(0, -0.25, 0) * (_swap_t / 0.4)
 	var sprint_pose := Vector3(-0.05, -0.03, 0.05) if sprinting and hs > walk_speed else Vector3.ZERO
-	gun.position = gun.position.lerp(_gun_rest + bob + _gun_kick + swap_dip + sprint_pose, clamp(20.0 * delta, 0.0, 1.0))
+	var posed := _ads_posed()
+	gun.position = gun.position.lerp(_view_rest() + bob * (AdsProfileScr.ADS_BOB_MULT if posed else 1.0) \
+		+ _gun_kick * (0.35 if posed else 1.0) + swap_dip + sprint_pose, clamp(20.0 * delta, 0.0, 1.0))
 
 
 func add_shake(amount: float) -> void:
@@ -778,6 +780,7 @@ func _fire_round(w: WeaponItem) -> void:
 	var last_round := w.ammo == 0
 	_ev(&"shot_fired", {"weapon": w, "ammo_after": w.ammo, "last_round": last_round})
 	emit_ammo()
+	WeaponRigScr.on_fire(_gun_rig, w.ammo, minf(w.fire_interval(), 1.0)) # revolver cylinder turns, launcher Rocket hides
 	var any_hit := false
 
 	var base_damage := w.damage() * PerkSystem.damage_mult(w, self)
@@ -934,6 +937,7 @@ func reload() -> void:
 	_reload_tween = create_tween()
 	_reload_tween.tween_property(gun, "rotation_degrees:x", -35.0, t * 0.4)
 	_reload_tween.tween_callback(_snd.bind("reload_mag_in"))
+	_reload_tween.tween_callback(WeaponRigScr.on_reload.bind(_gun_rig, t * 0.4)) # Rocket back in, cylinder spin, tube rack
 	_reload_tween.tween_interval(t * 0.2)
 	_reload_tween.tween_property(gun, "rotation_degrees:x", 0.0, t * 0.4)
 	_reload_tween.tween_callback(_finish_reload.bind(w))
@@ -946,6 +950,7 @@ func _finish_reload(w: WeaponItem) -> void:
 	var taken: int = min(w.mag_size() - w.ammo, w.reserve)
 	w.ammo += taken
 	w.reserve -= taken
+	WeaponRigScr.on_reload(_gun_rig, 0.0) # Rocket visible even when the reload was finished early (Slide Loader)
 	PerkSystem.on_reload(w)
 	emit_ammo()
 	_ev(&"reload_finished", {"weapon": w})
@@ -1316,6 +1321,7 @@ func _tick_ads(_delta: float) -> void:
 	if next != ads_active:
 		ads_active = next
 		ads_changed.emit(ads_active)
+		WeaponRigScr.set_ads(_gun_rig, ads_active) # Ratchet Stock slider
 	var arch := ""
 	var w = inventory.get_equipped_weapon() if inventory else null
 	if w and "archetype" in w:
@@ -1371,6 +1377,8 @@ func _fit_attachments(w: WeaponItem) -> void:
 	if w == null or _gun_model == null or not is_instance_valid(_gun_model):
 		return
 	_gun_rig = WeaponRigScr.apply(_gun_model, w.archetype)
+	# ADS pose: Gun position that puts the sight line (optic SightPoint > gun SightPoint) on the screen centre.
+	_gun_rig["ads_pos"] = AdsProfileScr.ads_gun_position(WeaponRigScr.ads_offset(_gun_rig, gun), w.archetype)
 	var mz = _gun_rig.get("muzzle")
 	if mz is Node3D and (mz as Node3D).is_inside_tree():
 		muzzle.position = gun.to_local((mz as Node3D).global_position)
@@ -1391,3 +1399,12 @@ func _apply_flashlight_cfg(c: Dictionary) -> void:
 	_flashlight.spot_attenuation = float(c.get("light_attenuation", 1.1))
 	if c.get("color") is Color:
 		_flashlight.light_color = c.color
+
+
+## ADS view-model pose (Skillz MAIN_HOOKS §14c): sights on the screen centre while aiming (not mid-reload).
+func _ads_posed() -> bool:
+	return ads_active and not _reloading and _gun_rig.has("ads_pos")
+
+
+func _view_rest() -> Vector3:
+	return _gun_rig.ads_pos if _ads_posed() else _gun_rest

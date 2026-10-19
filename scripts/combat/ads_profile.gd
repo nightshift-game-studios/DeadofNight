@@ -120,6 +120,30 @@ static func input_action() -> String:
 	return INPUT_ACTION
 
 
+## ADS view-model pose (Skillz art pass 2, MAIN_HOOKS §14): while aiming, the Gun node moves so the weapon's sight line
+## (WeaponRig.sight_line: optic SightPoint > the gun's SightPoint, e.g. the revolver's y 0.0793 notch line) sits on the
+## camera's optical axis, EYE distance in front of the camera. Camera-space metres (view models are ~0.3-0.8 m long).
+const EYE_DIST_BY_FAMILY := {
+	"sidearm": 0.24,
+	"smg": 0.17,
+	"rifle": 0.16,
+	"shotgun": 0.17,
+	"sniper": 0.12,
+	"heavy": 0.2,
+}
+const ADS_BOB_MULT := 0.2 ## view bob scale while aiming
+
+
+static func ads_eye_distance(archetype_id: String) -> float:
+	return float(EYE_DIST_BY_FAMILY.get(family_for_archetype(archetype_id), 0.16))
+
+
+## Gun node position (camera space, Gun rotation 0) that puts `sight_in_gun` (the sight line point in the Gun node's
+## local space, WeaponRig.ads_offset) at (0, 0, -eye) on the screen centre.
+static func ads_gun_position(sight_in_gun: Vector3, archetype_id: String) -> Vector3:
+	return Vector3(0.0, 0.0, -ads_eye_distance(archetype_id)) - sight_in_gun
+
+
 ## Sniper family needs Gooey's scope overlay when ADS.
 static func wants_scope_overlay(archetype_id: String) -> bool:
 	if family_for_archetype(archetype_id) == "sniper":

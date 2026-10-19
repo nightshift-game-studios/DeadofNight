@@ -285,7 +285,15 @@ func _rebuild_detail() -> void:
 	for c in _right.get_children():
 		c.queue_free()
 	var type_name := _weapon_type_name()
-	_right.add_child(UIStyle.label("%s UPGRADES — applies to all %ss" % [type_name.to_upper(), type_name], 15, UIStyle.RUST, true))
+	var hdr := HBoxContainer.new()
+	hdr.name = "WeaponHeader"
+	hdr.add_theme_constant_override("separation", 10)
+	_right.add_child(hdr)
+	var ht := UIStyle.label("%s UPGRADES — applies to all %ss" % [type_name.to_upper(), type_name], 15, UIStyle.RUST, true)
+	ht.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ht.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hdr.add_child(ht)
+	hdr.add_child(_weapon_ip_plate())
 	var ups: Array = api.list_upgrades(_weapon_id)
 	if ups.is_empty():
 		_right.add_child(UIStyle.label("no upgrade track", 12, UIStyle.BONE_DIM))
@@ -295,6 +303,28 @@ func _rebuild_detail() -> void:
 	var slots: Array = api.list_slots(_weapon_id)
 	for sl in slots:
 		_right.add_child(_slot_section(str(sl.id), str(sl.name), str(sl.get("equipped", ""))))
+
+
+## Item Power for the selected type: best owned (or baseline) total + "rolled + Rework" line (Armory §1a).
+func _weapon_ip_plate() -> Control:
+	var bd: Dictionary = api.item_power_breakdown(_weapon_id) if api and api.has_method("item_power_breakdown") else {}
+	var p := PanelContainer.new()
+	p.name = "WeaponIP"
+	p.set_meta("breakdown", bd)
+	var st := UIStyle.cut_box(Color(UIStyle.INK, 0.9), UIStyle.BONE_DIM, 2, 8)
+	st.set_content_margin_all(5)
+	st.content_margin_left = 10
+	st.content_margin_right = 10
+	p.add_theme_stylebox_override("panel", st)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 8)
+	p.add_child(h)
+	var src := str(bd.get("source", "baseline"))
+	var tag := UIStyle.label("BEST\nOWNED" if src == "best_owned" else ("THIS\nITEM" if src == "item" else "BASE\nLINE"), 9, UIStyle.BONE_DIM, true)
+	tag.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(tag)
+	h.add_child(UIStyle.ip_breakdown_block(bd, 22, 10, HORIZONTAL_ALIGNMENT_RIGHT))
+	return p
 
 
 func _upgrade_track(u: Dictionary) -> PanelContainer:
@@ -377,6 +407,7 @@ func _att_row(a: Dictionary) -> PanelContainer:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 8)
 	p.add_child(h)
+	h.add_child(UIStyle.attachment_icon(str(a.id), 40, str(a.get("slot", ""))))
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_theme_constant_override("separation", -1)
