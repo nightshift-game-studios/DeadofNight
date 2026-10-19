@@ -37,6 +37,10 @@ const AdsProfileScr := preload("res://scripts/combat/ads_profile.gd")
 signal ads_changed(active: bool) ## Gooey sniper scope overlay listens when AdsProfile.wants_scope_overlay(archetype)
 var ads_active: bool = false
 var _hip_fov: float = 75.0
+const ArmoryScr := preload("res://scripts/armory/armory.gd")
+## Mine Lamp (Skillz §10 + Mapz): camera SpotLight3D, F to toggle, gated on Armory.has_mine_lamp(archetype).
+var _flashlight: SpotLight3D
+var _flashlight_on: bool = false
 const HEAD_HITBOX_LAYER := 32 ## zombie head hitboxes (enemy.gd); only weapon rays query it
 
 ## Class (stats + Q ability + grenade). If empty, the class chosen in Progress is loaded.
@@ -190,6 +194,17 @@ func _ready() -> void:
 	health = max_health
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_apply_look_settings()
+	_flashlight = SpotLight3D.new()
+	_flashlight.name = "Flashlight"
+	camera.add_child(_flashlight)
+	_flashlight.spot_range = 22.0
+	_flashlight.spot_angle = 28.0
+	_flashlight.light_energy = 2.4
+	_flashlight.light_color = Color(0.92, 0.95, 1.0)
+	_flashlight.shadow_enabled = false
+	_flashlight.spot_attenuation = 1.1
+	_flashlight.visible = false
+	_flashlight.position = Vector3(0.12, -0.05, -0.1)
 	var _st := get_node_or_null("/root/Settings")
 	if _st and not _st.changed.is_connected(_on_settings_changed):
 		_st.changed.connect(_on_settings_changed)
@@ -364,6 +379,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		melee()
 	elif event.is_action_pressed("interact"):
 		_interact()
+	elif event.is_action_pressed("flashlight"):
+		_toggle_flashlight()
+		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("weapon_1"):
 		inventory.equip_index(0)
 	elif event.is_action_pressed("weapon_2"):
@@ -665,6 +683,7 @@ func _on_weapon_equipped(w: WeaponItem) -> void:
 	if w == null:
 		gun.visible = false
 		weapon_changed.emit(null)
+		_sync_flashlight()
 		return
 	_swap_t = w.swap_time()
 	_cooldown = max(_cooldown, _swap_t)
@@ -673,6 +692,7 @@ func _on_weapon_equipped(w: WeaponItem) -> void:
 		_snd("weapon_swap")
 	_build_view_model(w)
 	weapon_changed.emit(w)
+	_sync_flashlight()
 	emit_ammo()
 
 
@@ -1212,6 +1232,7 @@ func take_damage(amount: float, attacker: Node = null) -> void:
 	if health == 0:
 		dead = true
 		input_enabled = false
+		_set_flashlight(false)
 		_snd("player_death")
 		var a := _sfx()
 		if a:
@@ -1298,3 +1319,40 @@ func _tick_ads(_delta: float) -> void:
 	var want := AdsProfileScr.target_fov(ads_active, arch, _hip_fov)
 	if camera:
 		camera.fov = lerpf(camera.fov, want, clampf(12.0 * _delta, 0.0, 1.0))
+
+
+# ------------------------------------------------------------------ Mine Lamp (Skillz §10)
+
+func _weapon_archetype() -> String:
+	var w = current_weapon()
+	if w and "archetype" in w:
+		return str(w.archetype)
+	return ""
+
+
+func _toggle_flashlight() -> void:
+	if _flashlight == null or dead:
+		return
+	# Gate: only while Mine Lamp is on the weapon in hand (Armory loadout per archetype).
+	if not ArmoryScr.has_mine_lamp(_weapon_archetype()):
+		_set_flashlight(false)
+		return
+	_set_flashlight(not _flashlight_on)
+
+
+func _set_flashlight(on: bool) -> void:
+	if _flashlight == null:
+		return
+	var was := _flashlight_on
+	_flashlight_on = on and ArmoryScr.has_mine_lamp(_weapon_archetype())
+	_flashlight.visible = _flashlight_on
+	if was != _flashlight_on:
+		var a := _sfx()
+		if a and a.has_method("play"):
+			a.play("ui_hover") # soft click; replace with a dedicated cue later if desired
+
+
+## Call whenever the active weapon or Armory loadout changes so an unequipped lamp cannot stay on.
+func _sync_flashlight() -> void:
+	if not ArmoryScr.has_mine_lamp(_weapon_archetype()):
+		_set_flashlight(false)

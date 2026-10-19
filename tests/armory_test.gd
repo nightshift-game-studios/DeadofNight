@@ -354,6 +354,42 @@ func _run() -> void:
 	runner.queue_free()
 	fp.queue_free()
 
+	# ------------------------------------------------------------ Mine Lamp (F-toggle flashlight attachment)
+	prog.add_gravemark(30, "test")
+	check(not A.has_mine_lamp("auto_rifle") and not A.flag("auto_rifle", "mine_lamp", false),
+		"has_mine_lamp false with empty loadout")
+	check(A.attachment("mine_lamp").slot == "grip" and A.attachment("mine_lamp").get("flags", {}).get("mine_lamp") == true
+		and int(A.attachment("mine_lamp").cost) == 5 and int(A.attachment("mine_lamp").tier) == 2,
+		"Mine Lamp: grip/Underbarrel, cost 5, tier 2, mine_lamp flag")
+	check(A.is_compatible("mine_lamp", "auto_rifle") and A.is_compatible("mine_lamp", "sniper_rifle")
+		and not A.is_compatible("mine_lamp", "sidearm"), "Mine Lamp fits rifles/SMG/shotgun/sniper, not sidearm")
+	check(A.tier_requirement("mine_lamp") == 2, "Mine Lamp needs Rework II to equip")
+	var mine_locked: Dictionary = api.list_attachments("auto_rifle", "grip").filter(func(a): return a.id == "mine_lamp")[0]
+	# auto_rifle is at Rework IV from Echo Drum block above — reset then re-check lock
+	prog.armory.upgrades["auto_rifle"] = 0
+	prog.notify_armory("load", "", false)
+	mine_locked = api.list_attachments("auto_rifle", "grip").filter(func(a): return a.id == "mine_lamp")[0]
+	check(mine_locked.state == "locked" and not mine_locked.requirements.is_empty(), "Mine Lamp locked at Rework 0")
+	check(api.purchase("upg_auto_rifle") and api.purchase("upg_auto_rifle") and A.upgrade_tier("auto_rifle") == 2, "Rework II for Mine Lamp")
+	check(api.purchase("mine_lamp") and api.currency_balance() >= 0 and A.owned("mine_lamp"), "buy Mine Lamp for 5")
+	check(api.equip_attachment("auto_rifle", "grip", "mine_lamp") and A.has_mine_lamp("auto_rifle")
+		and bool(A.flag("auto_rifle", "flashlight", false)), "equip Mine Lamp -> has_mine_lamp + flashlight flag")
+	check(api.unequip("auto_rifle", "grip") and not A.has_mine_lamp("auto_rifle"), "unequip clears has_mine_lamp")
+	check(api.equip_attachment("auto_rifle", "grip", "mine_lamp") and api.equip_attachment("auto_rifle", "optic", "crows_eye_3x")
+		and A.has_mine_lamp("auto_rifle") and A.loadout("auto_rifle").has("optic"),
+		"optic + Mine Lamp both equipped (Underbarrel choice)")
+	# cost curve still valid after the new part
+	var curve_ok := true
+	var prev_c := 0
+	for t in range(1, A.max_tier() + 1):
+		var c: int = A.tier_cost("auto_rifle", t)
+		if t > 1 and c < int(ceil(prev_c * 1.6)):
+			curve_ok = false
+		prev_c = c
+	check(curve_ok and A.tier_cost("auto_rifle", 5) == 36 and A.upgrade_total_cost("auto_rifle") == 76,
+		"upgrade cost curve still 3/6/11/20/36 after Mine Lamp")
+	check(A.attachment_ids().size() == 38, "38 attachments including Mine Lamp")
+
 	# ------------------------------------------------------------ cleanup
 	_reset(prog)
 	D.set_active("")

@@ -9,7 +9,7 @@ extends StaticBody3D
 signal opened(door: MapDoor)
 
 @export var door_id: StringName = &""
-@export var cost: int = 750
+@export var cost: int = 0  ## default 0 so non-zero prices always serialize in .tscn (Godot omits export==default)
 @export var connects: PackedStringArray = []
 @export var opens_areas: PackedStringArray = []
 @export var prompt_name: String = "Door"

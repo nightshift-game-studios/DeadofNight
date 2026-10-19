@@ -353,13 +353,18 @@ static func ads_mods(arch: String) -> Dictionary:
 
 
 ## Presentation flags for player.gd / HUD hooks: tracer_hidden, flash_mult, scope_overlay, outline_elites,
-## heartbeat_counter (+ heartbeat_radius), bipod, flashlight.
+## heartbeat_counter (+ heartbeat_radius), bipod, flashlight, mine_lamp.
 static func flags(arch: String) -> Dictionary:
 	return _entry(arch).flags
 
 
 static func flag(arch: String, key: String, fallback = false):
 	return _entry(arch).flags.get(key, fallback)
+
+
+## True when the archetype's loadout has Mine Lamp equipped (and tier-unlocked). Player F-toggle reads this.
+static func has_mine_lamp(arch: String) -> bool:
+	return bool(flag(arch, "mine_lamp", false))
 
 
 ## SkillRunner: [{arch, id, def}] for every effect of every equipped attachment (gated to that archetype in hand).

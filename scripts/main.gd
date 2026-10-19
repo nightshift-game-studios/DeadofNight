@@ -12,6 +12,7 @@ extends Node3D
 
 const ZOMBIE_SCENE := preload("res://scenes/enemy.tscn")
 const BossCatalogScr := preload("res://scripts/enemies/boss_catalog.gd")
+const ArmoryScr := preload("res://scripts/armory/armory.gd")
 const PICKUP_SCENE := preload("res://scenes/pickup.tscn")
 const CharacterScreen := preload("res://scripts/ui/character_screen.gd")
 const SkillTreeMenu := preload("res://scripts/ui/skill_tree_menu.gd")
@@ -97,6 +98,7 @@ func _ready() -> void:
 	# Difficulty (Skillz): scale the wave exports by the map's profile (data/difficulty.json) and make it active.
 	# Also turns on the reward scaling (XP in Progress.record_match, loot rarity bias in GearDB.roll_rarity).
 	Difficulty.apply_to_main(self)
+	Progress.begin_match_gravemarks() # Gravemark per-match cap and per-round drop limits start fresh
 	_setup_ambience()
 	# Bake the navmesh from the level's static colliders at startup, so it always
 	# matches the level even after you move things around in the editor.
@@ -352,15 +354,14 @@ func _on_zombie_died(zombie: Node) -> void:
 		return
 	kills += 1
 	var pay := points_per_kill
-	var gravemark_gain := 0
 	if zombie.has_meta("is_boss") and zombie.get_meta("is_boss"):
 		var bid := str(zombie.get_meta("boss_id", ""))
 		pay = BossCatalogScr.kill_points(bid, points_per_kill)
-		gravemark_gain = BossCatalogScr.gravemark_scaled(bid) # int for Progress when currency lands
 	elif zombie.has_meta("boss_echo"):
 		pay = points_per_kill # echoes: normal kill, no Gravemark
 	player.add_points(int(round(pay * player.mod_stat("points_kill_mult", 1.0))), "kill")
-	# TODO (attachments pass): Progress.add_gravemark(gravemark_gain) when Gravemark is wired
+	# Gravemark (Skillz): bosses (first per round full, later +1), elites 20%, Soldiers 0.6%, others 0.15%; echoes 0.
+	ArmoryScr.on_zombie_died(zombie, current_round)
 	for item in GearDB.roll_table("zombie", current_round, player.mod_stat("drop_chance_add", 0.0)):
 		spawn_pickup(item, (zombie as Node3D).global_position)
 	hud.set_enemies(_to_spawn + _alive)
@@ -369,6 +370,7 @@ func _on_zombie_died(zombie: Node) -> void:
 		_snd("round_end_stinger")
 		_music("break")
 		GameEvents.emit_event(&"round_cleared", {"player": player, "round": current_round})
+		ArmoryScr.on_round_cleared(current_round) # milestone: 1 Gravemark at rounds 10 / 20 / 30 (x difficulty)
 		if field_cards_enabled and current_round >= 1:
 			_offer_pending = true
 			_offer_delay = offer_delay

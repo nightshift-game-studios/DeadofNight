@@ -6841,9 +6841,9 @@ metadata/prop = "prop_rubble_small"
 
 [node name="prop_rubble_small" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_West" unique_id=1275456814 instance=ExtResource("4_8t7uj")]
 
-[node name="prop_rubble_small" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_West/prop_rubble_small" unique_id=697362181]
+[node name="prop_rubble_small" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_West/prop_rubble_small" unique_id=414875146]
 
-[node name="Rubble" type="MeshInstance3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_West/prop_rubble_small/prop_rubble_small" unique_id=1267412583]
+[node name="Rubble" type="MeshInstance3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_West/prop_rubble_small/prop_rubble_small" unique_id=532129943]
 mesh = SubResource("ArrayMesh_j4gsl")
 
 [node name="Rubble_East" type="Marker3D" parent="NavigationRegion3D/Geometry/DesiDebris" unique_id=936698960]
@@ -6852,18 +6852,18 @@ metadata/prop = "prop_rubble_medium"
 
 [node name="prop_rubble_medium" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_East" unique_id=146971853 instance=ExtResource("3_j4q2t")]
 
-[node name="prop_rubble_medium" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_East/prop_rubble_medium" unique_id=1988866152]
+[node name="prop_rubble_medium" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_East/prop_rubble_medium" unique_id=1684416598]
 
-[node name="prop_rubble_medium" type="MeshInstance3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_East/prop_rubble_medium/prop_rubble_medium" unique_id=1997108467]
+[node name="prop_rubble_medium" type="MeshInstance3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_East/prop_rubble_medium/prop_rubble_medium" unique_id=289620045]
 visible = false
 mesh = SubResource("ArrayMesh_mktsn")
 
-[node name="StaticBody3D" type="StaticBody3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_East/prop_rubble_medium/prop_rubble_medium/prop_rubble_medium" unique_id=716565585]
+[node name="StaticBody3D" type="StaticBody3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_East/prop_rubble_medium/prop_rubble_medium/prop_rubble_medium" unique_id=157656014]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_East/prop_rubble_medium/prop_rubble_medium/prop_rubble_medium/StaticBody3D" unique_id=775204961]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_East/prop_rubble_medium/prop_rubble_medium/prop_rubble_medium/StaticBody3D" unique_id=156098743]
 shape = SubResource("ConcavePolygonShape3D_w677q")
 
-[node name="Rubble" type="MeshInstance3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_East/prop_rubble_medium/prop_rubble_medium" unique_id=1745426588]
+[node name="Rubble" type="MeshInstance3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_East/prop_rubble_medium/prop_rubble_medium" unique_id=1252332442]
 mesh = SubResource("ArrayMesh_bfuxr")
 
 [node name="Rubble_VaultDoor" type="Marker3D" parent="NavigationRegion3D/Geometry/DesiDebris" unique_id=299922570]
@@ -6872,9 +6872,9 @@ metadata/prop = "prop_rubble_small"
 
 [node name="prop_rubble_small" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_VaultDoor" unique_id=1945434908 instance=ExtResource("4_8t7uj")]
 
-[node name="prop_rubble_small" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_VaultDoor/prop_rubble_small" unique_id=1353036086]
+[node name="prop_rubble_small" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_VaultDoor/prop_rubble_small" unique_id=1887778198]
 
-[node name="Rubble" type="MeshInstance3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_VaultDoor/prop_rubble_small/prop_rubble_small" unique_id=63316545]
+[node name="Rubble" type="MeshInstance3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_VaultDoor/prop_rubble_small/prop_rubble_small" unique_id=1317500815]
 mesh = SubResource("ArrayMesh_j4gsl")
 
 [node name="Scrap_Chimney" type="Marker3D" parent="NavigationRegion3D/Geometry/DesiDebris" unique_id=1106660961]
@@ -6903,18 +6903,18 @@ metadata/prop = "prop_scrap_rebar"
 
 [node name="prop_scrap_rebar" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Scrap_Yard" unique_id=928666203 instance=ExtResource("5_q7mtw")]
 
-[node name="prop_scrap_rebar" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Scrap_Yard/prop_scrap_rebar" unique_id=728657364]
+[node name="prop_scrap_rebar" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Scrap_Yard/prop_scrap_rebar" unique_id=545619314]
 
-[node name="prop_scrap_rebar" type="MeshInstance3D" parent="NavigationRegion3D/Geometry/DesiDebris/Scrap_Yard/prop_scrap_rebar/prop_scrap_rebar" unique_id=1677211074]
+[node name="prop_scrap_rebar" type="MeshInstance3D" parent="NavigationRegion3D/Geometry/DesiDebris/Scrap_Yard/prop_scrap_rebar/prop_scrap_rebar" unique_id=16448356]
 visible = false
 mesh = SubResource("ArrayMesh_jrj4o")
 
-[node name="StaticBody3D" type="StaticBody3D" parent="NavigationRegion3D/Geometry/DesiDebris/Scrap_Yard/prop_scrap_rebar/prop_scrap_rebar/prop_scrap_rebar" unique_id=2098881165]
+[node name="StaticBody3D" type="StaticBody3D" parent="NavigationRegion3D/Geometry/DesiDebris/Scrap_Yard/prop_scrap_rebar/prop_scrap_rebar/prop_scrap_rebar" unique_id=904965525]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/DesiDebris/Scrap_Yard/prop_scrap_rebar/prop_scrap_rebar/prop_scrap_rebar/StaticBody3D" unique_id=1941009096]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/DesiDebris/Scrap_Yard/prop_scrap_rebar/prop_scrap_rebar/prop_scrap_rebar/StaticBody3D" unique_id=217698257]
 shape = SubResource("ConcavePolygonShape3D_1saa5")
 
-[node name="Scrap" type="MeshInstance3D" parent="NavigationRegion3D/Geometry/DesiDebris/Scrap_Yard/prop_scrap_rebar/prop_scrap_rebar" unique_id=136155571]
+[node name="Scrap" type="MeshInstance3D" parent="NavigationRegion3D/Geometry/DesiDebris/Scrap_Yard/prop_scrap_rebar/prop_scrap_rebar" unique_id=607309013]
 mesh = SubResource("ArrayMesh_t0kht")
 
 [node name="Slag_SE" type="Marker3D" parent="NavigationRegion3D/Geometry/DesiDebris" unique_id=185171591]
@@ -6963,18 +6963,18 @@ metadata/prop = "prop_slag_heap"
 
 [node name="prop_slag_heap" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Slag_Yard" unique_id=1771730605 instance=ExtResource("6_ei3jx")]
 
-[node name="prop_slag_heap" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Slag_Yard/prop_slag_heap" unique_id=1384688562]
+[node name="prop_slag_heap" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Slag_Yard/prop_slag_heap" unique_id=90645178]
 
-[node name="prop_slag_heap" type="MeshInstance3D" parent="NavigationRegion3D/Geometry/DesiDebris/Slag_Yard/prop_slag_heap/prop_slag_heap" unique_id=256683832]
+[node name="prop_slag_heap" type="MeshInstance3D" parent="NavigationRegion3D/Geometry/DesiDebris/Slag_Yard/prop_slag_heap/prop_slag_heap" unique_id=1200460083]
 visible = false
 mesh = SubResource("ArrayMesh_budr4")
 
-[node name="StaticBody3D" type="StaticBody3D" parent="NavigationRegion3D/Geometry/DesiDebris/Slag_Yard/prop_slag_heap/prop_slag_heap/prop_slag_heap" unique_id=1380325021]
+[node name="StaticBody3D" type="StaticBody3D" parent="NavigationRegion3D/Geometry/DesiDebris/Slag_Yard/prop_slag_heap/prop_slag_heap/prop_slag_heap" unique_id=1722597221]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/DesiDebris/Slag_Yard/prop_slag_heap/prop_slag_heap/prop_slag_heap/StaticBody3D" unique_id=1340340634]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/DesiDebris/Slag_Yard/prop_slag_heap/prop_slag_heap/prop_slag_heap/StaticBody3D" unique_id=1570493623]
 shape = SubResource("ConcavePolygonShape3D_papnu")
 
-[node name="Slag" type="MeshInstance3D" parent="NavigationRegion3D/Geometry/DesiDebris/Slag_Yard/prop_slag_heap/prop_slag_heap" unique_id=1293935554]
+[node name="Slag" type="MeshInstance3D" parent="NavigationRegion3D/Geometry/DesiDebris/Slag_Yard/prop_slag_heap/prop_slag_heap" unique_id=1215377844]
 mesh = SubResource("ArrayMesh_rgwgk")
 
 [node name="DesiCars" type="Node3D" parent="NavigationRegion3D/Geometry" unique_id=1759596902]
@@ -7020,6 +7020,7 @@ shape = SubResource("ConcavePolygonShape3D_klmox")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -9)
 script = ExtResource("10_qgugp")
 door_id = &"D1"
+cost = 750
 connects = PackedStringArray("start", "vault")
 opens_areas = PackedStringArray("vault")
 prompt_name = "Vault Hatch"
@@ -11016,36 +11017,36 @@ metadata/prop = "prop_barricade_wall_breach"
 [node name="prop_barricade_wall_breach" type="Node3D" parent="Dressing/BreachSlot_Spawn2" unique_id=1204353600 instance=ExtResource("34_4fboe")]
 transform = Transform3D(1.15, 0, 0, 0, 1.15, 0, 0, 0, 1.15, 0, 0, 0)
 
-[node name="prop_barricade_wall_breach" type="Node3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach" unique_id=1586886075]
+[node name="prop_barricade_wall_breach" type="Node3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach" unique_id=269778784]
 
-[node name="Board_01" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=234486040]
+[node name="Board_01" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=1851854518]
 mesh = SubResource("ArrayMesh_fs43l")
 
-[node name="Board_02" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=1040925072]
+[node name="Board_02" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=1222188023]
 mesh = SubResource("ArrayMesh_6j0go")
 
-[node name="Board_03" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=1600022319]
+[node name="Board_03" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=2061967179]
 mesh = SubResource("ArrayMesh_ruuk7")
 
-[node name="Board_04" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=1695322330]
+[node name="Board_04" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=979723954]
 mesh = SubResource("ArrayMesh_phv3k")
 
-[node name="Board_05" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=128985364]
+[node name="Board_05" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=1861522709]
 mesh = SubResource("ArrayMesh_33gxy")
 
-[node name="Board_06" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=1174889977]
+[node name="Board_06" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=234044958]
 mesh = SubResource("ArrayMesh_skp3y")
 
-[node name="Frame" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=657185136]
+[node name="Frame" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=426423715]
 mesh = SubResource("ArrayMesh_t7avf")
 
-[node name="prop_barricade_wall_breach" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=1882376428]
+[node name="prop_barricade_wall_breach" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=806472851]
 visible = false
 mesh = SubResource("ArrayMesh_w307x")
 
-[node name="StaticBody3D" type="StaticBody3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=1358702728]
+[node name="StaticBody3D" type="StaticBody3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=724602664]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach/prop_barricade_wall_breach/prop_barricade_wall_breach/StaticBody3D" unique_id=761423530]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Dressing/BreachSlot_Spawn2/prop_barricade_wall_breach/prop_barricade_wall_breach/prop_barricade_wall_breach/StaticBody3D" unique_id=1241981027]
 shape = SubResource("ConcavePolygonShape3D_6vxny")
 
 [node name="BreachSlot_Spawn3" type="Marker3D" parent="Dressing" unique_id=867564907]
@@ -11055,36 +11056,36 @@ metadata/prop = "prop_barricade_wall_breach"
 [node name="prop_barricade_wall_breach" type="Node3D" parent="Dressing/BreachSlot_Spawn3" unique_id=1960288648 instance=ExtResource("34_4fboe")]
 transform = Transform3D(1.15, 0, 0, 0, 1.15, 0, 0, 0, 1.15, 0, 0, 0)
 
-[node name="prop_barricade_wall_breach" type="Node3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach" unique_id=1488212660]
+[node name="prop_barricade_wall_breach" type="Node3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach" unique_id=2012849548]
 
-[node name="Board_01" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=1380793569]
+[node name="Board_01" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=510169942]
 mesh = SubResource("ArrayMesh_fs43l")
 
-[node name="Board_02" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=1262470550]
+[node name="Board_02" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=345148428]
 mesh = SubResource("ArrayMesh_6j0go")
 
-[node name="Board_03" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=559889465]
+[node name="Board_03" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=151308831]
 mesh = SubResource("ArrayMesh_ruuk7")
 
-[node name="Board_04" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=1132782085]
+[node name="Board_04" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=515052259]
 mesh = SubResource("ArrayMesh_phv3k")
 
-[node name="Board_05" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=1953439483]
+[node name="Board_05" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=1259610192]
 mesh = SubResource("ArrayMesh_33gxy")
 
-[node name="Board_06" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=1515084033]
+[node name="Board_06" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=1249711547]
 mesh = SubResource("ArrayMesh_skp3y")
 
-[node name="Frame" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=1382590662]
+[node name="Frame" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=554354816]
 mesh = SubResource("ArrayMesh_t7avf")
 
-[node name="prop_barricade_wall_breach" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=457095444]
+[node name="prop_barricade_wall_breach" type="MeshInstance3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=397140598]
 visible = false
 mesh = SubResource("ArrayMesh_w307x")
 
-[node name="StaticBody3D" type="StaticBody3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=1831314153]
+[node name="StaticBody3D" type="StaticBody3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach/prop_barricade_wall_breach/prop_barricade_wall_breach" unique_id=1914981977]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach/prop_barricade_wall_breach/prop_barricade_wall_breach/StaticBody3D" unique_id=1325706870]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Dressing/BreachSlot_Spawn3/prop_barricade_wall_breach/prop_barricade_wall_breach/prop_barricade_wall_breach/StaticBody3D" unique_id=1759995539]
 shape = SubResource("ConcavePolygonShape3D_6vxny")
 
 [node name="BreachSlot_Vault" type="Marker3D" parent="Dressing" unique_id=1765494122]
@@ -11131,40 +11132,40 @@ metadata/prop = "prop_barricade_window"
 
 [node name="prop_barricade_window" type="Node3D" parent="Dressing/BreachSlot_VaultE" unique_id=1289498268 instance=ExtResource("35_5w7cr")]
 
-[node name="prop_barricade_window" type="Node3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window" unique_id=555105071]
+[node name="prop_barricade_window" type="Node3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window" unique_id=1874320935]
 
-[node name="Board_01" type="MeshInstance3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window/prop_barricade_window" unique_id=68395102]
+[node name="Board_01" type="MeshInstance3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window/prop_barricade_window" unique_id=439636118]
 mesh = SubResource("ArrayMesh_2sek3")
 
-[node name="Board_02" type="MeshInstance3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window/prop_barricade_window" unique_id=2064921598]
+[node name="Board_02" type="MeshInstance3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window/prop_barricade_window" unique_id=708446319]
 mesh = SubResource("ArrayMesh_wb2og")
 
-[node name="Board_03" type="MeshInstance3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window/prop_barricade_window" unique_id=57327633]
+[node name="Board_03" type="MeshInstance3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window/prop_barricade_window" unique_id=415512648]
 mesh = SubResource("ArrayMesh_b6ne7")
 
-[node name="Board_04" type="MeshInstance3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window/prop_barricade_window" unique_id=1413134298]
+[node name="Board_04" type="MeshInstance3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window/prop_barricade_window" unique_id=508744937]
 mesh = SubResource("ArrayMesh_sttg7")
 
-[node name="Board_05" type="MeshInstance3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window/prop_barricade_window" unique_id=1730830812]
+[node name="Board_05" type="MeshInstance3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window/prop_barricade_window" unique_id=2099663434]
 mesh = SubResource("ArrayMesh_bomqi")
 
-[node name="Board_06" type="MeshInstance3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window/prop_barricade_window" unique_id=293370924]
+[node name="Board_06" type="MeshInstance3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window/prop_barricade_window" unique_id=204361831]
 mesh = SubResource("ArrayMesh_cak75")
 
-[node name="Frame" type="MeshInstance3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window/prop_barricade_window" unique_id=454701032]
+[node name="Frame" type="MeshInstance3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window/prop_barricade_window" unique_id=471399031]
 mesh = SubResource("ArrayMesh_iihvh")
 
-[node name="prop_barricade_window" type="MeshInstance3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window/prop_barricade_window" unique_id=312974293]
+[node name="prop_barricade_window" type="MeshInstance3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window/prop_barricade_window" unique_id=468179490]
 visible = false
 mesh = SubResource("ArrayMesh_sn5gr")
 
-[node name="StaticBody3D" type="StaticBody3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window/prop_barricade_window/prop_barricade_window" unique_id=553179784]
+[node name="StaticBody3D" type="StaticBody3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window/prop_barricade_window/prop_barricade_window" unique_id=627446882]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window/prop_barricade_window/prop_barricade_window/StaticBody3D" unique_id=1301689414]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Dressing/BreachSlot_VaultE/prop_barricade_window/prop_barricade_window/prop_barricade_window/StaticBody3D" unique_id=462023910]
 shape = SubResource("ConcavePolygonShape3D_utguy")
 
 [node name="PlayerSpawn" type="Marker3D" parent="." unique_id=1468941128]
-transform = Transform3D(-1, 0, -1.2246469e-16, 0, 1, 0, 1.2246469e-16, 0, -1, 0, 0.1, 17.5)
+transform = Transform3D(0.966235, 0, -0.25766268, 0, 1.0000001, 0, 0.25766268, 0, 0.966235, 2, 0.1, 15.5)
 
 [node name="SpawnPoints" type="Node3D" parent="." unique_id=394444137]
 
@@ -11572,7 +11573,7 @@ omni_attenuation = 1.3
 [node name="VaultBeacon0" type="OmniLight3D" parent="NightKit" unique_id=1903128809]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9, 4.5, -15)
 light_color = Color(1, 0.15, 0.08, 1)
-light_energy = 1.8
+light_energy = 1.8071502
 distance_fade_enabled = true
 distance_fade_begin = 22.0
 distance_fade_length = 12.0
@@ -11591,7 +11592,7 @@ mesh = SubResource("BoxMesh_xqjbr")
 [node name="VaultBeacon1" type="OmniLight3D" parent="NightKit" unique_id=35560623]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 4.5, -15)
 light_color = Color(1, 0.15, 0.08, 1)
-light_energy = 1.8
+light_energy = 1.3667866
 distance_fade_enabled = true
 distance_fade_begin = 22.0
 distance_fade_length = 12.0
@@ -11610,7 +11611,7 @@ mesh = SubResource("BoxMesh_d66yg")
 [node name="VaultBeacon2" type="OmniLight3D" parent="NightKit" unique_id=803849120]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.5, -20)
 light_color = Color(1, 0.15, 0.08, 1)
-light_energy = 1.8
+light_energy = 1.7117556
 distance_fade_enabled = true
 distance_fade_begin = 22.0
 distance_fade_length = 12.0
@@ -11629,7 +11630,7 @@ mesh = SubResource("BoxMesh_bvf38")
 [node name="VaultBeacon3" type="OmniLight3D" parent="NightKit" unique_id=360332556]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.5, -10.2)
 light_color = Color(1, 0.15, 0.08, 1)
-light_energy = 1.8
+light_energy = 1.175874
 distance_fade_enabled = true
 distance_fade_begin = 22.0
 distance_fade_length = 12.0
@@ -11684,6 +11685,7 @@ process_material = SubResource("ParticleProcessMaterial_ogaho")
 draw_pass_1 = SubResource("QuadMesh_4bs62")
 
 [node name="Flash" type="OmniLight3D" parent="NightKit/Spark_XFMR_A" unique_id=1866567091]
+light_color = Color(0.7, 0.85, 1, 1)
 light_energy = 0.0
 omni_range = 4.5
 
@@ -11701,6 +11703,7 @@ process_material = SubResource("ParticleProcessMaterial_6m1y8")
 draw_pass_1 = SubResource("QuadMesh_a0cvp")
 
 [node name="Flash" type="OmniLight3D" parent="NightKit/Spark_XFMR_B" unique_id=1912595516]
+light_color = Color(0.7, 0.85, 1, 1)
 light_energy = 0.0
 omni_range = 4.5
 
@@ -11718,6 +11721,7 @@ process_material = SubResource("ParticleProcessMaterial_mtltl")
 draw_pass_1 = SubResource("QuadMesh_jwkp3")
 
 [node name="Flash" type="OmniLight3D" parent="NightKit/Spark_Cabinet" unique_id=2118148923]
+light_color = Color(0.7, 0.85, 1, 1)
 light_energy = 0.0
 omni_range = 4.5
 
@@ -11732,7 +11736,7 @@ mesh = SubResource("BoxMesh_1iy5w")
 [node name="Light" type="OmniLight3D" parent="NightKit/WorkYard" unique_id=1950403552]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
 light_color = Color(1, 0.92, 0.7, 1)
-light_energy = 1.6
+light_energy = 1.6109512
 distance_fade_enabled = true
 distance_fade_begin = 22.0
 distance_fade_length = 12.0
@@ -11754,7 +11758,7 @@ mesh = SubResource("BoxMesh_0jabf")
 [node name="Light" type="OmniLight3D" parent="NightKit/WorkYardE" unique_id=293323430]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
 light_color = Color(1, 0.92, 0.7, 1)
-light_energy = 1.6
+light_energy = 1.8614401
 distance_fade_enabled = true
 distance_fade_begin = 22.0
 distance_fade_length = 12.0
@@ -11788,7 +11792,7 @@ draw_pass_1 = SubResource("QuadMesh_ofdje")
 [node name="Light" type="OmniLight3D" parent="NightKit/BarrelSW" unique_id=1147050656]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 light_color = Color(1, 0.45, 0.15, 1)
-light_energy = 2.0
+light_energy = 3.0101144
 distance_fade_enabled = true
 distance_fade_begin = 22.0
 distance_fade_length = 12.0

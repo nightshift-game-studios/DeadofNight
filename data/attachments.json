@@ -1,6 +1,6 @@
 {
 	"version": 1,
-	"_help": "Weapon attachments (Skillz). Bought once with Gravemark (account-wide unlock), then equipped per weapon archetype: every weapon of that archetype uses the archetype's loadout. classes[archetype].slots = slots it has (DESI_ATTACHMENTS.md §1); optic_cap limits optic size (micro<short<mid<long). attachment.classes = optional allow list (default: every class with that slot). tier 1/2/3: equipping needs the weapon's upgrade tier >= tier_requires[tier] (0/2/4). mods (WeaponItem, multiply unless *_add): damage_mult rpm_mult mag_mult reload_mult (time) spread_mult (all fire) hip_spread_mult (not ADS) recoil_mult range_mult (falloff start) swap_mult (time) pellets_add headshot_add reserve_mags_add. ads (AdsProfile): fov (ADS FOV override; the narrowest wins) move_mult spread_mult (multiply the ADS penalties). flags = presentation hooks for player.gd/HUD (tracer_hidden, flash_mult, scope_overlay, outline_elites, heartbeat_counter, bipod, flashlight). effects = SkillEffect defs (same format as skill_tree.json) run by the player's SkillRunner only while a weapon of that archetype is in hand.",
+	"_help": "Weapon attachments (Skillz). Bought once with Gravemark (account-wide unlock), then equipped per weapon archetype: every weapon of that archetype uses the archetype's loadout. classes[archetype].slots = slots it has (DESI_ATTACHMENTS.md §1); optic_cap limits optic size (micro<short<mid<long). attachment.classes = optional allow list (default: every class with that slot). tier 1/2/3: equipping needs the weapon's upgrade tier >= tier_requires[tier] (0/2/4). mods (WeaponItem, multiply unless *_add): damage_mult rpm_mult mag_mult reload_mult (time) spread_mult (all fire) hip_spread_mult (not ADS) recoil_mult range_mult (falloff start) swap_mult (time) pellets_add headshot_add reserve_mags_add. ads (AdsProfile): fov (ADS FOV override; the narrowest wins) move_mult spread_mult (multiply the ADS penalties). flags = presentation hooks for player.gd/HUD (tracer_hidden, flash_mult, scope_overlay, outline_elites, heartbeat_counter, bipod, flashlight, mine_lamp). effects = SkillEffect defs (same format as skill_tree.json) run by the player's SkillRunner only while a weapon of that archetype is in hand.",
 	"slots": [
 		{
 			"id": "optic",
@@ -873,6 +873,34 @@
 					}
 				}
 			],
+			"classes": [
+				"auto_rifle",
+				"scout_rifle",
+				"pulse_rifle",
+				"smg",
+				"shotgun",
+				"sniper_rifle"
+			]
+		},
+		{
+			"id": "mine_lamp",
+			"name": "Mine Lamp",
+			"slot": "grip",
+			"tier": 2,
+			"cost": 5,
+			"unique": true,
+			"summary": "Underbarrel lamp: press F for a night beam.",
+			"description": "Toggle a camera flashlight with F while this weapon is out.",
+			"drawback": "",
+			"icon": "att_mine_lamp",
+			"model": "res://assets/models/attachments/grip/mine_lamp.glb",
+			"mods": {},
+			"ads": {},
+			"flags": {
+				"flashlight": true,
+				"mine_lamp": true
+			},
+			"effects": [],
 			"classes": [
 				"auto_rifle",
 				"scout_rifle",
