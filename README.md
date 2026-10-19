@@ -12,7 +12,9 @@ It's made by Nightshift Game Studios.
 - **Pick a class.** **Soldier** gets Dash and a Frag grenade. **Scout** gets Adrenaline and a Tremor Charge.
 - **Loot gear.** Weapons and armor drop with random rarity, Item Power, stats and perks. You can find them on zombies, in loot chests and in the world.
 - **Skill tree and progression.** XP, unlocked skills, your class and your gear stash are saved between games. After each round you pick a **Field Card** that lasts for that match.
-- **Maps:** **Arena** is the original walled arena. **Rustwell Foundry** is an overrun steel works where you buy doors to open the Rail Spur, Warehouse, Foundry Hall and Tank Farm.
+- **Three night maps, three difficulties:** **Arena** (Easy) is the original walled arena. **Rustwell Foundry** (Medium) is an overrun steel works where you buy doors to open the Rail Spur, Warehouse, Foundry Hall and Tank Farm. **Lockout Substation** (Hard) is a quarantined electrical yard with a battery vault. Harder maps bring tougher, faster zombies, bosses sooner, and bigger rewards.
+- **Bosses:** the Bellwether, the Choir Host and the Lantern Stalker show up on boss rounds.
+- **Gravemarks and the Armory:** Gravemarks are a rare currency: bosses, chests and round milestones pay them, and zombies sometimes drop one. Spend them in the **Armory** (home menu) on weapon upgrades (Reworks) and attachments, including the **Mine Lamp** flashlight.
 
 ---
 
@@ -41,7 +43,7 @@ The game ships as a Godot project. You play it with the free Godot engine, so th
 1. In the Godot **Project Manager**, click **Import**.
 2. Browse to the extracted `fps-starter` folder, select **`project.godot`**, then confirm with **Import** (in some versions the button says **Import & Edit**). The editor opens.
 3. **The first launch takes a minute or two** while Godot imports the models, textures and sounds. This only happens once.
-4. Press **F5**, or click the ▶ **Play** button at the top right. Have fun!
+4. Press **F5**, or click the ▶ **Play** button at the top right. The game opens on the **home menu**: **Play** → pick a map (Easy / Medium / Hard) → **Deploy**. **Kit / Inventory**, **Armory** and **Settings** are there too. Have fun!
 
 Next time, just open Godot, double-click **DeadofNight** in the project list, and press F5.
 
@@ -56,6 +58,7 @@ Next time, just open Godot, double-click **DeadofNight** in the project list, an
 | Move | **W A S D** (or arrow keys) |
 | Look | **Mouse** |
 | Shoot | **Left mouse** (hold for automatic weapons) |
+| Aim down sights | **Right mouse** (hold or toggle, see Settings → Gameplay) |
 | Reload | **R** |
 | Sprint | **Left Shift** |
 | Jump / wall jump | **Space**. Press it in the air next to a wall to wall-jump, up to 3 times before you land again |
@@ -64,11 +67,12 @@ Next time, just open Godot, double-click **DeadofNight** in the project list, an
 | Class ability | **Q** (Soldier: Dash, Scout: Adrenaline) |
 | Grenade | **G** |
 | Melee | **V** |
+| Mine Lamp flashlight | **F** (only when the Mine Lamp attachment is on the weapon in your hands) |
 | Switch weapon | **1** Primary, **2** Secondary, **3** Heavy |
 | Inventory / character screen (pauses the game) | **Tab** or **I** |
 | Skill tree | **K** (before round 1 starts, or on the game-over screen) |
 | Map picker | **M** (before round 1 starts, or on the game-over screen) |
-| Pause menu (Resume / Settings) | **Esc** |
+| Pause menu (Resume / Settings / Quit to Home) | **Esc** |
 | Restart after game over | **Enter** |
 | Pick your class for the next game | **1** Soldier, **2** Scout (on the game-over screen) |
 
@@ -77,7 +81,7 @@ Next time, just open Godot, double-click **DeadofNight** in the project list, an
 **Field Cards** (after every round): **1–4** picks a card, **R** rerolls, **S** skips, **B** banishes (if unlocked).
 
 ## Settings menu (Esc)
-Press **Esc** during a match (or before round 1, or on the game-over screen) to open the **pause menu**, then choose **Settings**.
+Open **Settings** from the home menu, or press **Esc** during a match (or before round 1, or on the game-over screen) to open the **pause menu** and choose **Settings**.
 Changes apply immediately and are saved for next time.
 
 | Tab | Options |
@@ -88,12 +92,13 @@ Changes apply immediately and are saved for next time.
 | **Gameplay** | Mouse Sensitivity, Invert Y, **ADS Mode**: *Hold* (aim while right mouse is held) or *Toggle* (right-click turns aiming on/off) |
 
 **Q / E** switch tabs, and **Esc** goes back. **Reset to Defaults** restores everything.
-> Aim-down-sights (right mouse) is still being added to the weapons. The ADS Mode setting is ready for it, and so is the Motion Blur switch, which will matter once blur effects arrive.
+> The Motion Blur switch is ready for blur effects that haven't arrived yet.
 
 ---
 
 ## Tips
 - You get a few seconds before **Round 1**. Use them to spend skill points (**K**) or switch maps (**M**).
+- Spend Gravemarks in the **Armory** on the home menu. Rework upgrades get more expensive at each tier, so the top tiers need the bigger payouts from Hard maps.
 - Zombies earn you points for hits and kills. On Rustwell Foundry, spend them on doors (750 / 1000 / 1250) to open new areas.
 - The crates with an **orange glow** are loot chests. You can open each one once per round.
 - The **metal ammo box** refills your Primary and Secondary weapons, and the **purple box** refills your Heavy weapon.
