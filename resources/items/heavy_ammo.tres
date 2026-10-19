@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ConsumableItem" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/consumable_item.gd" id="1_s"]
+
+[resource]
+script = ExtResource("1_s")
+id = "heavy_ammo"
+display_name = "Heavy Ammo"
+type = 1
+description = "Ammo for your Power weapon."
+color = Color(0.62, 0.3, 0.95, 1)
+max_stack = 3
+effect = 2
+amount = 0
+auto_use = true
+model_path = "res://assets/models/props/ammo_box/ammo_box.gltf"
+model_scale = 1.6

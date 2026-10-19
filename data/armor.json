@@ -1,0 +1,159 @@
+{
+	"_help": "Armor pieces roll each stat 0..N so the piece's total lands in the rarity's range. Totals across all 5 equipped pieces (capped at 100) drive gameplay - see README.",
+	"slots": [
+		"helmet",
+		"gauntlets",
+		"chest",
+		"legs",
+		"class_item"
+	],
+	"slot_names": {
+		"helmet": "Helmet",
+		"gauntlets": "Gauntlets",
+		"chest": "Chest Armor",
+		"legs": "Leg Armor",
+		"class_item": "Class Item"
+	},
+	"stats": [
+		"agility",
+		"toughness",
+		"vitality",
+		"ordnance",
+		"focus",
+		"brawn"
+	],
+	"piece_totals": {
+		"common": [
+			6,
+			12
+		],
+		"uncommon": [
+			10,
+			18
+		],
+		"rare": [
+			15,
+			24
+		],
+		"legendary": [
+			22,
+			32
+		],
+		"mythic": [
+			28,
+			38
+		]
+	},
+	"names": {
+		"helmet": [
+			"Scavenger's Hood",
+			"Gravewatch Helm",
+			"Night Shift Mask",
+			"Ashen Visor",
+			"Survivor's Cowl"
+		],
+		"gauntlets": [
+			"Scrapper Grips",
+			"Gravewatch Gauntlets",
+			"Night Shift Wraps",
+			"Ashen Grasps",
+			"Survivor's Gloves"
+		],
+		"chest": [
+			"Scavenger's Vest",
+			"Gravewatch Plate",
+			"Night Shift Jacket",
+			"Ashen Cuirass",
+			"Survivor's Rig"
+		],
+		"legs": [
+			"Scavenger's Boots",
+			"Gravewatch Greaves",
+			"Night Shift Strides",
+			"Ashen Legguards",
+			"Survivor's Treads"
+		],
+		"class_item": [
+			"Tattered Cloak",
+			"Gravewatch Mark",
+			"Night Shift Bond",
+			"Ashen Sash",
+			"Survivor's Scarf"
+		]
+	},
+	"mythics": {
+		"helmet": {
+			"name": "Lazarus Visor",
+			"bonus": {
+				"ordnance": 12
+			},
+			"flavor": "It hears them coming. It never stops listening."
+		},
+		"gauntlets": {
+			"name": "Pit-Fighter Wraps",
+			"bonus": {
+				"brawn": 12
+			},
+			"flavor": "Knuckles first, questions never."
+		},
+		"chest": {
+			"name": "Ashen Barricade Plate",
+			"bonus": {
+				"toughness": 12
+			},
+			"flavor": "Still warm from the last fire it walked out of."
+		},
+		"legs": {
+			"name": "Marathon Greaves",
+			"bonus": {
+				"agility": 12
+			},
+			"flavor": "The horde is slow. You are not."
+		},
+		"class_item": {
+			"name": "Quarantine Armband",
+			"bonus": {
+				"focus": 12
+			},
+			"flavor": "Sewn from the last flag on the barricade."
+		}
+	},
+	"brands": [
+		{
+			"name": "Patchwork Outfitters",
+			"color": [
+				0.7,
+				0.62,
+				0.45
+			],
+			"flavor": [
+				"Stitched from three other jackets.",
+				"Duct tape is load-bearing."
+			]
+		},
+		{
+			"name": "Barricade Supply Co.",
+			"color": [
+				0.55,
+				0.6,
+				0.4
+			],
+			"flavor": [
+				"Rated for at least one apocalypse.",
+				"Bite-resistant. Mostly."
+			]
+		},
+		{
+			"name": "Ironmoth Tactical",
+			"color": [
+				0.5,
+				0.55,
+				0.65
+			],
+			"flavor": [
+				"Light, quiet, and stubborn.",
+				"Moves when you move."
+			]
+		}
+	]
+}

@@ -1,0 +1,112 @@
+Props NOTES — Batch 1
+Coordinate system: metres, Y-up, origin at base centre, front faces +Z.
+
+=== prop_barricade_window.glb ===
+Purpose: boarded covering for a ~1.2 × 1.4 m wall opening (frame is larger: ~1.57 × 1.62 m).
+Nodes:
+  prop_barricade_window          (root empty)
+    Frame                        brick/concrete broken wall-hole rim
+    Board_01 .. Board_06         separate horizontal planks (rebuild mechanic)
+    prop_barricade_window-col    box collision (Godot imports as StaticBody3D)
+Collision: axis-aligned box covering the opening + frame (~1.44 × 1.54 × 0.22 m).
+  Godot 4 glTF importer recognizes the "-col" suffix and builds a StaticBody3D automatically.
+Facing: boards sit on the +Z side of the Frame (mean board Z > frame Z).
+Tris: Frame 832 + Boards 6×44 = 264 + col 12 → visual 1096 / total 1108. Textures 1K.
+
+=== prop_barricade_wall_breach.glb ===
+Purpose: boarded covering for a ~2.5 × 2.2 m wall breach (frame ~3.0 × 2.49 m).
+Nodes: same pattern (Frame, Board_01..06, prop_barricade_wall_breach-col).
+Collision: box ~2.76 × 2.36 × 0.24 m, flat faces (not a walkable ramp; slope N/A — vertical blocker).
+Tris: Frame 1136 + Boards 264 + col 12 → visual 1400 / total 1412. Textures 1K.
+
+Rebuild mechanic: hide/free Board_NN nodes independently; Frame stays.
+Batch 2+ not started (doors, cars, debris) — waiting on Mapz confirmation.
+
+=== BATCH 2 — Doors (visual only; MapDoor owns real collision/nav) ===
+Convention: root origin at base centre, front +Z. Moving mesh node is exactly named "Panel".
+Closed-state preview collision: `{prop}-col` box (Godot StaticBody). Do NOT use as gameplay collision.
+
+--- prop_door_rail_gate.glb  (D1 Rail Gate) ---
+Size: ~4.0 m wide × 3.0 m tall (posts/track slightly larger).
+Nodes: Frame (posts + top track + bottom guide + rollers), Panel (chain-link lattice + kick plate), prop_door_rail_gate-col.
+Open: SLIDE. Translate Panel in local +X by approximately **4.0 m** (full clear). Optionally ease over 1–2 s.
+  Panel pivot/origin = base centre of the closed panel (0,0,0) under the root.
+Tris: visual 904 (Frame 288 + Panel 616). 1K textures.
+
+--- prop_door_foundry_side.glb  (D3 Foundry Side Door) ---
+Size: ~3.5 × 3.5 m leaf in a steel frame.
+Nodes: Frame (jambs/lintel/threshold + hinge knuckles), Panel (painted steel plate, ribs, rivets, handle, vision slit), *-col.
+Open: HINGED SWING. Panel origin is on the **hinge edge** (character-left / −X), at ground (Y=0).
+  Rotate Panel around local +Y (up) by **−95°** (opens outward toward +Z / front). Opposite sign if MapDoor’s forward differs — match so the leaf clears the frame toward the front side.
+  Pivot local position under root ≈ (−1.70, 0, +0.09) in glTF.
+Tris: visual 1028. 1K textures.
+
+--- prop_door_blast.glb  (D4 Furnace Passage) ---
+Size: ~3.0 m wide × 3.5 m tall, thick (~0.18 m) riveted leaf + latch housing on frame.
+Nodes: Frame (heavy jambs, latch box, hinges), Panel (thick steel, beams, rivets, handwheel, soot/rust), *-col.
+Open: HINGED SWING (chosen over slide — reads as a vault/blast leaf). Same convention as D3:
+  Panel origin on hinge edge (−X), ground. Rotate about local +Y by **−90° to −100°** outward (+Z).
+  Pivot ≈ (−1.48, 0, +0.16) in glTF.
+Tris: visual 1368. 1K textures.
+
+--- prop_door_fence_patch.glb  (D6 Fence Breach) ---
+Size: ~3 × 3 m scrap patch in fence remnant posts/rail.
+Nodes: Frame (rusted posts, top rail, leftover wire stubs, brackets), Panel (overlapping welded scrap plates), *-col.
+Open: HINGED SWING (scrap plate swings like a gate). Panel origin on left (−X) near the post, ground.
+  Rotate about local +Y by **−100° to −110°** (wide so players fit), or optionally hide/remove Panel for a “cut away” event.
+  Pivot ≈ (−1.35, 0, +0.02) in glTF.
+Tris: visual 588. 1K textures.
+
+Skipped: D2, D5 (as ordered). Batch 3 (cars) not started.
+
+=== BATCH 3 — Car wrecks ===
+Origin base centre, front +Z (nose toward +Z). MapDoor N/A — static cover props.
+
+--- prop_car_wreck_01.glb ---
+Burnt/rusted civilian sedan ~4.5–4.9 m long × ~2.6 m wide × ~2.3 m tall (incl. bent antenna).
+Nodes: Car (single mesh), prop_car_wreck_01-col (box cover collider, ~1.1 m tall — NOT roof-walkable).
+Tris: **12,000** visual. Textures **2K**.
+Open doors: right door swung out; left door missing (opening). Flat tires / one rim gone. Glass shattered (frames only).
+
+--- prop_car_wreck_01_lod.glb ---
+Decimated LOD of the same bake. Tris: **4,184**. Same origin/facing/materials. Own *-col box.
+Swap at distance; silhouette matches hero.
+
+--- prop_car_wreck_02.glb (bonus) ---
+Overturned pickup / light truck on its side (~5.4 m long). Cab + bed readable; wheels half in air.
+Nodes: Car, prop_car_wreck_02-col (box ~1.35 m tall cover).
+Tris: **6,436**. Textures **2K**.
+
+--- prop_car_wreck_02_lod.glb ---
+LOD tris: **3,800**. Same origin/facing.
+
+Collision note: both use axis-aligned -col boxes for cover only. Do not treat roof as walkable.
+Batch 4 (debris) not started.
+
+=== BATCH 4 — Debris / scatter ===
+Origin base centre, front +Z. 1K PBR.
+
+--- prop_rubble_small.glb ---
+~0.61 × 0.22 × 0.54 m. Tris 448. **No collision** (height < 0.3 m).
+
+--- prop_rubble_medium.glb ---
+~1.06 × 0.56 × 1.12 m. Tris 992. Flat box -col (walkable-ish cover top, slope N/A — box faces).
+
+--- prop_rubble_large.glb ---
+~1.95 × 1.01 × 1.92 m. Tris 1232. Flat box -col.
+
+--- prop_scrap_rebar.glb ---
+~1.64 × 0.84 × 1.87 m tangled rebar + scrap plates. Tris 720. -col box (height > 0.3).
+
+--- prop_slag_heap.glb ---
+~1.49 × 0.59 × 1.20 m dark clinker/slag. Tris 512. -col box.
+
+--- prop_ingot_stack.glb ---
+~0.83 × 0.59 × 0.66 m stacked cooled bars. Tris 564. -col box.
+
+--- prop_floor_scatter.glb ---
+Kit of separate instanceable nodes (all location 0, each mesh base-centred), **no collision**:
+  Paper_01, Paper_02, BrokenPallet_01, Brick_01, Brick_02, CrateFragment_01, Tire_01
+Total tris 732. All piece heights ≤ 0.16 m.
+
+Mapz prop list complete (batches 1–4).

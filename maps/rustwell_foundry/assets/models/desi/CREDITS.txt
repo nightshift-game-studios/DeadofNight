@@ -1,0 +1,33 @@
+Props — Batch 1 (2026-10-19)
+All geometry / UVs / bakes authored in Blender 4.5 (scripts under _work/scripts/).
+
+CC0 textures (Poly Haven, https://polyhaven.com, CC0 1.0):
+  brick_wall_001          — wall-hole frame (window + breach)
+  concrete_block_wall     — jamb / cinder accents on frames
+  concrete_debris         — available for later batches (linked in propslib)
+  rough_wood              — boarded planks (Board_01..06)
+  rusty_metal / rusty_metal_02 — rebar stubs
+  abandoned_tank_farm_05  — preview HDRI only (not embedded in GLBs)
+  damaged_concrete_floor  — preview ground only
+
+Also available under _work/src/ for later batches (not used in batch 1 GLBs):
+  painted_worn_brick, coast_sand_01, asphalt_03, metal_plate_02, green_metal_rust, denim_fabric
+
+No Mixamo. No non-CC0 sources.
+
+Props — Batch 2 doors (2026-10-19)
+Additional CC0 Poly Haven:
+  metal_grate_rusty       — chain-link / fence wire look (rail gate, fence remnant)
+Reused from batch 1 / armor: metal_plate_02, green_metal_rust, rusty_metal, rusty_metal_02,
+  rough_wood (unused this batch), concrete_*, brick_* (unused this batch).
+
+Props — Batch 3 car wrecks (2026-10-19)
+No new texture downloads. Reused CC0 Poly Haven already logged:
+  green_metal_rust, metal_plate_02, rusty_metal, rusty_metal_02, asphalt_03
+  (plus rubber procedural). 2K baked albedo/ORM/normal embedded in hero GLBs.
+
+Props — Batch 4 debris / scatter (2026-10-19)
+No new downloads. Reused CC0 Poly Haven already logged:
+  brick_wall_001, painted_worn_brick, concrete_debris, concrete_block_wall,
+  rusty_metal, rusty_metal_02, metal_plate_02, asphalt_03, rough_wood, denim_fabric (paper/burlap stand-in).
+1K baked PBR embedded.

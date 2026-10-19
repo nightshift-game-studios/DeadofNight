@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ConsumableItem" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/consumable_item.gd" id="1_s"]
+
+[resource]
+script = ExtResource("1_s")
+id = "health_pack"
+display_name = "Health Pack"
+type = 1
+description = "Restores 50 health."
+color = Color(0.9, 0.15, 0.2, 1)
+max_stack = 3
+effect = 0
+amount = 50
+model_path = "res://assets/models/props/medical_box/medical_box.gltf"
+model_scale = 1.0

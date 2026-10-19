@@ -1,0 +1,102 @@
+{
+	"_help": "Weapon perks. 'effect' selects the code path in scripts/gear/perk_system.gd; the other fields are its parameters. 'glyph' + 'icon_color' draw the perk badge in the UI.",
+	"perks": [
+		{
+			"id": "bloodrush",
+			"name": "Bloodrush",
+			"effect": "damage_stack",
+			"description": "Kills grant +12% damage for 4s. Stacks 3x.",
+			"amount": 0.12,
+			"max_stacks": 3,
+			"duration": 4.0,
+			"glyph": "BR",
+			"icon_color": [
+				0.85,
+				0.15,
+				0.12
+			]
+		},
+		{
+			"id": "fever_hands",
+			"name": "Fever Hands",
+			"effect": "reload_buff",
+			"description": "Kills greatly increase reload speed for 6s.",
+			"amount": 0.5,
+			"duration": 6.0,
+			"glyph": "FH",
+			"icon_color": [
+				0.95,
+				0.6,
+				0.15
+			]
+		},
+		{
+			"id": "shrapnel_tips",
+			"name": "Shrapnel Tips",
+			"effect": "explode",
+			"description": "25% chance for hits to explode for 50% bonus area damage.",
+			"chance": 0.25,
+			"amount": 0.5,
+			"radius": 2.2,
+			"glyph": "ST",
+			"icon_color": [
+				1.0,
+				0.45,
+				0.1
+			]
+		},
+		{
+			"id": "hot_brass",
+			"name": "Hot Brass",
+			"effect": "reload_after_kill",
+			"description": "Reloading after a kill grants +25% damage for 5s.",
+			"amount": 0.25,
+			"duration": 5.0,
+			"glyph": "HB",
+			"icon_color": [
+				0.95,
+				0.8,
+				0.2
+			]
+		},
+		{
+			"id": "pin_puller",
+			"name": "Pin Puller",
+			"effect": "grenade_refund",
+			"description": "Kills refund 15% of your grenade cooldown.",
+			"amount": 0.15,
+			"glyph": "PP",
+			"icon_color": [
+				0.55,
+				0.75,
+				0.25
+			]
+		},
+		{
+			"id": "marrow_tap",
+			"name": "Marrow Tap",
+			"effect": "heal_on_kill",
+			"description": "Kills restore 12 health.",
+			"amount": 12,
+			"glyph": "MT",
+			"icon_color": [
+				0.75,
+				0.2,
+				0.35
+			]
+		},
+		{
+			"id": "low_stance",
+			"name": "Low Stance",
+			"effect": "crouch_stability",
+			"description": "Much less spread while crouched or sliding.",
+			"amount": 0.5,
+			"glyph": "LS",
+			"icon_color": [
+				0.4,
+				0.65,
+				0.85
+			]
+		}
+	]
+}

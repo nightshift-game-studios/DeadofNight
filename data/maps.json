@@ -1,0 +1,18 @@
+{
+	"_help": "Playable maps. 'arena' is the built-in level inside scenes/main.tscn (scene = \"\"), and it is the default and the fallback. Other maps follow docs/map_contract (res://maps/<id>/<id>.tscn). Pick one with the project setting game/maps/default_map, the command-line user arg --map=<id> (after --), or MapRegistry.select(id) from a menu, then reload main.tscn.",
+	"default": "arena",
+	"maps": [
+		{
+			"id": "arena",
+			"display_name": "Arena",
+			"scene": "",
+			"description": "The original walled arena: brick alley, tower, platform. Fully open, 7 spawns."
+		},
+		{
+			"id": "rustwell_foundry",
+			"display_name": "Rustwell Foundry",
+			"scene": "res://maps/rustwell_foundry/rustwell_foundry.tscn",
+			"description": "Overrun steel works. Start in the Loading Yard and buy doors (750 / 1000 / 1250) to open the Rail Spur, Warehouse, Foundry Hall and Tank Farm."
+		}
+	]
+}

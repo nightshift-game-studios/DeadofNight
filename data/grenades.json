@@ -1,0 +1,39 @@
+{
+	"_help": "Grenade types. type 'frag' = one explosion after fuse; 'pulse' = repeated damage pulses. cooldown is before Ordnance.",
+	"grenades": {
+		"frag": {
+			"name": "Frag Grenade",
+			"type": "frag",
+			"fuse": 1.6,
+			"radius": 5.0,
+			"damage": 240,
+			"knockback": 10.0,
+			"cooldown": 20.0,
+			"throw_speed": 15.0,
+			"bounce": 0.45,
+			"color": [
+				1.0,
+				0.55,
+				0.2
+			]
+		},
+		"pulse": {
+			"name": "Tremor Charge",
+			"type": "pulse",
+			"fuse": 0.9,
+			"radius": 4.0,
+			"damage": 70,
+			"pulses": 5,
+			"interval": 0.45,
+			"knockback": 3.0,
+			"cooldown": 18.0,
+			"throw_speed": 14.0,
+			"bounce": 0.3,
+			"color": [
+				0.35,
+				0.7,
+				1.0
+			]
+		}
+	}
+}

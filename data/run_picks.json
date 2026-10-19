@@ -1,0 +1,1741 @@
+{
+	"version": 1,
+	"_help": "Field Cards (per-match run picks). Offer config + card pool. Same effect format as skill_tree.json.",
+	"offer": {
+		"size": 3,
+		"milestone_every": 5,
+		"milestone_legendary": 2,
+		"offer_delay": 1.0,
+		"reroll_base": 50,
+		"reroll_base_milestone": 100,
+		"reroll_growth": 2.0,
+		"skip_points_per_round": 50,
+		"cache_points_per_round": 50,
+		"owned_weight_mult": 1.5,
+		"synergy_weight_mult": 1.5,
+		"max_banish_per_offer": 1
+	},
+	"cache_card": {
+		"id": "cache",
+		"name": "Supply Cache",
+		"tier": "normal",
+		"branch": "core",
+		"type": "passive",
+		"icon": "cache",
+		"ranks": 1,
+		"summary": "Take the points instead.",
+		"description": "+{points} points.",
+		"values": {
+			"points": "50 x round"
+		}
+	},
+	"cards": [
+		{
+			"id": "c_deep_pockets",
+			"name": "Deep Pockets",
+			"tier": "normal",
+			"branch": "core",
+			"type": "passive",
+			"icon": "c_deep_pockets",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [],
+			"class": "",
+			"tags": [
+				"core"
+			],
+			"summary": "Bigger magazines.",
+			"description": "+{add_pct}% magazine size.",
+			"drawback": "",
+			"values": {
+				"add_pct": [
+					15,
+					30,
+					45
+				]
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "mag_size_mult",
+						"add": [
+							0.15,
+							0.3,
+							0.45
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "c_greased",
+			"name": "Greased Hands",
+			"tier": "normal",
+			"branch": "core",
+			"type": "passive",
+			"icon": "c_greased",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [],
+			"class": "",
+			"tags": [
+				"core"
+			],
+			"summary": "Faster reloads.",
+			"description": "Reload {faster_pct}% faster.",
+			"drawback": "",
+			"values": {
+				"faster_pct": [
+					10,
+					20,
+					30
+				]
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "reload_time_mult",
+						"mult": [
+							0.9,
+							0.8,
+							0.7
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "c_patched",
+			"name": "Patched Up",
+			"tier": "normal",
+			"branch": "core",
+			"type": "passive",
+			"icon": "c_patched",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [],
+			"class": "",
+			"tags": [
+				"core"
+			],
+			"summary": "More max health, full heal now.",
+			"description": "+{add} max health. Heals you to full when picked.",
+			"drawback": "",
+			"values": {
+				"add": [
+					15,
+					30,
+					45
+				]
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "max_health",
+						"add": [
+							15,
+							30,
+							45
+						]
+					}
+				},
+				{
+					"script": "heal",
+					"params": {
+						"amount": "full"
+					},
+					"on": [
+						"card_picked"
+					],
+					"if": {
+						"card_id": "c_patched"
+					}
+				}
+			]
+		},
+		{
+			"id": "c_bounty",
+			"name": "Bounty Ledger",
+			"tier": "normal",
+			"branch": "core",
+			"type": "passive",
+			"icon": "c_bounty",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [],
+			"class": "",
+			"tags": [
+				"core"
+			],
+			"summary": "More points per kill.",
+			"description": "+{add_pct}% points per kill.",
+			"drawback": "",
+			"values": {
+				"add_pct": [
+					20,
+					40,
+					60
+				]
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "points_kill_mult",
+						"add": [
+							0.2,
+							0.4,
+							0.6
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "c_knuckles",
+			"name": "Knuckle Wraps",
+			"tier": "normal",
+			"branch": "core",
+			"type": "passive",
+			"icon": "c_knuckles",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [],
+			"class": "",
+			"tags": [
+				"core"
+			],
+			"summary": "Harder melee.",
+			"description": "+{add_pct}% melee damage.",
+			"drawback": "",
+			"values": {
+				"add_pct": [
+					25,
+					50,
+					75
+				]
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "melee_damage_mult",
+						"add": [
+							0.25,
+							0.5,
+							0.75
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "c_quick_pin",
+			"name": "Quick Pin",
+			"tier": "normal",
+			"branch": "core",
+			"type": "passive",
+			"icon": "c_quick_pin",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [],
+			"class": "",
+			"tags": [
+				"core"
+			],
+			"summary": "Grenades recharge faster.",
+			"description": "-{less_pct}% grenade cooldown.",
+			"drawback": "",
+			"values": {
+				"less_pct": [
+					10,
+					20,
+					30
+				]
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "grenade_cd_mult",
+						"mult": [
+							0.9,
+							0.8,
+							0.7
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "c_steady_pulse",
+			"name": "Steady Pulse",
+			"tier": "normal",
+			"branch": "core",
+			"type": "passive",
+			"icon": "c_steady_pulse",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [],
+			"class": "",
+			"tags": [
+				"core"
+			],
+			"summary": "Class ability recharges faster.",
+			"description": "-{less_pct}% class ability cooldown.",
+			"drawback": "",
+			"values": {
+				"less_pct": [
+					10,
+					20,
+					30
+				]
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "ability_cd_mult",
+						"mult": [
+							0.9,
+							0.8,
+							0.7
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "c_mender",
+			"name": "Fast Mender",
+			"tier": "normal",
+			"branch": "core",
+			"type": "passive",
+			"icon": "c_mender",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [],
+			"class": "",
+			"tags": [
+				"core"
+			],
+			"summary": "Regen kicks in sooner and heals faster.",
+			"description": "Regen starts {sooner}s sooner and heals +{rate} HP/s.",
+			"drawback": "",
+			"values": {
+				"sooner": [
+					0.5,
+					1.0,
+					1.5
+				],
+				"rate": [
+					2,
+					4,
+					6
+				]
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "regen_delay_add",
+						"add": [
+							-0.5,
+							-1.0,
+							-1.5
+						]
+					}
+				},
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "regen_rate_add",
+						"add": [
+							2,
+							4,
+							6
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "m_caromshot",
+			"name": "Caromshot",
+			"tier": "normal",
+			"branch": "marksman",
+			"type": "passive",
+			"icon": "m_caromshot",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [
+				"mk_root"
+			],
+			"class": "",
+			"tags": [
+				"marksman"
+			],
+			"summary": "Precision kills ricochet to the next zombie.",
+			"description": "Precision kills fire a ray at the nearest zombie within {range}m for {frac_pct}% of the killing hit.",
+			"drawback": "",
+			"values": {
+				"range": 8,
+				"frac_pct": [
+					50,
+					75,
+					100
+				]
+			},
+			"effects": [
+				{
+					"script": "on_event_ray",
+					"params": {
+						"frac": [
+							0.5,
+							0.75,
+							1.0
+						],
+						"range": 8.0
+					},
+					"on": [
+						"enemy_killed"
+					],
+					"if": {
+						"is_headshot": true
+					}
+				}
+			]
+		},
+		{
+			"id": "m_heel_round",
+			"name": "Heel Round",
+			"tier": "normal",
+			"branch": "marksman",
+			"type": "passive",
+			"icon": "m_heel_round",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [
+				"mk_root"
+			],
+			"class": "",
+			"tags": [
+				"marksman"
+			],
+			"summary": "Last round in the mag hits harder.",
+			"description": "The last round in the magazine deals +{mult_pct}% damage.",
+			"drawback": "",
+			"values": {
+				"mult_pct": [
+					40,
+					70,
+					100
+				]
+			},
+			"effects": [
+				{
+					"script": "conditional_damage",
+					"params": {
+						"cond": "last_round",
+						"mult": [
+							0.4,
+							0.7,
+							1.0
+						],
+						"sources": [
+							"gun"
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "m_still_water",
+			"name": "Still Water",
+			"tier": "normal",
+			"branch": "marksman",
+			"type": "passive",
+			"icon": "m_still_water",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [
+				"mk_root"
+			],
+			"class": "",
+			"tags": [
+				"marksman"
+			],
+			"summary": "Stand still to aim truer and hit harder.",
+			"description": "After {still}s standing still or crouched: +{mult_pct}% damage and -{spread_pct}% spread.",
+			"drawback": "",
+			"values": {
+				"still": 0.5,
+				"mult_pct": [
+					8,
+					14,
+					20
+				],
+				"spread_pct": 20
+			},
+			"effects": [
+				{
+					"script": "conditional_damage",
+					"params": {
+						"cond": "still",
+						"mult": [
+							0.08,
+							0.14,
+							0.2
+						]
+					}
+				},
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "spread_mult",
+						"mult": 0.8,
+						"while": "still"
+					}
+				}
+			]
+		},
+		{
+			"id": "m_tally",
+			"name": "Tally Marks",
+			"tier": "normal",
+			"branch": "marksman",
+			"type": "passive",
+			"icon": "m_tally",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [
+				"mk_root"
+			],
+			"class": "",
+			"tags": [
+				"marksman"
+			],
+			"summary": "Precision hit streaks stack damage.",
+			"description": "Each consecutive precision hit +{per_pct}% damage (max {max} stacks). A miss resets it.",
+			"drawback": "",
+			"values": {
+				"per_pct": [
+					3,
+					4,
+					5
+				],
+				"max": 10
+			},
+			"effects": [
+				{
+					"script": "stacking_damage",
+					"params": {
+						"per": [
+							0.03,
+							0.04,
+							0.05
+						],
+						"max": 10
+					}
+				}
+			]
+		},
+		{
+			"id": "s_daisy_fuse",
+			"name": "Daisy Fuse",
+			"tier": "normal",
+			"branch": "sapper",
+			"type": "passive",
+			"icon": "s_daisy_fuse",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [
+				"sp_root"
+			],
+			"class": "",
+			"tags": [
+				"sapper"
+			],
+			"summary": "Grenade kills can pop extra blasts.",
+			"description": "Grenade kills have a {chance_pct}% chance to pop a {damage}-damage blast ({radius}m).",
+			"drawback": "",
+			"values": {
+				"chance_pct": [
+					30,
+					45,
+					60
+				],
+				"damage": 80,
+				"radius": 2.5
+			},
+			"effects": [
+				{
+					"script": "on_event_explode",
+					"params": {
+						"chance": [
+							0.3,
+							0.45,
+							0.6
+						],
+						"damage": 80.0,
+						"radius": 2.5,
+						"knockback": 3.0,
+						"at": "target"
+					},
+					"on": [
+						"enemy_killed"
+					],
+					"if": {
+						"source": "grenade"
+					}
+				}
+			]
+		},
+		{
+			"id": "s_rot_bloom",
+			"name": "Rot Bloom",
+			"tier": "normal",
+			"branch": "sapper",
+			"type": "passive",
+			"icon": "s_rot_bloom",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [
+				"sp_root"
+			],
+			"class": "",
+			"tags": [
+				"sapper"
+			],
+			"summary": "Blight rots zombies; rotters burst and spread.",
+			"description": "Blight hits Rot for {dur}s: +{amp_pct}% damage taken. Rotting zombies burst for {burst} on death and spread it.",
+			"drawback": "",
+			"values": {
+				"dur": 4,
+				"amp_pct": [
+					10,
+					15,
+					20
+				],
+				"burst": 40
+			},
+			"effects": [
+				{
+					"script": "element_debuff",
+					"params": {
+						"amp": [
+							0.1,
+							0.15,
+							0.2
+						],
+						"dur": 4.0,
+						"burst": 40.0,
+						"radius": 3.0
+					}
+				}
+			]
+		},
+		{
+			"id": "s_static_fork",
+			"name": "Static Fork",
+			"tier": "normal",
+			"branch": "sapper",
+			"type": "passive",
+			"icon": "s_static_fork",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [
+				"sp_root"
+			],
+			"class": "",
+			"tags": [
+				"sapper"
+			],
+			"summary": "Volt hits arc to nearby zombies.",
+			"description": "Volt hits arc to +{targets} zombies ({range}m, {frac_pct}% damage).",
+			"drawback": "",
+			"values": {
+				"targets": [
+					1,
+					2,
+					3
+				],
+				"range": 4,
+				"frac_pct": 30
+			},
+			"effects": [
+				{
+					"script": "element_arc",
+					"params": {
+						"targets": [
+							1,
+							2,
+							3
+						],
+						"frac": 0.3,
+						"range": 4.0
+					},
+					"on": [
+						"hit"
+					],
+					"if": {
+						"element": "volt"
+					}
+				}
+			]
+		},
+		{
+			"id": "s_cinder",
+			"name": "Cinder Shells",
+			"tier": "normal",
+			"branch": "sapper",
+			"type": "passive",
+			"icon": "s_cinder",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [
+				"sp_root"
+			],
+			"class": "",
+			"tags": [
+				"sapper"
+			],
+			"summary": "Blaze hits set zombies burning.",
+			"description": "Blaze hits burn for {frac_pct}% of the hit per second for {dur}s.",
+			"drawback": "",
+			"values": {
+				"frac_pct": [
+					15,
+					25,
+					35
+				],
+				"dur": 3
+			},
+			"effects": [
+				{
+					"script": "element_dot",
+					"params": {
+						"frac_per_s": [
+							0.15,
+							0.25,
+							0.35
+						],
+						"dur": 3.0
+					},
+					"on": [
+						"hit"
+					],
+					"if": {
+						"element": "blaze"
+					}
+				}
+			]
+		},
+		{
+			"id": "v_bloodwick",
+			"name": "Bloodwick Rounds",
+			"tier": "normal",
+			"branch": "survivor",
+			"type": "passive",
+			"icon": "v_bloodwick",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [
+				"sv_root"
+			],
+			"class": "",
+			"tags": [
+				"survivor"
+			],
+			"summary": "Precision kills heal you.",
+			"description": "Precision kills heal {amount}.",
+			"drawback": "",
+			"values": {
+				"amount": [
+					3,
+					5,
+					7
+				]
+			},
+			"effects": [
+				{
+					"script": "heal",
+					"params": {
+						"amount": [
+							3,
+							5,
+							7
+						]
+					},
+					"on": [
+						"enemy_killed"
+					],
+					"if": {
+						"is_headshot": true
+					}
+				}
+			]
+		},
+		{
+			"id": "v_kill_plating",
+			"name": "Kill Plating",
+			"tier": "normal",
+			"branch": "survivor",
+			"type": "passive",
+			"icon": "v_kill_plating",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [
+				"sv_root"
+			],
+			"class": "",
+			"tags": [
+				"survivor"
+			],
+			"summary": "Kill streaks build overshield.",
+			"description": "Every {n} kills: +{amount} overshield.",
+			"drawback": "",
+			"values": {
+				"n": 10,
+				"amount": [
+					10,
+					15,
+					20
+				]
+			},
+			"effects": [
+				{
+					"script": "grant_overshield",
+					"params": {
+						"every_n_kills": 10,
+						"amount": [
+							10,
+							15,
+							20
+						]
+					},
+					"on": [
+						"enemy_killed"
+					]
+				}
+			]
+		},
+		{
+			"id": "v_grit",
+			"name": "Grit",
+			"tier": "normal",
+			"branch": "survivor",
+			"type": "passive",
+			"icon": "v_grit",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [
+				"sv_root"
+			],
+			"class": "",
+			"tags": [
+				"survivor"
+			],
+			"summary": "Take less damage at low health.",
+			"description": "Below {hp_pct}% health take {dr_pct}% less damage.",
+			"drawback": "",
+			"values": {
+				"hp_pct": 50,
+				"dr_pct": [
+					8,
+					12,
+					16
+				]
+			},
+			"effects": [
+				{
+					"script": "damage_in_mod",
+					"params": {
+						"reduction": [
+							0.08,
+							0.12,
+							0.16
+						],
+						"cond": "health_below",
+						"threshold": 0.5
+					}
+				}
+			]
+		},
+		{
+			"id": "v_gleaner",
+			"name": "Gleaner",
+			"tier": "normal",
+			"branch": "survivor",
+			"type": "passive",
+			"icon": "v_gleaner",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [
+				"sv_root"
+			],
+			"class": "",
+			"tags": [
+				"survivor"
+			],
+			"summary": "Zombies drop loot more often.",
+			"description": "Zombie drop chance +{add_pct} points.",
+			"drawback": "",
+			"values": {
+				"add_pct": [
+					3,
+					5,
+					7
+				]
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "drop_chance_add",
+						"add": [
+							0.03,
+							0.05,
+							0.07
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "f_rail_slide",
+			"name": "Rail Slide",
+			"tier": "normal",
+			"branch": "freerunner",
+			"type": "passive",
+			"icon": "f_rail_slide",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [
+				"fr_root"
+			],
+			"class": "",
+			"tags": [
+				"freerunner"
+			],
+			"summary": "Slides reload part of your mag.",
+			"description": "Each slide loads {fraction_pct}% of a magazine from reserve.",
+			"drawback": "",
+			"values": {
+				"fraction_pct": [
+					20,
+					35,
+					50
+				]
+			},
+			"effects": [
+				{
+					"script": "refill_mag",
+					"params": {
+						"mode": "fraction",
+						"fraction": [
+							0.2,
+							0.35,
+							0.5
+						]
+					},
+					"on": [
+						"slide_started"
+					]
+				}
+			]
+		},
+		{
+			"id": "f_updraft_aim",
+			"name": "Updraft Aim",
+			"tier": "normal",
+			"branch": "freerunner",
+			"type": "passive",
+			"icon": "f_updraft_aim",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [
+				"fr_root"
+			],
+			"class": "",
+			"tags": [
+				"freerunner"
+			],
+			"summary": "Airborne hits deal more damage.",
+			"description": "Airborne hits deal +{mult_pct}% damage.",
+			"drawback": "",
+			"values": {
+				"mult_pct": [
+					10,
+					15,
+					20
+				]
+			},
+			"effects": [
+				{
+					"script": "conditional_damage",
+					"params": {
+						"cond": "airborne",
+						"mult": [
+							0.1,
+							0.15,
+							0.2
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "f_slide_guard",
+			"name": "Slide Guard",
+			"tier": "normal",
+			"branch": "freerunner",
+			"type": "passive",
+			"icon": "f_slide_guard",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [
+				"fr_root"
+			],
+			"class": "",
+			"tags": [
+				"freerunner"
+			],
+			"summary": "Take less damage while sliding.",
+			"description": "While sliding and {after}s after: take {dr_pct}% less damage.",
+			"drawback": "",
+			"values": {
+				"after": 0.5,
+				"dr_pct": [
+					20,
+					30,
+					40
+				]
+			},
+			"effects": [
+				{
+					"script": "damage_in_mod",
+					"params": {
+						"reduction": [
+							0.2,
+							0.3,
+							0.4
+						],
+						"cond": "sliding"
+					}
+				}
+			]
+		},
+		{
+			"id": "f_spring_heels",
+			"name": "Spring Heels",
+			"tier": "normal",
+			"branch": "freerunner",
+			"type": "passive",
+			"icon": "f_spring_heels",
+			"ranks": 3,
+			"weight": 10,
+			"requires_meta": [
+				"fr_root"
+			],
+			"class": "",
+			"tags": [
+				"freerunner"
+			],
+			"summary": "Higher jumps and wall jumps.",
+			"description": "+{add_pct}% jump and wall jump height.",
+			"drawback": "",
+			"values": {
+				"add_pct": [
+					6,
+					12,
+					18
+				]
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "jump_mult",
+						"add": [
+							0.06,
+							0.12,
+							0.18
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "L_second_heartbeat",
+			"name": "Second Heartbeat",
+			"tier": "legendary",
+			"branch": "core",
+			"type": "passive",
+			"icon": "L_second_heartbeat",
+			"ranks": 1,
+			"weight": 10,
+			"requires_meta": [],
+			"class": "",
+			"tags": [
+				"core"
+			],
+			"summary": "Cheat death once per match.",
+			"description": "Once per match, lethal damage leaves you at 1 HP with {invuln}s invulnerability and {os} overshield.",
+			"drawback": "",
+			"values": {
+				"invuln": 3,
+				"os": 50
+			},
+			"effects": [
+				{
+					"script": "cheat_death",
+					"params": {
+						"invuln": 3.0,
+						"overshield": 50.0,
+						"uses": 1
+					}
+				}
+			]
+		},
+		{
+			"id": "L_reverb_core",
+			"name": "Reverb Core",
+			"tier": "legendary",
+			"branch": "core",
+			"type": "active",
+			"icon": "L_reverb_core",
+			"ranks": 1,
+			"weight": 10,
+			"requires_meta": [],
+			"class": "",
+			"tags": [
+				"core"
+			],
+			"summary": "Extra ability charge; every use sends a shockwave.",
+			"description": "Class ability +1 charge. Every use releases a {damage}-damage shockwave ({radius}m).",
+			"drawback": "",
+			"values": {
+				"damage": 120,
+				"radius": 4
+			},
+			"effects": [
+				{
+					"script": "ability_mod",
+					"params": {
+						"charges": 1
+					}
+				},
+				{
+					"script": "on_event_explode",
+					"params": {
+						"damage": 120.0,
+						"radius": 4.0,
+						"knockback": 6.0,
+						"at": "player"
+					},
+					"on": [
+						"ability_used"
+					]
+				}
+			]
+		},
+		{
+			"id": "L_skullburst",
+			"name": "Skullburst",
+			"tier": "legendary",
+			"branch": "marksman",
+			"type": "passive",
+			"icon": "L_skullburst",
+			"ranks": 1,
+			"weight": 10,
+			"requires_meta": [
+				"mk_legend"
+			],
+			"class": "",
+			"tags": [
+				"marksman"
+			],
+			"summary": "Precision kills explode in chains.",
+			"description": "Precision kills explode for {frac_pct}% of the killing blow ({radius}m). Blast kills chain (x{decay}, {max_depth} links).",
+			"drawback": "",
+			"values": {
+				"frac_pct": 60,
+				"radius": 3,
+				"decay": 0.7,
+				"max_depth": 4
+			},
+			"effects": [
+				{
+					"script": "on_event_explode",
+					"params": {
+						"damage_frac": 0.6,
+						"radius": 3.0,
+						"knockback": 4.0,
+						"chain": true,
+						"decay": 0.7,
+						"max_depth": 4,
+						"at": "target"
+					},
+					"on": [
+						"enemy_killed"
+					],
+					"if": {
+						"is_headshot": true
+					}
+				}
+			]
+		},
+		{
+			"id": "L_phantom_mag",
+			"name": "Phantom Mag",
+			"tier": "legendary",
+			"branch": "marksman",
+			"type": "passive",
+			"icon": "L_phantom_mag",
+			"ranks": 1,
+			"weight": 10,
+			"requires_meta": [
+				"mk_legend"
+			],
+			"class": "",
+			"tags": [
+				"marksman"
+			],
+			"summary": "Every Nth shot is free and hits harder.",
+			"description": "Every {every}th shot uses no ammo and deals +{bonus_pct}% damage.",
+			"drawback": "",
+			"values": {
+				"every": 6,
+				"bonus_pct": 100
+			},
+			"effects": [
+				{
+					"script": "shot_counter",
+					"params": {
+						"every": 6,
+						"bonus": 1.0
+					}
+				}
+			]
+		},
+		{
+			"id": "L_mercy_line",
+			"name": "Mercy Line",
+			"tier": "legendary",
+			"branch": "marksman",
+			"type": "passive",
+			"icon": "L_mercy_line",
+			"ranks": 1,
+			"weight": 10,
+			"requires_meta": [
+				"mk_legend"
+			],
+			"class": "",
+			"tags": [
+				"marksman"
+			],
+			"summary": "Hits on weakened zombies always count as precision.",
+			"description": "Hits on zombies below {hp_pct}% health always count as precision.",
+			"drawback": "",
+			"values": {
+				"hp_pct": 25
+			},
+			"effects": [
+				{
+					"script": "force_precision",
+					"params": {
+						"cond": "target_health_below",
+						"threshold": 0.25
+					}
+				}
+			]
+		},
+		{
+			"id": "L_livewire",
+			"name": "Livewire Lattice",
+			"tier": "legendary",
+			"branch": "sapper",
+			"type": "passive",
+			"icon": "L_livewire",
+			"ranks": 1,
+			"weight": 10,
+			"requires_meta": [
+				"sp_legend"
+			],
+			"class": "",
+			"tags": [
+				"sapper"
+			],
+			"summary": "Arcs chain far; even Ballistic hits arc.",
+			"description": "Volt arcs chain through zombies within {range}m (up to {chain} jumps, x{decay} each). Ballistic hits arc at {primary_pct}% strength.",
+			"drawback": "",
+			"values": {
+				"range": 3,
+				"chain": 8,
+				"decay": 0.8,
+				"primary_pct": 50
+			},
+			"effects": [
+				{
+					"script": "element_arc",
+					"params": {
+						"chain": 8,
+						"decay": 0.8,
+						"chain_range": 3.0,
+						"frac": 0.35,
+						"primary_frac": 0.5
+					},
+					"on": [
+						"hit"
+					]
+				}
+			]
+		},
+		{
+			"id": "L_pyre_walker",
+			"name": "Pyre Walker",
+			"tier": "legendary",
+			"branch": "sapper",
+			"type": "passive",
+			"icon": "L_pyre_walker",
+			"ranks": 1,
+			"weight": 10,
+			"requires_meta": [
+				"sp_legend"
+			],
+			"class": "",
+			"tags": [
+				"sapper"
+			],
+			"summary": "Fire spreads on death; slides leave flames.",
+			"description": "Burning zombies that die ignite everything within {radius}m. Slides leave a fire trail ({dps} DPS, {dur}s).",
+			"drawback": "",
+			"values": {
+				"radius": 3,
+				"dps": 20,
+				"dur": 2
+			},
+			"effects": [
+				{
+					"script": "element_dot",
+					"params": {
+						"spread_on_death": true,
+						"spread_radius": 3.0,
+						"spread_dps": 20.0,
+						"dur": 3.0
+					},
+					"on": [
+						"enemy_killed"
+					]
+				},
+				{
+					"script": "trail_hazard",
+					"params": {
+						"dps": 20.0,
+						"dur": 2.0,
+						"radius": 1.2,
+						"spacing": 0.25
+					},
+					"on": [
+						"slide_tick"
+					]
+				}
+			]
+		},
+		{
+			"id": "L_cluster",
+			"name": "Cluster Doctrine",
+			"tier": "legendary",
+			"branch": "sapper",
+			"type": "passive",
+			"icon": "L_cluster",
+			"ranks": 1,
+			"weight": 10,
+			"requires_meta": [
+				"sp_legend"
+			],
+			"class": "",
+			"tags": [
+				"sapper"
+			],
+			"summary": "Grenades split into bomblets.",
+			"description": "Grenades split into {count} bomblets on detonation ({frac_pct}% damage, {radius}m each).",
+			"drawback": "",
+			"values": {
+				"count": 3,
+				"frac_pct": 40,
+				"radius": 2.5
+			},
+			"effects": [
+				{
+					"script": "grenade_mod",
+					"params": {
+						"cluster": 3,
+						"cluster_frac": 0.4,
+						"cluster_radius": 2.5
+					},
+					"on": [
+						"grenade_detonated"
+					]
+				}
+			]
+		},
+		{
+			"id": "L_scrapwall",
+			"name": "Scrapwall",
+			"tier": "legendary",
+			"branch": "survivor",
+			"type": "passive",
+			"icon": "L_scrapwall",
+			"ranks": 1,
+			"weight": 10,
+			"requires_meta": [
+				"sv_legend"
+			],
+			"class": "",
+			"tags": [
+				"survivor"
+			],
+			"summary": "Kills build a big overshield that boosts damage.",
+			"description": "Overshield cap {cap}. Kills grant {os} overshield. While overshield is up, +{mult_pct}% damage.",
+			"drawback": "",
+			"values": {
+				"cap": 100,
+				"os": 5,
+				"mult_pct": 15
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "overshield_cap",
+						"add": 50
+					}
+				},
+				{
+					"script": "grant_overshield",
+					"params": {
+						"amount": 5
+					},
+					"on": [
+						"enemy_killed"
+					]
+				},
+				{
+					"script": "conditional_damage",
+					"params": {
+						"cond": "has_overshield",
+						"mult": 0.15
+					}
+				}
+			]
+		},
+		{
+			"id": "L_grave_feast",
+			"name": "Grave Feast",
+			"tier": "legendary",
+			"branch": "survivor",
+			"type": "passive",
+			"icon": "L_grave_feast",
+			"ranks": 1,
+			"weight": 10,
+			"requires_meta": [
+				"sv_legend"
+			],
+			"class": "",
+			"tags": [
+				"survivor"
+			],
+			"summary": "Brutal melee that heals and resets on kills.",
+			"description": "Melee +{melee_pct}% damage. Melee kills heal {heal} and reset the melee cooldown.",
+			"drawback": "",
+			"values": {
+				"melee_pct": 100,
+				"heal": 25
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "melee_damage_mult",
+						"add": 1.0
+					}
+				},
+				{
+					"script": "heal",
+					"params": {
+						"amount": 25
+					},
+					"on": [
+						"enemy_killed"
+					],
+					"if": {
+						"source": "melee"
+					}
+				},
+				{
+					"script": "cooldown_reset",
+					"params": {
+						"what": "melee"
+					},
+					"on": [
+						"enemy_killed"
+					],
+					"if": {
+						"source": "melee"
+					}
+				}
+			]
+		},
+		{
+			"id": "L_bramble",
+			"name": "Bramble Hide",
+			"tier": "legendary",
+			"branch": "survivor",
+			"type": "passive",
+			"icon": "L_bramble",
+			"ranks": 1,
+			"weight": 10,
+			"requires_meta": [
+				"sv_legend"
+			],
+			"class": "",
+			"tags": [
+				"survivor"
+			],
+			"summary": "Zombies that hit you get hurt back.",
+			"description": "Zombies that hit you take {mult}x the raw damage back.",
+			"drawback": "",
+			"values": {
+				"mult": 3
+			},
+			"effects": [
+				{
+					"script": "reflect_damage",
+					"params": {
+						"mult": 3.0
+					},
+					"on": [
+						"damage_taken"
+					]
+				}
+			]
+		},
+		{
+			"id": "L_undertow",
+			"name": "Undertow Glide",
+			"tier": "legendary",
+			"branch": "freerunner",
+			"type": "passive",
+			"icon": "L_undertow",
+			"ranks": 1,
+			"weight": 10,
+			"requires_meta": [
+				"fr_legend"
+			],
+			"class": "",
+			"tags": [
+				"freerunner"
+			],
+			"summary": "Slides fully reload and keep your speed.",
+			"description": "Sliding fully reloads your weapon ({icd}s cooldown per weapon). Slides hold sprint speed for {floor}s.",
+			"drawback": "",
+			"values": {
+				"icd": 3,
+				"floor": 1.5
+			},
+			"effects": [
+				{
+					"script": "refill_mag",
+					"params": {
+						"mode": "full",
+						"icd": 3.0,
+						"per_weapon": true
+					},
+					"on": [
+						"slide_started"
+					]
+				},
+				{
+					"script": "slide_mod",
+					"params": {
+						"floor_time": 1.5
+					}
+				}
+			]
+		},
+		{
+			"id": "L_kite_string",
+			"name": "Kite String",
+			"tier": "legendary",
+			"branch": "freerunner",
+			"type": "passive",
+			"icon": "L_kite_string",
+			"ranks": 1,
+			"weight": 10,
+			"requires_meta": [
+				"fr_legend"
+			],
+			"class": "",
+			"tags": [
+				"freerunner"
+			],
+			"summary": "Rule the air: slow zombies, take less, hit harder.",
+			"description": "While airborne: zombies near you slow {slow_pct}% and you take {dr_pct}% less damage, gun damage +{mult_pct}%, and +{jumps} wall jumps.",
+			"drawback": "",
+			"values": {
+				"slow_pct": 25,
+				"dr_pct": 15,
+				"mult_pct": 25,
+				"jumps": 2
+			},
+			"effects": [
+				{
+					"script": "slowmo_trigger",
+					"params": {
+						"mode": "while_airborne",
+						"time_scale": 0.75,
+						"slow": 0.25,
+						"radius": 12.0,
+						"fallback_dr": 0.15
+					}
+				},
+				{
+					"script": "conditional_damage",
+					"params": {
+						"cond": "airborne",
+						"mult": 0.25,
+						"sources": [
+							"gun"
+						]
+					}
+				},
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "max_wall_jumps_add",
+						"add": 2
+					}
+				}
+			]
+		},
+		{
+			"id": "L_crater_drop",
+			"name": "Crater Drop",
+			"tier": "legendary",
+			"branch": "freerunner",
+			"type": "passive",
+			"icon": "L_crater_drop",
+			"ranks": 1,
+			"weight": 10,
+			"requires_meta": [
+				"fr_legend"
+			],
+			"class": "",
+			"tags": [
+				"freerunner"
+			],
+			"summary": "Hard landings send out a shockwave.",
+			"description": "Landing from a fall faster than {min_fall} m/s sends out a shockwave: {per} x fall speed damage ({radius}m).",
+			"drawback": "",
+			"values": {
+				"min_fall": 3.5,
+				"per": 15,
+				"radius": 3.5
+			},
+			"effects": [
+				{
+					"script": "on_event_explode",
+					"params": {
+						"damage_per_fall_speed": 15.0,
+						"min_fall": 3.5,
+						"radius": 3.5,
+						"knockback": 6.0,
+						"at": "player"
+					},
+					"on": [
+						"landed"
+					]
+				}
+			]
+		},
+		{
+			"id": "L_breakline",
+			"name": "Breakline Charge",
+			"tier": "legendary",
+			"branch": "soldier",
+			"type": "active",
+			"icon": "L_breakline",
+			"ranks": 1,
+			"weight": 10,
+			"requires_meta": [
+				"so_breacher"
+			],
+			"class": "soldier",
+			"tags": [
+				"soldier"
+			],
+			"summary": "Dashes end in a grenade blast.",
+			"description": "The end of a dash detonates your grenade type at {frac_pct}% damage ({icd}s cooldown).",
+			"drawback": "",
+			"values": {
+				"frac_pct": 50,
+				"icd": 6
+			},
+			"effects": [
+				{
+					"script": "on_event_explode",
+					"params": {
+						"grenade_frac": 0.5,
+						"icd": 6.0,
+						"at": "player"
+					},
+					"on": [
+						"ability_ended"
+					]
+				}
+			]
+		},
+		{
+			"id": "L_redline",
+			"name": "Redline",
+			"tier": "legendary",
+			"branch": "scout",
+			"type": "active",
+			"icon": "L_redline",
+			"ranks": 1,
+			"weight": 10,
+			"requires_meta": [
+				"sc_racing_heart"
+			],
+			"class": "scout",
+			"tags": [
+				"scout"
+			],
+			"summary": "Long Adrenaline where every hit is precision.",
+			"description": "Adrenaline lasts {dur}s and every hit during it counts as precision.",
+			"drawback": "",
+			"values": {
+				"dur": 8
+			},
+			"effects": [
+				{
+					"script": "ability_mod",
+					"params": {
+						"duration": 8.0
+					}
+				},
+				{
+					"script": "force_precision",
+					"params": {
+						"cond": "ability_active"
+					}
+				}
+			]
+		}
+	]
+}

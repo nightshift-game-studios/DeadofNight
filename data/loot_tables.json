@@ -1,0 +1,117 @@
+{
+	"_help": "Loot tables. Each table: drop_chance (0-1, per kill/open), rolls, weighted 'entries' and 'rarity_weights'. Entry kinds: gear (random weapon or armor), weapon (optional archetype/slot), armor (optional slot), consumable (id = file in resources/items). 'rarity_round_bonus' adds weight per round survived.",
+	"stash": {
+		"_help": "Persistent stash (Skillz). cap = max spare (non-equipped) gear pieces carried between matches, across all 8 slots, on top of each slot's 9-tile grid. Equipped gear does not count. Scrap (right-click) frees space. Saved in progress.cfg [stash].",
+		"cap": 40
+	},
+	"item_power": {
+		"_help": "Diablo-style Item Power. Each drop rolls base + per_round*(round-1) + rarity_bonus +/- variance (capped at max). Item power scales the item: weapon damage x(1 + (IP-100)*damage_per_point); every rolled weapon stat EXCEPT those in ip_stat_exclude gets +(IP-100)*stat_points_per_point; armor stat totals get +(IP-100)*armor_points_per_point. Impact is excluded so damage_per_point is the only Item Power damage dial (IP 400 = exactly 2.2x).",
+		"base": 100,
+		"per_round": 5,
+		"variance": 3,
+		"rarity_bonus": {
+			"common": 0,
+			"uncommon": 3,
+			"rare": 6,
+			"legendary": 10,
+			"mythic": 15
+		},
+		"max": 400,
+		"damage_per_point": 0.004,
+		"stat_points_per_point": 0.1,
+		"armor_points_per_point": 0.12,
+		"ip_stat_exclude": [
+			"impact"
+		]
+	},
+	"roll_quality": {
+		"_help": "Roll quality (0-1) = how far through the random roll range an item's stats landed for its Item Power and rarity (0 = worst possible roll, 1 = best). Weapons: weighted average over stats of (random offset + stat_variance) / (2 * stat_variance), measured after the 1..100 clamp. Armor: position of the random total inside armor.json piece_totals for its rarity. Stored on the item and saved; items saved without it get it derived from their stats on load (derive_missing), otherwise legacy_default.",
+		"weapon_stat_weights": {
+			"impact": 2.0,
+			"range": 1.0,
+			"stability": 1.0,
+			"handling": 1.0,
+			"reload": 1.0,
+			"magazine": 1.0
+		},
+		"derive_missing": true,
+		"legacy_default": 0.5,
+		"legacy_item_power": 100
+	},
+	"tables": {
+		"zombie": {
+			"drop_chance": 0.14,
+			"rolls": 1,
+			"entries": [
+				{
+					"kind": "gear",
+					"weight": 5
+				},
+				{
+					"kind": "consumable",
+					"id": "health_pack",
+					"weight": 2
+				},
+				{
+					"kind": "consumable",
+					"id": "ammo_box",
+					"weight": 3
+				},
+				{
+					"kind": "consumable",
+					"id": "heavy_ammo",
+					"weight": 2
+				}
+			],
+			"rarity_weights": {
+				"common": 50,
+				"uncommon": 32,
+				"rare": 14,
+				"legendary": 3.5,
+				"mythic": 0.5
+			},
+			"rarity_round_bonus": {
+				"rare": 1.0,
+				"legendary": 0.6,
+				"mythic": 0.12
+			}
+		},
+		"chest": {
+			"drop_chance": 1.0,
+			"rolls": 2,
+			"entries": [
+				{
+					"kind": "weapon",
+					"weight": 5
+				},
+				{
+					"kind": "armor",
+					"weight": 4
+				},
+				{
+					"kind": "consumable",
+					"id": "heavy_ammo",
+					"weight": 1
+				}
+			],
+			"rarity_weights": {
+				"uncommon": 30,
+				"rare": 42,
+				"legendary": 24,
+				"mythic": 4
+			},
+			"rarity_round_bonus": {
+				"legendary": 1.5,
+				"mythic": 0.4
+			}
+		},
+		"starter": {
+			"drop_chance": 1.0,
+			"rolls": 0,
+			"entries": [],
+			"rarity_weights": {
+				"common": 100
+			}
+		}
+	}
+}

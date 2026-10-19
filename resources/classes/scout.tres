@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="PlayerClass" format=3]
+
+[ext_resource type="Script" path="res://scripts/classes/player_class.gd" id="1_pc"]
+[ext_resource type="Script" path="res://scripts/abilities/speed_boost_ability.gd" id="2_boost"]
+
+[sub_resource type="Resource" id="Resource_boost"]
+script = ExtResource("2_boost")
+speed_multiplier = 1.6
+display_name = "Adrenaline"
+cooldown = 10.0
+duration = 4.0
+
+[resource]
+script = ExtResource("1_pc")
+display_name = "Scout"
+description = "Fragile but fast. Q: Adrenaline speed boost. G: Tremor Charge."
+max_health = 75
+walk_speed = 5.8
+sprint_speed = 9.5
+jump_velocity = 5.5
+grenade_id = "pulse"
+ability = SubResource("Resource_boost")

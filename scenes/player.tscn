@@ -1,0 +1,61 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
+[ext_resource type="Script" path="res://scripts/items/inventory.gd" id="2_inv"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_p"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="Mat_flash"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(1, 0.8, 0.3, 0.9)
+emission_enabled = true
+emission = Color(1, 0.7, 0.2, 1)
+emission_energy_multiplier = 4.0
+billboard_mode = 1
+
+[sub_resource type="QuadMesh" id="QuadMesh_flash"]
+material = SubResource("Mat_flash")
+size = Vector2(0.12, 0.12)
+
+[node name="Player" type="CharacterBody3D"]
+collision_layer = 2
+collision_mask = 5
+floor_snap_length = 0.3
+script = ExtResource("1_player")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_p")
+
+[node name="Head" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Head"]
+current = true
+fov = 80.0
+near = 0.02
+
+[node name="Gun" type="Node3D" parent="Head/Camera3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, -0.2, -0.45)
+
+[node name="Model" type="Node3D" parent="Head/Camera3D/Gun"]
+
+[node name="Muzzle" type="Marker3D" parent="Head/Camera3D/Gun"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -0.3)
+
+[node name="Flash" type="Node3D" parent="Head/Camera3D/Gun/Muzzle"]
+
+[node name="FlashQuad" type="MeshInstance3D" parent="Head/Camera3D/Gun/Muzzle/Flash"]
+cast_shadow = 0
+mesh = SubResource("QuadMesh_flash")
+
+[node name="FlashLight" type="OmniLight3D" parent="Head/Camera3D/Gun/Muzzle/Flash"]
+light_color = Color(1, 0.75, 0.35, 1)
+light_energy = 3.0
+omni_range = 4.0
+
+[node name="Inventory" type="Node" parent="."]
+script = ExtResource("2_inv")

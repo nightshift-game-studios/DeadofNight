@@ -1,0 +1,562 @@
+{
+	"_help": "Weapon archetypes plus fictional manufacturers. Each roll picks a manufacturer allowed in the weapon's slot; its stat_mods are added to the rolled stats and one of its flavor lines is used (mythic-tier rolls use the archetype's mythic name, perk and flavor). Precision (head) hits multiply damage by the archetype's headshot_multiplier, falling back to headshot_multiplier_default. Optional per archetype: \"fire_sfx\" = sound key in assets/audio/sfx/weapons (file name minus _NN), \"burst\"/\"burst_interval\" = rounds per trigger pull and seconds between them (rpm stays the average fire rate).",
+	"stat_variance": 12,
+	"headshot_multiplier_default": 2.0,
+	"archetypes": [
+		{
+			"id": "sidearm",
+			"type": "Sidearm",
+			"slot": "primary",
+			"model": "res://assets/models/guns/sidearm.glb",
+			"view": {
+				"length": 0.26,
+				"offset": [
+					0.2,
+					-0.2,
+					-0.42
+				]
+			},
+			"fire_mode": "semi",
+			"rpm": 400,
+			"fire_sfx": "sidearm_fire",
+			"base_damage": 24,
+			"pellets": 1,
+			"headshot_multiplier": 2.0,
+			"spread": 0.6,
+			"base_range": 18,
+			"base_mag": 14,
+			"base_reload": 1.2,
+			"reserve_mags": 8,
+			"stats": {
+				"impact": 40,
+				"range": 35,
+				"stability": 60,
+				"handling": 80,
+				"reload": 75,
+				"magazine": 55
+			},
+			"names": [
+				"Rat Catcher",
+				"Back-Alley Cure",
+				"Brightline",
+				"Small Mercy",
+				"Pocket Thunder"
+			],
+			"mythic": {
+				"name": "Graveyard Shift",
+				"perk": "shrapnel_tips",
+				"flavor": "Small, mean, and always within reach."
+			}
+		},
+		{
+			"id": "hand_cannon",
+			"type": "Hand Cannon",
+			"slot": "primary",
+			"model": "res://assets/models/guns/hand_cannon.glb",
+			"view": {
+				"length": 0.3,
+				"offset": [
+					0.2,
+					-0.2,
+					-0.42
+				]
+			},
+			"fire_mode": "semi",
+			"rpm": 140,
+			"fire_sfx": "hand_cannon_fire",
+			"base_damage": 60,
+			"pellets": 1,
+			"headshot_multiplier": 2.0,
+			"spread": 0.3,
+			"base_range": 30,
+			"base_mag": 8,
+			"base_reload": 1.6,
+			"reserve_mags": 7,
+			"stats": {
+				"impact": 80,
+				"range": 60,
+				"stability": 45,
+				"handling": 50,
+				"reload": 45,
+				"magazine": 40
+			},
+			"names": [
+				"Final Argument",
+				"Gravedigger",
+				"Iron Promise",
+				"Dead Man's Draw",
+				"Tin Star"
+			],
+			"mythic": {
+				"name": "Sexton's Verdict",
+				"perk": "bloodrush",
+				"flavor": "Six chambers. Six graves. Dig fast."
+			}
+		},
+		{
+			"id": "auto_rifle",
+			"type": "Auto Rifle",
+			"slot": "primary",
+			"model": "res://assets/models/guns/auto_rifle.glb",
+			"view": {
+				"length": 0.62,
+				"offset": [
+					0.2,
+					-0.22,
+					-0.5
+				]
+			},
+			"fire_mode": "auto",
+			"rpm": 600,
+			"fire_sfx": "auto_rifle_fire",
+			"base_damage": 16,
+			"pellets": 1,
+			"headshot_multiplier": 2.0,
+			"spread": 1.1,
+			"base_range": 22,
+			"base_mag": 36,
+			"base_reload": 1.9,
+			"reserve_mags": 5,
+			"stats": {
+				"impact": 30,
+				"range": 45,
+				"stability": 55,
+				"handling": 55,
+				"reload": 50,
+				"magazine": 60
+			},
+			"names": [
+				"Horde Breaker",
+				"Steady Hand",
+				"Long Night",
+				"Cinder Saw",
+				"Last Light"
+			],
+			"mythic": {
+				"name": "Ninth Siren",
+				"perk": "bloodrush",
+				"flavor": "Nine verses for the horde, sung at full auto."
+			}
+		},
+		{
+			"id": "scout_rifle",
+			"type": "Scout Rifle",
+			"slot": "primary",
+			"model": "res://assets/models/guns/scout_rifle.glb",
+			"view": {
+				"length": 0.66,
+				"offset": [
+					0.2,
+					-0.22,
+					-0.5
+				]
+			},
+			"fire_mode": "semi",
+			"rpm": 260,
+			"fire_sfx": "scout_rifle_fire",
+			"base_damage": 42,
+			"pellets": 1,
+			"headshot_multiplier": 2.0,
+			"spread": 0.15,
+			"base_range": 45,
+			"base_mag": 14,
+			"base_reload": 1.8,
+			"reserve_mags": 6,
+			"stats": {
+				"impact": 60,
+				"range": 80,
+				"stability": 55,
+				"handling": 45,
+				"reload": 45,
+				"magazine": 45
+			},
+			"names": [
+				"Far Horizon",
+				"Watchtower",
+				"Patient Eye",
+				"Distant Bell",
+				"Grim Surveyor"
+			],
+			"mythic": {
+				"name": "Steeple Watch",
+				"perk": "fever_hands",
+				"flavor": "Mark the far ones. The near ones will wait."
+			}
+		},
+		{
+			"id": "smg",
+			"type": "Submachine Gun",
+			"slot": "secondary",
+			"model": "res://assets/models/guns/smg.glb",
+			"view": {
+				"length": 0.42,
+				"offset": [
+					0.2,
+					-0.2,
+					-0.44
+				]
+			},
+			"fire_mode": "auto",
+			"rpm": 900,
+			"fire_sfx": "smg_fire",
+			"base_damage": 12,
+			"pellets": 1,
+			"headshot_multiplier": 2.0,
+			"spread": 1.8,
+			"base_range": 13,
+			"base_mag": 32,
+			"base_reload": 1.5,
+			"reserve_mags": 6,
+			"stats": {
+				"impact": 20,
+				"range": 30,
+				"stability": 50,
+				"handling": 80,
+				"reload": 65,
+				"magazine": 55
+			},
+			"names": [
+				"Hornet's Wake",
+				"Static Bloom",
+				"Quickfire Hymn",
+				"Spark Swarm",
+				"Riot Choir"
+			],
+			"mythic": {
+				"name": "Wasp Cradle",
+				"perk": "hot_brass",
+				"flavor": "Sparks fly, the dead dance."
+			}
+		},
+		{
+			"id": "shotgun",
+			"type": "Shotgun",
+			"slot": "secondary",
+			"model": "res://assets/models/guns/shotgun.glb",
+			"view": {
+				"length": 0.62,
+				"offset": [
+					0.2,
+					-0.22,
+					-0.5
+				]
+			},
+			"fire_mode": "semi",
+			"rpm": 70,
+			"fire_sfx": "shotgun_fire",
+			"base_damage": 20,
+			"pellets": 9,
+			"headshot_multiplier": 2.0,
+			"spread": 6.0,
+			"base_range": 9,
+			"base_mag": 6,
+			"base_reload": 2.3,
+			"reserve_mags": 5,
+			"stats": {
+				"impact": 70,
+				"range": 30,
+				"stability": 40,
+				"handling": 50,
+				"reload": 40,
+				"magazine": 35
+			},
+			"names": [
+				"Doorbreaker",
+				"Close Call",
+				"Grave Greeting",
+				"Salvo Hymn",
+				"Rusted Verdict"
+			],
+			"mythic": {
+				"name": "Brickbreaker Psalm",
+				"perk": "fever_hands",
+				"flavor": "Six reasons to stay out of arm's reach."
+			}
+		},
+		{
+			"id": "pulse_rifle",
+			"type": "Pulse Rifle",
+			"slot": "secondary",
+			"model": "res://assets/models/guns/pulse_rifle.glb",
+			"view": {
+				"length": 0.62,
+				"offset": [
+					0.2,
+					-0.22,
+					-0.5
+				]
+			},
+			"fire_mode": "auto",
+			"rpm": 420,
+			"fire_sfx": "pulse_rifle_burst",
+			"burst": 3,
+			"burst_interval": 0.075,
+			"base_damage": 22,
+			"pellets": 1,
+			"headshot_multiplier": 2.0,
+			"spread": 0.7,
+			"base_range": 28,
+			"base_mag": 30,
+			"base_reload": 1.8,
+			"reserve_mags": 5,
+			"stats": {
+				"impact": 45,
+				"range": 55,
+				"stability": 60,
+				"handling": 55,
+				"reload": 50,
+				"magazine": 50
+			},
+			"names": [
+				"Pulsewright",
+				"Third Chorus",
+				"Bloodtide",
+				"Vigilant Echo",
+				"Hollow Metronome"
+			],
+			"mythic": {
+				"name": "Gallows Choir",
+				"perk": "shrapnel_tips",
+				"flavor": "Three-round bursts, one quiet throat."
+			}
+		},
+		{
+			"id": "sniper_rifle",
+			"type": "Sniper Rifle",
+			"slot": "heavy",
+			"model": "res://assets/models/guns/sniper_rifle.glb",
+			"view": {
+				"length": 0.8,
+				"offset": [
+					0.2,
+					-0.22,
+					-0.55
+				]
+			},
+			"fire_mode": "semi",
+			"rpm": 60,
+			"fire_sfx": "sniper_fire",
+			"base_damage": 220,
+			"pellets": 1,
+			"headshot_multiplier": 2.0,
+			"spread": 0.0,
+			"base_range": 90,
+			"base_mag": 4,
+			"base_reload": 2.4,
+			"reserve_mags": 3,
+			"penetrate": true,
+			"stats": {
+				"impact": 90,
+				"range": 95,
+				"stability": 50,
+				"handling": 35,
+				"reload": 40,
+				"magazine": 30
+			},
+			"names": [
+				"Lone Vigil",
+				"Silent Pine",
+				"Frostbite Gaze",
+				"Ending Note",
+				"Wraithfinder"
+			],
+			"mythic": {
+				"name": "Lighthouse Keeper",
+				"perk": "hot_brass",
+				"flavor": "When the sun goes down, it opens its eye."
+			}
+		},
+		{
+			"id": "rocket_launcher",
+			"type": "Rocket Launcher",
+			"slot": "heavy",
+			"model": "res://assets/models/guns/rocket_launcher.glb",
+			"view": {
+				"length": 0.6,
+				"offset": [
+					0.22,
+					-0.22,
+					-0.45
+				]
+			},
+			"fire_mode": "semi",
+			"rpm": 45,
+			"fire_sfx": "rocket_launcher_fire",
+			"base_damage": 280,
+			"pellets": 1,
+			"headshot_multiplier": 2.0,
+			"spread": 0.0,
+			"base_range": 80,
+			"base_mag": 1,
+			"base_reload": 2.2,
+			"reserve_mags": 5,
+			"projectile": {
+				"speed": 32.0,
+				"radius": 5.0,
+				"knockback": 12.0
+			},
+			"stats": {
+				"impact": 85,
+				"range": 70,
+				"stability": 40,
+				"handling": 35,
+				"reload": 40,
+				"magazine": 10
+			},
+			"names": [
+				"Doomsday Lullaby",
+				"Hellwalker",
+				"Big Sleep",
+				"Boomtown Toll",
+				"Wrecker's Hymn"
+			],
+			"mythic": {
+				"name": "Undertaker's Mercy",
+				"perk": "pin_puller",
+				"flavor": "Say a few words. Then say goodbye to the block."
+			}
+		}
+	],
+	"manufacturers": [
+		{
+			"id": "rustwell",
+			"name": "Rustwell Arms",
+			"color": [
+				0.78,
+				0.52,
+				0.28
+			],
+			"slots": [
+				"primary",
+				"secondary",
+				"heavy"
+			],
+			"stat_mods": {
+				"reload": 8,
+				"handling": 4,
+				"impact": -4
+			},
+			"flavor": [
+				"Built in a garage. Still outlived the garage.",
+				"Rust is just armor that hasn't finished yet.",
+				"Ugly, honest, works every time."
+			]
+		},
+		{
+			"id": "kestrel",
+			"name": "Kestrel & Vane",
+			"color": [
+				0.45,
+				0.7,
+				0.85
+			],
+			"slots": [
+				"primary",
+				"secondary",
+				"heavy"
+			],
+			"stat_mods": {
+				"range": 10,
+				"stability": 6,
+				"magazine": -8
+			},
+			"flavor": [
+				"Measure twice. Fire once.",
+				"Precision tooling for an imprecise apocalypse.",
+				"The last luxury brand standing."
+			]
+		},
+		{
+			"id": "hollowpoint",
+			"name": "Hollowpoint Collective",
+			"color": [
+				0.85,
+				0.25,
+				0.2
+			],
+			"slots": [
+				"primary",
+				"secondary",
+				"heavy"
+			],
+			"stat_mods": {
+				"impact": 10,
+				"handling": -8
+			},
+			"flavor": [
+				"Every round is a strongly worded opinion.",
+				"Hits like a closing door.",
+				"Recoil is how it says hello."
+			]
+		},
+		{
+			"id": "grimtide",
+			"name": "Grimtide Industries",
+			"color": [
+				0.55,
+				0.62,
+				0.35
+			],
+			"slots": [
+				"primary",
+				"secondary",
+				"heavy"
+			],
+			"stat_mods": {
+				"magazine": 12,
+				"reload": -6
+			},
+			"flavor": [
+				"More bullets. Fewer questions.",
+				"Bulk ammunition for bulk problems.",
+				"Feed it. It never stops being hungry."
+			]
+		},
+		{
+			"id": "voltaic",
+			"name": "Voltaic Foundry",
+			"color": [
+				0.6,
+				0.45,
+				0.95
+			],
+			"slots": [
+				"secondary",
+				"heavy"
+			],
+			"stat_mods": {
+				"stability": 8,
+				"range": -4,
+				"handling": 4
+			},
+			"flavor": [
+				"Smells like ozone and bad decisions.",
+				"Batteries not included. Lightning is.",
+				"Hums when it's hungry."
+			]
+		},
+		{
+			"id": "cinderjaw",
+			"name": "Cinderjaw Munitions",
+			"color": [
+				0.95,
+				0.55,
+				0.15
+			],
+			"slots": [
+				"heavy",
+				"primary"
+			],
+			"stat_mods": {
+				"impact": 6,
+				"stability": -6,
+				"reload": -2
+			},
+			"flavor": [
+				"If it isn't on fire, you're holding it wrong.",
+				"Warranty void on detonation.",
+				"Loud is a feature."
+			]
+		}
+	]
+}

@@ -1,0 +1,35 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/items/chest.gd" id="1_chest"]
+[ext_resource type="PackedScene" path="res://assets/models/props/wooden_crate_02/wooden_crate_02.gltf" id="2_model"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_c"]
+size = Vector3(2.3, 0.93, 1.06)
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_a"]
+radius = 1.8
+
+[node name="Chest" type="StaticBody3D"]
+script = ExtResource("1_chest")
+
+[node name="Model" parent="." instance=ExtResource("2_model")]
+transform = Transform3D(0, 0, 2, 0, 2, 0, -2, 0, 0, 0, 0, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.47, 0)
+shape = SubResource("BoxShape3D_c")
+
+[node name="Area3D" type="Area3D" parent="."]
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+shape = SubResource("SphereShape3D_a")
+
+[node name="Glow" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
+light_color = Color(1, 0.8, 0.35, 1)
+light_energy = 2.0
+omni_range = 3.5

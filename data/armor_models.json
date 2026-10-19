@@ -1,0 +1,22 @@
+{
+	"_help": "3D models for armor, by Desi (CC0, see CREDITS.md). 'skinned' GLBs carry the 65-bone UAL2 skeleton (same bone names / rest pose as the zombies) and no animations: parent the MeshInstance3D(s) under a UAL2 Skeleton3D (skeleton = that node) to wear them. 'display' GLBs are unskinned and centred for the character screen (T-pose shapes). slot_pieces maps data/armor.json slots to pieces; class_item has two looks, class_item_by_class picks one per class (fallback = first). Use ArmorModels (scripts/world/armor_models.gd) to read this.",
+	"pieces": {
+		"helmet": {"skinned": "res://assets/models/armor/armor_helmet.glb", "display": "res://assets/models/armor/display/armor_helmet_display.glb"},
+		"gauntlets": {"skinned": "res://assets/models/armor/armor_gauntlets.glb", "display": "res://assets/models/armor/display/armor_gauntlets_display.glb", "nodes": ["gauntlet_l", "gauntlet_r"]},
+		"chest": {"skinned": "res://assets/models/armor/armor_chest.glb", "display": "res://assets/models/armor/display/armor_chest_display.glb"},
+		"legs": {"skinned": "res://assets/models/armor/armor_legs.glb", "display": "res://assets/models/armor/display/armor_legs_display.glb"},
+		"cloak": {"skinned": "res://assets/models/armor/armor_cloak.glb", "display": "res://assets/models/armor/display/armor_cloak_display.glb"},
+		"sash": {"skinned": "res://assets/models/armor/armor_sash.glb", "display": "res://assets/models/armor/display/armor_sash_display.glb"}
+	},
+	"slot_pieces": {
+		"helmet": ["helmet"],
+		"gauntlets": ["gauntlets"],
+		"chest": ["chest"],
+		"legs": ["legs"],
+		"class_item": ["cloak", "sash"]
+	},
+	"class_item_by_class": {
+		"soldier": "sash",
+		"scout": "cloak"
+	}
+}

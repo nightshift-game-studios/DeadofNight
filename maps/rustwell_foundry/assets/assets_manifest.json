@@ -1,0 +1,673 @@
+{
+  "asphalt_02": {
+    "kind": "texture",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/asphalt_02",
+    "author": "Rob Tuytel",
+    "license": "CC0 1.0",
+    "res": "2k",
+    "use": "Yard / Tank Farm / Rail Spur ground",
+    "files": [
+      "textures/asphalt_02/asphalt_02_diff_2k.jpg",
+      "textures/asphalt_02/asphalt_02_nor_gl_2k.jpg",
+      "textures/asphalt_02/asphalt_02_arm_2k.jpg"
+    ],
+    "bytes": 9318812
+  },
+  "concrete_floor_worn_001": {
+    "kind": "texture",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/concrete_floor_worn_001",
+    "author": "Dimitrios Savva, Rico Cilliers",
+    "license": "CC0 1.0",
+    "res": "2k",
+    "use": "warehouse floor",
+    "files": [
+      "textures/concrete_floor_worn_001/concrete_floor_worn_001_diff_2k.jpg",
+      "textures/concrete_floor_worn_001/concrete_floor_worn_001_nor_gl_2k.jpg",
+      "textures/concrete_floor_worn_001/concrete_floor_worn_001_arm_2k.jpg"
+    ],
+    "bytes": 2003398
+  },
+  "hangar_concrete_floor": {
+    "kind": "texture",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/hangar_concrete_floor",
+    "author": "Dimitrios Savva",
+    "license": "CC0 1.0",
+    "res": "2k",
+    "use": "foundry floor, casting pit",
+    "files": [
+      "textures/hangar_concrete_floor/hangar_concrete_floor_diff_2k.jpg",
+      "textures/hangar_concrete_floor/hangar_concrete_floor_nor_gl_2k.jpg",
+      "textures/hangar_concrete_floor/hangar_concrete_floor_arm_2k.jpg"
+    ],
+    "bytes": 8654313
+  },
+  "container_side": {
+    "kind": "texture",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/container_side",
+    "author": "Dimitrios Savva",
+    "license": "CC0 1.0",
+    "res": "2k",
+    "use": "shipping containers",
+    "files": [
+      "textures/container_side/container_side_diff_2k.jpg",
+      "textures/container_side/container_side_nor_gl_2k.jpg",
+      "textures/container_side/container_side_arm_2k.jpg"
+    ],
+    "bytes": 6322637
+  },
+  "factory_wall": {
+    "kind": "texture",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/factory_wall",
+    "author": "Rob Tuytel",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "warehouse walls, pump house, office",
+    "files": [
+      "textures/factory_wall/factory_wall_diff_1k.jpg",
+      "textures/factory_wall/factory_wall_nor_gl_1k.jpg",
+      "textures/factory_wall/factory_wall_arm_1k.jpg"
+    ],
+    "bytes": 711310
+  },
+  "factory_brick": {
+    "kind": "texture",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/factory_brick",
+    "author": "Rob Tuytel",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "foundry walls, furnace, flue",
+    "files": [
+      "textures/factory_brick/factory_brick_diff_1k.jpg",
+      "textures/factory_brick/factory_brick_nor_gl_1k.jpg",
+      "textures/factory_brick/factory_brick_arm_1k.jpg"
+    ],
+    "bytes": 3180028
+  },
+  "rusty_corrugated_iron": {
+    "kind": "texture",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/rusty_corrugated_iron",
+    "author": "Charlotte Baglioni",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "outdoor compound walls, roofs, gate office",
+    "files": [
+      "textures/rusty_corrugated_iron/rusty_corrugated_iron_diff_1k.jpg",
+      "textures/rusty_corrugated_iron/rusty_corrugated_iron_nor_gl_1k.jpg",
+      "textures/rusty_corrugated_iron/rusty_corrugated_iron_arm_1k.jpg"
+    ],
+    "bytes": 1678640
+  },
+  "rusty_metal_shutter": {
+    "kind": "texture",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/rusty_metal_shutter",
+    "author": "Charlotte Baglioni",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "doors D1/D5/D6",
+    "files": [
+      "textures/rusty_metal_shutter/rusty_metal_shutter_diff_1k.jpg",
+      "textures/rusty_metal_shutter/rusty_metal_shutter_nor_gl_1k.jpg",
+      "textures/rusty_metal_shutter/rusty_metal_shutter_arm_1k.jpg"
+    ],
+    "bytes": 1923918
+  },
+  "rusty_painted_metal": {
+    "kind": "texture",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/rusty_painted_metal",
+    "author": "Amal Kumar",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "boxcars, hopper car, truck",
+    "files": [
+      "textures/rusty_painted_metal/rusty_painted_metal_diff_1k.jpg",
+      "textures/rusty_painted_metal/rusty_painted_metal_nor_gl_1k.jpg",
+      "textures/rusty_painted_metal/rusty_painted_metal_arm_1k.jpg"
+    ],
+    "bytes": 1328639
+  },
+  "rust_coarse_01": {
+    "kind": "texture",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/rust_coarse_01",
+    "author": "Dimitrios Savva, Rico Cilliers",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "tanks T1-T3",
+    "files": [
+      "textures/rust_coarse_01/rust_coarse_01_diff_1k.jpg",
+      "textures/rust_coarse_01/rust_coarse_01_nor_gl_1k.jpg",
+      "textures/rust_coarse_01/rust_coarse_01_arm_1k.jpg"
+    ],
+    "bytes": 2441627
+  },
+  "green_metal_rust": {
+    "kind": "texture",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/green_metal_rust",
+    "author": "Rob Tuytel",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "pipe rack, valve house, racks",
+    "files": [
+      "textures/green_metal_rust/green_metal_rust_diff_1k.jpg",
+      "textures/green_metal_rust/green_metal_rust_nor_gl_1k.jpg",
+      "textures/green_metal_rust/green_metal_rust_arm_1k.jpg"
+    ],
+    "bytes": 442141
+  },
+  "gravel_floor": {
+    "kind": "texture",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/gravel_floor",
+    "author": "Jenelle van Heerden, Matterfield",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "rail ballast strips",
+    "files": [
+      "textures/gravel_floor/gravel_floor_diff_1k.jpg",
+      "textures/gravel_floor/gravel_floor_nor_gl_1k.jpg",
+      "textures/gravel_floor/gravel_floor_arm_1k.jpg"
+    ],
+    "bytes": 3903372
+  },
+  "wood_planks_dirt": {
+    "kind": "texture",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/wood_planks_dirt",
+    "author": "Rob Tuytel",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "loading dock deck, plank bridge",
+    "files": [
+      "textures/wood_planks_dirt/wood_planks_dirt_diff_1k.jpg",
+      "textures/wood_planks_dirt/wood_planks_dirt_nor_gl_1k.jpg",
+      "textures/wood_planks_dirt/wood_planks_dirt_arm_1k.jpg"
+    ],
+    "bytes": 1994514
+  },
+  "rollershutter_door": {
+    "kind": "model",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/rollershutter_door",
+    "author": "MP",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "D2 / D5 door models, wall dressing",
+    "files": [
+      "models/rollershutter_door/rollershutter_door.gltf",
+      "models/rollershutter_door/rollershutter_door.bin",
+      "models/rollershutter_door/textures/rollershutter_door_arm_1k.jpg",
+      "models/rollershutter_door/textures/rollershutter_door_diff_1k.jpg",
+      "models/rollershutter_door/textures/rollershutter_door_nor_gl_1k.jpg",
+      "models/rollershutter_door/textures/rollershutter_door_graffiti_diff_1k.jpg"
+    ],
+    "bytes": 2342983,
+    "tris": 1104
+  },
+  "hanging_industrial_lamp": {
+    "kind": "model",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/hanging_industrial_lamp",
+    "author": "Kuutti Siitonen",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "foundry / warehouse hanging lamps",
+    "files": [
+      "models/hanging_industrial_lamp/hanging_industrial_lamp.gltf",
+      "models/hanging_industrial_lamp/textures/hanging_industrial_lamp_emissive_1k.jpg",
+      "models/hanging_industrial_lamp/textures/hanging_industrial_lamp_nor_gl_1k.jpg",
+      "models/hanging_industrial_lamp/textures/hanging_industrial_lamp_diff_1k.jpg",
+      "models/hanging_industrial_lamp/textures/hanging_industrial_lamp_arm_1k.jpg",
+      "models/hanging_industrial_lamp/textures/hanging_industrial_lamp_glass_nor_gl_1k.jpg",
+      "models/hanging_industrial_lamp/hanging_industrial_lamp.bin"
+    ],
+    "bytes": 3243654,
+    "tris": 9530
+  },
+  "industrial_wall_lamp": {
+    "kind": "model",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/industrial_wall_lamp",
+    "author": "Kuutti Siitonen",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "wall lamps (spawn breaches, doors)",
+    "files": [
+      "models/industrial_wall_lamp/industrial_wall_lamp.gltf",
+      "models/industrial_wall_lamp/textures/industrial_wall_lamp_emissive_1k.jpg",
+      "models/industrial_wall_lamp/textures/industrial_wall_lamp_nor_gl_1k.jpg",
+      "models/industrial_wall_lamp/textures/industrial_wall_lamp_diff_1k.jpg",
+      "models/industrial_wall_lamp/textures/industrial_wall_lamp_arm_1k.jpg",
+      "models/industrial_wall_lamp/textures/industrial_wall_lamp_glass_nor_gl_1k.jpg",
+      "models/industrial_wall_lamp/textures/industrial_wall_lamp_glass_diff_1k.jpg",
+      "models/industrial_wall_lamp/textures/industrial_wall_lamp_glass_arm_1k.jpg",
+      "models/industrial_wall_lamp/industrial_wall_lamp.bin"
+    ],
+    "bytes": 3778230,
+    "tris": 4446
+  },
+  "security_light": {
+    "kind": "model",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/security_light",
+    "author": "Maximilian Schuster",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "yard / tank farm floodlights",
+    "files": [
+      "models/security_light/security_light.gltf",
+      "models/security_light/textures/security_light_nor_gl_1k.jpg",
+      "models/security_light/security_light.bin",
+      "models/security_light/textures/security_light_diff_1k.jpg",
+      "models/security_light/textures/security_light_arm_1k.jpg"
+    ],
+    "bytes": 2390412,
+    "tris": 4668
+  },
+  "mounted_fluorescent_lights": {
+    "kind": "model",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/mounted_fluorescent_lights",
+    "author": "Ulan Cabanilla",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "warehouse strip lights",
+    "files": [
+      "models/mounted_fluorescent_lights/mounted_fluorescent_lights.gltf",
+      "models/mounted_fluorescent_lights/textures/mounted_fluorescent_lights_nor_gl_1k.jpg",
+      "models/mounted_fluorescent_lights/textures/mounted_fluorescent_lights_diff_1k.jpg",
+      "models/mounted_fluorescent_lights/textures/mounted_fluorescent_lights_arm_1k.jpg",
+      "models/mounted_fluorescent_lights/textures/mounted_fluorescent_lights_emission_1k.jpg",
+      "models/mounted_fluorescent_lights/mounted_fluorescent_lights.bin"
+    ],
+    "bytes": 1864362,
+    "tris": 17820
+  },
+  "old_tyre": {
+    "kind": "model",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/old_tyre",
+    "author": "MP",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "yard / rail clutter",
+    "files": [
+      "models/old_tyre/old_tyre.gltf",
+      "models/old_tyre/textures/old_tyre_diff_1k.jpg",
+      "models/old_tyre/textures/old_tyre_arm_1k.jpg",
+      "models/old_tyre/old_tyre.bin",
+      "models/old_tyre/textures/old_tyre_nor_gl_1k.jpg"
+    ],
+    "bytes": 2237203,
+    "tris": 2880
+  },
+  "utility_box_01": {
+    "kind": "model",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/utility_box_01",
+    "author": "James Ray Cock",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "wall dressing",
+    "files": [
+      "models/utility_box_01/utility_box_01.gltf",
+      "models/utility_box_01/textures/utility_box_01_diff_1k.jpg",
+      "models/utility_box_01/textures/utility_box_01_nor_gl_1k.jpg",
+      "models/utility_box_01/textures/utility_box_01_arm_1k.jpg",
+      "models/utility_box_01/utility_box_01.bin"
+    ],
+    "bytes": 1977061,
+    "tris": 4404
+  },
+  "propane_tank": {
+    "kind": "model",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/propane_tank",
+    "author": "Slinc",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "tank farm dressing",
+    "files": [
+      "models/propane_tank/propane_tank.gltf",
+      "models/propane_tank/textures/propane_tank_nor_gl_1k.jpg",
+      "models/propane_tank/textures/propane_tank_diff_1k.jpg",
+      "models/propane_tank/textures/propane_tank_arm_1k.jpg",
+      "models/propane_tank/propane_tank.bin"
+    ],
+    "bytes": 2214101,
+    "tris": 5238
+  },
+  "barrel_stove": {
+    "kind": "model",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/barrel_stove",
+    "author": "MP",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "survivor fire / spawn breach dressing",
+    "files": [
+      "models/barrel_stove/barrel_stove.gltf",
+      "models/barrel_stove/textures/barrel_stove_diff_1k.jpg",
+      "models/barrel_stove/textures/barrel_stove_nor_gl_1k.jpg",
+      "models/barrel_stove/textures/barrel_stove_arm_1k.jpg",
+      "models/barrel_stove/barrel_stove.bin"
+    ],
+    "bytes": 2146911,
+    "tris": 11404
+  },
+  "modular_industrial_pipes_01": {
+    "kind": "model",
+    "source": "Poly Haven",
+    "url": "https://polyhaven.com/a/modular_industrial_pipes_01",
+    "author": "Jorge Camacho",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "pipe runs on walls / pipe rack",
+    "files": [
+      "models/modular_industrial_pipes_01/modular_industrial_pipes_01.gltf",
+      "models/modular_industrial_pipes_01/textures/modular_industrial_pipes_01_group02_arm_1k.jpg",
+      "models/modular_industrial_pipes_01/textures/modular_industrial_pipes_01_group01_diff_1k.jpg",
+      "models/modular_industrial_pipes_01/textures/modular_industrial_pipes_01_group02_nor_gl_1k.jpg",
+      "models/modular_industrial_pipes_01/modular_industrial_pipes_01.bin",
+      "models/modular_industrial_pipes_01/textures/modular_industrial_pipes_01_group01_nor_gl_1k.jpg",
+      "models/modular_industrial_pipes_01/textures/modular_industrial_pipes_01_group01_arm_1k.jpg",
+      "models/modular_industrial_pipes_01/textures/modular_industrial_pipes_01_group02_diff_1k.jpg"
+    ],
+    "bytes": 4823938,
+    "tris": 12340
+  },
+  "MetalWalkway010": {
+    "kind": "texture",
+    "source": "ambientCG",
+    "url": "https://ambientcg.com/view?id=MetalWalkway010",
+    "author": "ambientCG (Lennart Demes)",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "catwalk / deck grating tops",
+    "files": [
+      "textures/MetalWalkway010/MetalWalkway010_diff_1k.png",
+      "textures/MetalWalkway010/MetalWalkway010_nor_gl_1k.jpg",
+      "textures/MetalWalkway010/MetalWalkway010_arm_1k.jpg"
+    ],
+    "bytes": 3261912,
+    "note": "ORM packed from AO/Roughness/Metalness by tools/fetch_assets.py; alpha from Opacity"
+  },
+  "DiamondPlate008C": {
+    "kind": "texture",
+    "source": "ambientCG",
+    "url": "https://ambientcg.com/view?id=DiamondPlate008C",
+    "author": "ambientCG (Lennart Demes)",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "stairs, ramps, mezzanines",
+    "files": [
+      "textures/DiamondPlate008C/DiamondPlate008C_diff_1k.jpg",
+      "textures/DiamondPlate008C/DiamondPlate008C_nor_gl_1k.jpg",
+      "textures/DiamondPlate008C/DiamondPlate008C_arm_1k.jpg"
+    ],
+    "bytes": 1999253,
+    "note": "ORM packed from AO/Roughness/Metalness by tools/fetch_assets.py"
+  },
+  "Fence006": {
+    "kind": "texture",
+    "source": "ambientCG",
+    "url": "https://ambientcg.com/view?id=Fence006",
+    "author": "ambientCG (Lennart Demes)",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "chain-link fence cards on top of the compound walls (alpha)",
+    "files": [
+      "textures/Fence006/Fence006_diff_1k.png",
+      "textures/Fence006/Fence006_nor_gl_1k.jpg",
+      "textures/Fence006/Fence006_arm_1k.jpg"
+    ],
+    "bytes": 3915167,
+    "note": "ORM packed from AO/Roughness/Metalness by tools/fetch_assets.py; alpha from Opacity"
+  },
+  "Rust004": {
+    "kind": "texture",
+    "source": "ambientCG",
+    "url": "https://ambientcg.com/view?id=Rust004",
+    "author": "ambientCG (Lennart Demes)",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "railings, pillars, beams",
+    "files": [
+      "textures/Rust004/Rust004_diff_1k.jpg",
+      "textures/Rust004/Rust004_nor_gl_1k.jpg",
+      "textures/Rust004/Rust004_arm_1k.jpg"
+    ],
+    "bytes": 2402921,
+    "note": "ORM packed from AO/Roughness/Metalness by tools/fetch_assets.py"
+  },
+  "prop_barricade_window": {
+    "kind": "model",
+    "source": "Desi",
+    "url": "/workspace/desi-models/props/prop_barricade_window.glb",
+    "author": "Desi",
+    "license": "CC0 1.0",
+    "res": "custom",
+    "use": "Gate office window barricade",
+    "files": [
+      "models/desi/prop_barricade_window.glb"
+    ],
+    "bytes": 1632660
+  },
+  "prop_barricade_wall_breach": {
+    "kind": "model",
+    "source": "Desi",
+    "url": "/workspace/desi-models/props/prop_barricade_wall_breach.glb",
+    "author": "Desi",
+    "license": "CC0 1.0",
+    "res": "custom",
+    "use": "Spawn breach barricades",
+    "files": [
+      "models/desi/prop_barricade_wall_breach.glb"
+    ],
+    "bytes": 1463460
+  },
+  "prop_door_rail_gate": {
+    "kind": "model",
+    "source": "Desi",
+    "url": "/workspace/desi-models/props/prop_door_rail_gate.glb",
+    "author": "Desi",
+    "license": "CC0 1.0",
+    "res": "custom",
+    "use": "D1 Rail Gate visual",
+    "files": [
+      "models/desi/prop_door_rail_gate.glb"
+    ],
+    "bytes": 1083588
+  },
+  "prop_door_foundry_side": {
+    "kind": "model",
+    "source": "Desi",
+    "url": "/workspace/desi-models/props/prop_door_foundry_side.glb",
+    "author": "Desi",
+    "license": "CC0 1.0",
+    "res": "custom",
+    "use": "D3 Foundry Side Door visual",
+    "files": [
+      "models/desi/prop_door_foundry_side.glb"
+    ],
+    "bytes": 897244
+  },
+  "prop_door_blast": {
+    "kind": "model",
+    "source": "Desi",
+    "url": "/workspace/desi-models/props/prop_door_blast.glb",
+    "author": "Desi",
+    "license": "CC0 1.0",
+    "res": "custom",
+    "use": "D4 Furnace Passage visual",
+    "files": [
+      "models/desi/prop_door_blast.glb"
+    ],
+    "bytes": 1220076
+  },
+  "prop_door_fence_patch": {
+    "kind": "model",
+    "source": "Desi",
+    "url": "/workspace/desi-models/props/prop_door_fence_patch.glb",
+    "author": "Desi",
+    "license": "CC0 1.0",
+    "res": "custom",
+    "use": "D6 Fence Breach visual",
+    "files": [
+      "models/desi/prop_door_fence_patch.glb"
+    ],
+    "bytes": 983520
+  },
+  "prop_car_wreck_01": {
+    "kind": "model",
+    "source": "Desi",
+    "url": "/workspace/desi-models/props/prop_car_wreck_01.glb",
+    "author": "Desi",
+    "license": "CC0 1.0",
+    "res": "2k",
+    "use": "Hero cover prop (Geometry/DesiCars)",
+    "files": [
+      "models/desi/prop_car_wreck_01.glb"
+    ],
+    "bytes": 3352656
+  },
+  "prop_car_wreck_01_lod": {
+    "kind": "model",
+    "source": "Desi",
+    "url": "/workspace/desi-models/props/prop_car_wreck_01_lod.glb",
+    "author": "Desi",
+    "license": "CC0 1.0",
+    "res": "lod",
+    "use": "Hero cover prop (Geometry/DesiCars)",
+    "files": [
+      "models/desi/prop_car_wreck_01_lod.glb"
+    ],
+    "bytes": 2819184
+  },
+  "prop_car_wreck_02": {
+    "kind": "model",
+    "source": "Desi",
+    "url": "/workspace/desi-models/props/prop_car_wreck_02.glb",
+    "author": "Desi",
+    "license": "CC0 1.0",
+    "res": "2k",
+    "use": "Hero cover prop (Geometry/DesiCars)",
+    "files": [
+      "models/desi/prop_car_wreck_02.glb"
+    ],
+    "bytes": 2563288
+  },
+  "prop_car_wreck_02_lod": {
+    "kind": "model",
+    "source": "Desi",
+    "url": "/workspace/desi-models/props/prop_car_wreck_02_lod.glb",
+    "author": "Desi",
+    "license": "CC0 1.0",
+    "res": "lod",
+    "use": "Hero cover prop (Geometry/DesiCars)",
+    "files": [
+      "models/desi/prop_car_wreck_02_lod.glb"
+    ],
+    "bytes": 2425248
+  },
+  "prop_rubble_small": {
+    "kind": "model",
+    "source": "Desi",
+    "url": "/workspace/desi-models/props/prop_rubble_small.glb",
+    "author": "Desi",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "Breach foot rubble (no col)",
+    "files": [
+      "models/desi/prop_rubble_small.glb"
+    ],
+    "bytes": 993740
+  },
+  "prop_rubble_medium": {
+    "kind": "model",
+    "source": "Desi",
+    "url": "/workspace/desi-models/props/prop_rubble_medium.glb",
+    "author": "Desi",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "Cover rubble piles",
+    "files": [
+      "models/desi/prop_rubble_medium.glb"
+    ],
+    "bytes": 1155968
+  },
+  "prop_rubble_large": {
+    "kind": "model",
+    "source": "Desi",
+    "url": "/workspace/desi-models/props/prop_rubble_large.glb",
+    "author": "Desi",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "Large rubble pile",
+    "files": [
+      "models/desi/prop_rubble_large.glb"
+    ],
+    "bytes": 1249692
+  },
+  "prop_scrap_rebar": {
+    "kind": "model",
+    "source": "Desi",
+    "url": "/workspace/desi-models/props/prop_scrap_rebar.glb",
+    "author": "Desi",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "Foundry scrap rebar",
+    "files": [
+      "models/desi/prop_scrap_rebar.glb"
+    ],
+    "bytes": 834872
+  },
+  "prop_slag_heap": {
+    "kind": "model",
+    "source": "Desi",
+    "url": "/workspace/desi-models/props/prop_slag_heap.glb",
+    "author": "Desi",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "Foundry slag heaps",
+    "files": [
+      "models/desi/prop_slag_heap.glb"
+    ],
+    "bytes": 822124
+  },
+  "prop_ingot_stack": {
+    "kind": "model",
+    "source": "Desi",
+    "url": "/workspace/desi-models/props/prop_ingot_stack.glb",
+    "author": "Desi",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "Foundry ingot stacks",
+    "files": [
+      "models/desi/prop_ingot_stack.glb"
+    ],
+    "bytes": 609012
+  },
+  "prop_floor_scatter": {
+    "kind": "model",
+    "source": "Desi",
+    "url": "/workspace/desi-models/props/prop_floor_scatter.glb",
+    "author": "Desi",
+    "license": "CC0 1.0",
+    "res": "1k",
+    "use": "Floor scatter kit \u2192 MultiMesh",
+    "files": [
+      "models/desi/prop_floor_scatter.glb"
+    ],
+    "bytes": 1051984
+  }
+}

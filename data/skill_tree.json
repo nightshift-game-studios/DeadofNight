@@ -1,0 +1,1735 @@
+{
+	"version": 2,
+	"xp_per_skill_point": 250,
+	"_help": "v2 meta tree. See /workspace/skillz/GOOEY_HANDOFF.md for the schema. Rank-indexed params are arrays (index = rank-1); scalars apply to every rank.",
+	"grid": {
+		"cols": 11,
+		"rows": 6,
+		"cell_w": 112,
+		"cell_h": 96
+	},
+	"branches": [
+		{
+			"id": "marksman",
+			"name": "Marksman",
+			"accent": "marksman_orange",
+			"color": [
+				0.85,
+				0.5,
+				0.25
+			],
+			"x": 0,
+			"class": "",
+			"blurb": "Precision"
+		},
+		{
+			"id": "sapper",
+			"name": "Sapper",
+			"accent": "sapper_yellow",
+			"color": [
+				0.9,
+				0.72,
+				0.25
+			],
+			"x": 2,
+			"class": "",
+			"blurb": "Explosives and elements"
+		},
+		{
+			"id": "ledger",
+			"name": "Ledger",
+			"accent": "ledger_olive",
+			"color": [
+				0.62,
+				0.66,
+				0.36
+			],
+			"x": 4,
+			"class": "",
+			"blurb": "Field Card economy"
+		},
+		{
+			"id": "survivor",
+			"name": "Survivor",
+			"accent": "survivor_red",
+			"color": [
+				0.78,
+				0.3,
+				0.25
+			],
+			"x": 7,
+			"class": "",
+			"blurb": "Sustain"
+		},
+		{
+			"id": "freerunner",
+			"name": "Freerunner",
+			"accent": "freerunner_teal",
+			"color": [
+				0.3,
+				0.72,
+				0.7
+			],
+			"x": 9,
+			"class": "",
+			"blurb": "Movement"
+		},
+		{
+			"id": "soldier",
+			"name": "Soldier",
+			"accent": "soldier_steel",
+			"color": [
+				0.55,
+				0.62,
+				0.7
+			],
+			"x": 4,
+			"class": "soldier",
+			"blurb": "Dash"
+		},
+		{
+			"id": "scout",
+			"name": "Scout",
+			"accent": "scout_green",
+			"color": [
+				0.45,
+				0.75,
+				0.4
+			],
+			"x": 4,
+			"class": "scout",
+			"blurb": "Adrenaline"
+		}
+	],
+	"nodes": [
+		{
+			"id": "mk_root",
+			"name": "Steady Eye",
+			"branch": "marksman",
+			"type": "passive",
+			"keystone": false,
+			"icon": "mk_root",
+			"x": 0.5,
+			"y": 0,
+			"ranks": 1,
+			"cost": [
+				1
+			],
+			"requires": [],
+			"requires_any": [],
+			"choice_group": "",
+			"class": "",
+			"description": "Precision kills put {amount} round back in the magazine. Unlocks Marksman cards.",
+			"drawback": "",
+			"values": {
+				"amount": 1
+			},
+			"effects": [
+				{
+					"script": "refill_mag",
+					"params": {
+						"mode": "amount",
+						"amount": 1
+					},
+					"on": [
+						"enemy_killed"
+					],
+					"if": {
+						"is_headshot": true
+					}
+				},
+				{
+					"script": "unlock_cards",
+					"params": {
+						"branch": "marksman",
+						"tier": "normal"
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"marksman"
+			]
+		},
+		{
+			"id": "mk_aim",
+			"name": "Trained Aim",
+			"branch": "marksman",
+			"type": "passive",
+			"keystone": false,
+			"icon": "mk_aim",
+			"x": 0.5,
+			"y": 1,
+			"ranks": 3,
+			"cost": [
+				1,
+				1,
+				1
+			],
+			"requires": [
+				"mk_root"
+			],
+			"requires_any": [],
+			"choice_group": "",
+			"class": "",
+			"description": "+{add} precision multiplier (x2.0 base).",
+			"drawback": "",
+			"values": {
+				"add": [
+					0.1,
+					0.2,
+					0.3
+				]
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "headshot_mult_add",
+						"add": [
+							0.1,
+							0.2,
+							0.3
+						]
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"marksman",
+				"filler"
+			]
+		},
+		{
+			"id": "mk_spotter",
+			"name": "Spotter",
+			"branch": "marksman",
+			"type": "passive",
+			"keystone": false,
+			"icon": "mk_spotter",
+			"x": 0,
+			"y": 2,
+			"ranks": 1,
+			"cost": [
+				2
+			],
+			"requires": [
+				"mk_aim"
+			],
+			"requires_any": [],
+			"choice_group": "mk_choice",
+			"class": "",
+			"description": "Precision hits Mark for {dur}s: +{amp_pct}% damage taken from every source.",
+			"drawback": "",
+			"values": {
+				"dur": 4,
+				"amp_pct": 15
+			},
+			"effects": [
+				{
+					"script": "apply_status",
+					"params": {
+						"status": "mark",
+						"dur": 4.0,
+						"amp": 0.15
+					},
+					"on": [
+						"hit"
+					],
+					"if": {
+						"is_headshot": true
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"marksman"
+			]
+		},
+		{
+			"id": "mk_longcount",
+			"name": "Long Count",
+			"branch": "marksman",
+			"type": "passive",
+			"keystone": false,
+			"icon": "mk_longcount",
+			"x": 1,
+			"y": 2,
+			"ranks": 1,
+			"cost": [
+				2
+			],
+			"requires": [
+				"mk_aim"
+			],
+			"requires_any": [],
+			"choice_group": "mk_choice",
+			"class": "",
+			"description": "No damage falloff. Gun hits past falloff range deal +{mult_pct}%.",
+			"drawback": "",
+			"values": {
+				"mult_pct": 15
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "no_falloff",
+						"add": 1
+					}
+				},
+				{
+					"script": "conditional_damage",
+					"params": {
+						"cond": "beyond_falloff",
+						"mult": 0.15,
+						"sources": [
+							"gun"
+						]
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"marksman"
+			]
+		},
+		{
+			"id": "mk_legend",
+			"name": "Hall of Marks",
+			"branch": "marksman",
+			"type": "capstone",
+			"keystone": false,
+			"icon": "mk_legend",
+			"x": 0.5,
+			"y": 3,
+			"ranks": 1,
+			"cost": [
+				3
+			],
+			"requires": [],
+			"requires_any": [
+				"mk_spotter",
+				"mk_longcount"
+			],
+			"choice_group": "",
+			"class": "",
+			"description": "Unlocks Marksman legendary cards. Marksman cards show up x{mult} as often.",
+			"drawback": "",
+			"values": {
+				"mult": 1.5
+			},
+			"effects": [
+				{
+					"script": "unlock_cards",
+					"params": {
+						"branch": "marksman",
+						"tier": "legendary"
+					}
+				},
+				{
+					"script": "offer_weight",
+					"params": {
+						"branch": "marksman",
+						"mult": 1.5
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"marksman"
+			]
+		},
+		{
+			"id": "mk_key",
+			"name": "Glass Sight",
+			"branch": "marksman",
+			"type": "keystone",
+			"keystone": true,
+			"icon": "mk_key",
+			"x": 0.5,
+			"y": 4,
+			"ranks": 1,
+			"cost": [
+				4
+			],
+			"requires": [
+				"mk_legend"
+			],
+			"requires_any": [],
+			"choice_group": "keystone",
+			"class": "",
+			"description": "Precision hits +{head_pct}% damage.",
+			"drawback": "Body hits -{body_pct}% damage.",
+			"values": {
+				"head_pct": 50,
+				"body_pct": 30
+			},
+			"effects": [
+				{
+					"script": "conditional_damage",
+					"params": {
+						"cond": "headshot",
+						"mult": 0.5
+					}
+				},
+				{
+					"script": "conditional_damage",
+					"params": {
+						"cond": "bodyshot",
+						"mult": -0.3
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"marksman"
+			]
+		},
+		{
+			"id": "sp_root",
+			"name": "Short Fuse",
+			"branch": "sapper",
+			"type": "passive",
+			"keystone": false,
+			"icon": "sp_root",
+			"x": 2.5,
+			"y": 0,
+			"ranks": 1,
+			"cost": [
+				1
+			],
+			"requires": [],
+			"requires_any": [],
+			"choice_group": "",
+			"class": "",
+			"description": "Grenade kills refund {fraction_pct}% of grenade cooldown. Unlocks Sapper cards.",
+			"drawback": "",
+			"values": {
+				"fraction_pct": 20
+			},
+			"effects": [
+				{
+					"script": "refund_grenade",
+					"params": {
+						"fraction": 0.2
+					},
+					"on": [
+						"enemy_killed"
+					],
+					"if": {
+						"source": "grenade"
+					}
+				},
+				{
+					"script": "unlock_cards",
+					"params": {
+						"branch": "sapper",
+						"tier": "normal"
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"sapper"
+			]
+		},
+		{
+			"id": "sp_powder",
+			"name": "Powder Stock",
+			"branch": "sapper",
+			"type": "passive",
+			"keystone": false,
+			"icon": "sp_powder",
+			"x": 2.5,
+			"y": 1,
+			"ranks": 3,
+			"cost": [
+				1,
+				1,
+				1
+			],
+			"requires": [
+				"sp_root"
+			],
+			"requires_any": [],
+			"choice_group": "",
+			"class": "",
+			"description": "+{add_pct}% explosion damage.",
+			"drawback": "",
+			"values": {
+				"add_pct": [
+					6,
+					12,
+					18
+				]
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "explosion_damage_mult",
+						"add": [
+							0.06,
+							0.12,
+							0.18
+						]
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"sapper",
+				"filler"
+			]
+		},
+		{
+			"id": "sp_volt_coil",
+			"name": "Volt Coil",
+			"branch": "sapper",
+			"type": "passive",
+			"keystone": false,
+			"icon": "sp_volt_coil",
+			"x": 2,
+			"y": 2,
+			"ranks": 1,
+			"cost": [
+				2
+			],
+			"requires": [
+				"sp_powder"
+			],
+			"requires_any": [],
+			"choice_group": "sp_choice",
+			"class": "",
+			"description": "Volt hits arc to {targets} zombie within {range}m for {frac_pct}% of the hit.",
+			"drawback": "",
+			"values": {
+				"targets": 1,
+				"range": 4,
+				"frac_pct": 35
+			},
+			"effects": [
+				{
+					"script": "element_arc",
+					"params": {
+						"targets": 1,
+						"frac": 0.35,
+						"range": 4.0
+					},
+					"on": [
+						"hit"
+					],
+					"if": {
+						"element": "volt"
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"sapper"
+			]
+		},
+		{
+			"id": "sp_kindling",
+			"name": "Kindling",
+			"branch": "sapper",
+			"type": "passive",
+			"keystone": false,
+			"icon": "sp_kindling",
+			"x": 3,
+			"y": 2,
+			"ranks": 1,
+			"cost": [
+				2
+			],
+			"requires": [
+				"sp_powder"
+			],
+			"requires_any": [],
+			"choice_group": "sp_choice",
+			"class": "",
+			"description": "Blaze hits ignite: {frac_pct}% of the hit per second for {dur}s.",
+			"drawback": "",
+			"values": {
+				"frac_pct": 20,
+				"dur": 3
+			},
+			"effects": [
+				{
+					"script": "element_dot",
+					"params": {
+						"frac_per_s": 0.2,
+						"dur": 3.0
+					},
+					"on": [
+						"hit"
+					],
+					"if": {
+						"element": "blaze"
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"sapper"
+			]
+		},
+		{
+			"id": "sp_legend",
+			"name": "Blast Archive",
+			"branch": "sapper",
+			"type": "capstone",
+			"keystone": false,
+			"icon": "sp_legend",
+			"x": 2.5,
+			"y": 3,
+			"ranks": 1,
+			"cost": [
+				3
+			],
+			"requires": [],
+			"requires_any": [
+				"sp_volt_coil",
+				"sp_kindling"
+			],
+			"choice_group": "",
+			"class": "",
+			"description": "Unlocks Sapper legendary cards. Sapper cards show up x{mult} as often.",
+			"drawback": "",
+			"values": {
+				"mult": 1.5
+			},
+			"effects": [
+				{
+					"script": "unlock_cards",
+					"params": {
+						"branch": "sapper",
+						"tier": "legendary"
+					}
+				},
+				{
+					"script": "offer_weight",
+					"params": {
+						"branch": "sapper",
+						"mult": 1.5
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"sapper"
+			]
+		},
+		{
+			"id": "sp_key",
+			"name": "Powder Keg Frame",
+			"branch": "sapper",
+			"type": "keystone",
+			"keystone": true,
+			"icon": "sp_key",
+			"x": 2.5,
+			"y": 4,
+			"ranks": 1,
+			"cost": [
+				4
+			],
+			"requires": [
+				"sp_legend"
+			],
+			"requires_any": [],
+			"choice_group": "keystone",
+			"class": "",
+			"description": "{charges} grenade charges.",
+			"drawback": "Each charge recharges {slow_pct}% slower.",
+			"values": {
+				"charges": 2,
+				"slow_pct": 40
+			},
+			"effects": [
+				{
+					"script": "grenade_mod",
+					"params": {
+						"charges": 1,
+						"cd_mult": 1.4
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"sapper"
+			]
+		},
+		{
+			"id": "lg_spare",
+			"name": "Spare Coin",
+			"branch": "ledger",
+			"type": "passive",
+			"keystone": false,
+			"icon": "lg_spare",
+			"x": 5,
+			"y": 0,
+			"ranks": 2,
+			"cost": [
+				2,
+				2
+			],
+			"requires": [],
+			"requires_any": [],
+			"choice_group": "",
+			"class": "",
+			"description": "+{free_rerolls} free Field Card rerolls per match.",
+			"drawback": "",
+			"values": {
+				"free_rerolls": [
+					1,
+					2
+				]
+			},
+			"effects": [
+				{
+					"script": "offer_mod",
+					"params": {
+						"free_rerolls": [
+							1,
+							2
+						]
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"ledger"
+			]
+		},
+		{
+			"id": "lg_wide",
+			"name": "Wider Spread",
+			"branch": "ledger",
+			"type": "passive",
+			"keystone": false,
+			"icon": "lg_wide",
+			"x": 4,
+			"y": 1,
+			"ranks": 1,
+			"cost": [
+				3
+			],
+			"requires": [
+				"lg_spare"
+			],
+			"requires_any": [],
+			"choice_group": "",
+			"class": "",
+			"description": "Field Card offers show {size_total} cards.",
+			"drawback": "",
+			"values": {
+				"size_total": 4
+			},
+			"effects": [
+				{
+					"script": "offer_mod",
+					"params": {
+						"size": 1
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"ledger"
+			]
+		},
+		{
+			"id": "lg_lucky",
+			"name": "Lucky Find",
+			"branch": "ledger",
+			"type": "passive",
+			"keystone": false,
+			"icon": "lg_lucky",
+			"x": 6,
+			"y": 1,
+			"ranks": 2,
+			"cost": [
+				2,
+				2
+			],
+			"requires": [
+				"lg_spare"
+			],
+			"requires_any": [],
+			"choice_group": "",
+			"class": "",
+			"description": "Normal offers: each slot has a {chance_pct}% chance to be legendary.",
+			"drawback": "",
+			"values": {
+				"chance_pct": [
+					4,
+					8
+				]
+			},
+			"effects": [
+				{
+					"script": "offer_mod",
+					"params": {
+						"lucky_slot_chance": [
+							0.04,
+							0.08
+						]
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"ledger"
+			]
+		},
+		{
+			"id": "lg_black",
+			"name": "Black Ledger",
+			"branch": "ledger",
+			"type": "passive",
+			"keystone": false,
+			"icon": "lg_black",
+			"x": 4,
+			"y": 2,
+			"ranks": 1,
+			"cost": [
+				3
+			],
+			"requires": [
+				"lg_wide"
+			],
+			"requires_any": [],
+			"choice_group": "",
+			"class": "",
+			"description": "Banish: remove a card from this match's pool. {banishes} per match, 1 per offer.",
+			"drawback": "",
+			"values": {
+				"banishes": 3
+			},
+			"effects": [
+				{
+					"script": "offer_mod",
+					"params": {
+						"banishes": 3
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"ledger"
+			]
+		},
+		{
+			"id": "lg_gilded",
+			"name": "Gilded Ledger",
+			"branch": "ledger",
+			"type": "capstone",
+			"keystone": false,
+			"icon": "lg_gilded",
+			"x": 6,
+			"y": 2,
+			"ranks": 1,
+			"cost": [
+				4
+			],
+			"requires": [
+				"lg_lucky"
+			],
+			"requires_any": [],
+			"choice_group": "",
+			"class": "",
+			"description": "Milestone offers (every 5th round) are all legendary. Needs Lucky Find II.",
+			"drawback": "",
+			"values": {},
+			"effects": [
+				{
+					"script": "offer_mod",
+					"params": {
+						"milestone_all_legendary": 1
+					}
+				}
+			],
+			"requires_rank": {
+				"lg_lucky": 2
+			},
+			"unlocks_cards": [],
+			"tags": [
+				"ledger"
+			]
+		},
+		{
+			"id": "sv_root",
+			"name": "Scrap Plating",
+			"branch": "survivor",
+			"type": "passive",
+			"keystone": false,
+			"icon": "sv_root",
+			"x": 7.5,
+			"y": 0,
+			"ranks": 1,
+			"cost": [
+				1
+			],
+			"requires": [],
+			"requires_any": [],
+			"choice_group": "",
+			"class": "",
+			"description": "Every round starts with {amount} overshield. Unlocks Survivor cards.",
+			"drawback": "",
+			"values": {
+				"amount": 20
+			},
+			"effects": [
+				{
+					"script": "grant_overshield",
+					"params": {
+						"amount": 20
+					},
+					"on": [
+						"round_started"
+					]
+				},
+				{
+					"script": "unlock_cards",
+					"params": {
+						"branch": "survivor",
+						"tier": "normal"
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"survivor"
+			]
+		},
+		{
+			"id": "sv_skin",
+			"name": "Thick Skin",
+			"branch": "survivor",
+			"type": "passive",
+			"keystone": false,
+			"icon": "sv_skin",
+			"x": 7.5,
+			"y": 1,
+			"ranks": 3,
+			"cost": [
+				1,
+				1,
+				1
+			],
+			"requires": [
+				"sv_root"
+			],
+			"requires_any": [],
+			"choice_group": "",
+			"class": "",
+			"description": "+{add} max health.",
+			"drawback": "",
+			"values": {
+				"add": [
+					10,
+					20,
+					30
+				]
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "max_health",
+						"add": [
+							10,
+							20,
+							30
+						]
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"survivor",
+				"filler"
+			]
+		},
+		{
+			"id": "sv_breath",
+			"name": "Second Breath",
+			"branch": "survivor",
+			"type": "passive",
+			"keystone": false,
+			"icon": "sv_breath",
+			"x": 7,
+			"y": 2,
+			"ranks": 1,
+			"cost": [
+				2
+			],
+			"requires": [
+				"sv_skin"
+			],
+			"requires_any": [],
+			"choice_group": "sv_choice",
+			"class": "",
+			"description": "Dropping below {hp_pct}% health: zombies near you slow {slow_pct}% and you take {dr_pct}% less damage for {dur}s. {icd}s cooldown.",
+			"drawback": "",
+			"values": {
+				"hp_pct": 30,
+				"slow_pct": 50,
+				"dr_pct": 30,
+				"dur": 2.5,
+				"icd": 45
+			},
+			"effects": [
+				{
+					"script": "slowmo_trigger",
+					"params": {
+						"mode": "trigger",
+						"health_below": 0.3,
+						"icd": 45.0,
+						"dur": 2.5,
+						"time_scale": 0.5,
+						"dr": 0.3,
+						"slow": 0.5,
+						"radius": 10.0
+					},
+					"on": [
+						"damage_taken"
+					]
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"survivor"
+			]
+		},
+		{
+			"id": "sv_harvest",
+			"name": "Bone Harvest",
+			"branch": "survivor",
+			"type": "passive",
+			"keystone": false,
+			"icon": "sv_harvest",
+			"x": 8,
+			"y": 2,
+			"ranks": 1,
+			"cost": [
+				2
+			],
+			"requires": [
+				"sv_skin"
+			],
+			"requires_any": [],
+			"choice_group": "sv_choice",
+			"class": "",
+			"description": "Melee kills drop a Primary Ammo box and heal {amount}.",
+			"drawback": "",
+			"values": {
+				"amount": 10
+			},
+			"effects": [
+				{
+					"script": "drop_pickup",
+					"params": {
+						"item": "ammo_box"
+					},
+					"on": [
+						"enemy_killed"
+					],
+					"if": {
+						"source": "melee"
+					}
+				},
+				{
+					"script": "heal",
+					"params": {
+						"amount": 10
+					},
+					"on": [
+						"enemy_killed"
+					],
+					"if": {
+						"source": "melee"
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"survivor"
+			]
+		},
+		{
+			"id": "sv_legend",
+			"name": "Survivor's Cache",
+			"branch": "survivor",
+			"type": "capstone",
+			"keystone": false,
+			"icon": "sv_legend",
+			"x": 7.5,
+			"y": 3,
+			"ranks": 1,
+			"cost": [
+				3
+			],
+			"requires": [],
+			"requires_any": [
+				"sv_breath",
+				"sv_harvest"
+			],
+			"choice_group": "",
+			"class": "",
+			"description": "Unlocks Survivor legendary cards. Survivor cards show up x{mult} as often.",
+			"drawback": "",
+			"values": {
+				"mult": 1.5
+			},
+			"effects": [
+				{
+					"script": "unlock_cards",
+					"params": {
+						"branch": "survivor",
+						"tier": "legendary"
+					}
+				},
+				{
+					"script": "offer_weight",
+					"params": {
+						"branch": "survivor",
+						"mult": 1.5
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"survivor"
+			]
+		},
+		{
+			"id": "sv_key",
+			"name": "Stoneblood",
+			"branch": "survivor",
+			"type": "keystone",
+			"keystone": true,
+			"icon": "sv_key",
+			"x": 7.5,
+			"y": 4,
+			"ranks": 1,
+			"cost": [
+				4
+			],
+			"requires": [
+				"sv_legend"
+			],
+			"requires_any": [],
+			"choice_group": "keystone",
+			"class": "",
+			"description": "Every kill heals {heal} and grants {os} overshield.",
+			"drawback": "No health regen. Overshield cap drops to {cap}.",
+			"values": {
+				"heal": 4,
+				"os": 6,
+				"cap": 40
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "regen_disabled",
+						"add": 1
+					}
+				},
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "overshield_cap",
+						"add": -10
+					}
+				},
+				{
+					"script": "heal",
+					"params": {
+						"amount": 4
+					},
+					"on": [
+						"enemy_killed"
+					]
+				},
+				{
+					"script": "grant_overshield",
+					"params": {
+						"amount": 6
+					},
+					"on": [
+						"enemy_killed"
+					]
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"survivor"
+			]
+		},
+		{
+			"id": "fr_root",
+			"name": "Slide Loader",
+			"branch": "freerunner",
+			"type": "passive",
+			"keystone": false,
+			"icon": "fr_root",
+			"x": 9.5,
+			"y": 0,
+			"ranks": 1,
+			"cost": [
+				1
+			],
+			"requires": [],
+			"requires_any": [],
+			"choice_group": "",
+			"class": "",
+			"description": "Sliding while reloading finishes the reload instantly ({icd}s cooldown). Unlocks Freerunner cards.",
+			"drawback": "",
+			"values": {
+				"icd": 8
+			},
+			"effects": [
+				{
+					"script": "refill_mag",
+					"params": {
+						"mode": "finish_reload",
+						"icd": 8.0
+					},
+					"on": [
+						"slide_started"
+					]
+				},
+				{
+					"script": "unlock_cards",
+					"params": {
+						"branch": "freerunner",
+						"tier": "normal"
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"freerunner"
+			]
+		},
+		{
+			"id": "fr_step",
+			"name": "Light Step",
+			"branch": "freerunner",
+			"type": "passive",
+			"keystone": false,
+			"icon": "fr_step",
+			"x": 9.5,
+			"y": 1,
+			"ranks": 3,
+			"cost": [
+				1,
+				1,
+				1
+			],
+			"requires": [
+				"fr_root"
+			],
+			"requires_any": [],
+			"choice_group": "",
+			"class": "",
+			"description": "+{add_pct}% move speed.",
+			"drawback": "",
+			"values": {
+				"add_pct": [
+					4,
+					8,
+					12
+				]
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "move_speed",
+						"add": [
+							0.04,
+							0.08,
+							0.12
+						]
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"freerunner",
+				"filler"
+			]
+		},
+		{
+			"id": "fr_battery",
+			"name": "Wall Battery",
+			"branch": "freerunner",
+			"type": "passive",
+			"keystone": false,
+			"icon": "fr_battery",
+			"x": 9,
+			"y": 2,
+			"ranks": 1,
+			"cost": [
+				2
+			],
+			"requires": [
+				"fr_step"
+			],
+			"requires_any": [],
+			"choice_group": "fr_choice",
+			"class": "",
+			"description": "Each wall jump refunds {fraction_pct}% of grenade cooldown (max {per_airtime} per airtime).",
+			"drawback": "",
+			"values": {
+				"fraction_pct": 10,
+				"per_airtime": 3
+			},
+			"effects": [
+				{
+					"script": "refund_grenade",
+					"params": {
+						"fraction": 0.1,
+						"per_airtime": 3
+					},
+					"on": [
+						"wall_jumped"
+					]
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"freerunner"
+			]
+		},
+		{
+			"id": "fr_skyplate",
+			"name": "Sky Plating",
+			"branch": "freerunner",
+			"type": "passive",
+			"keystone": false,
+			"icon": "fr_skyplate",
+			"x": 10,
+			"y": 2,
+			"ranks": 1,
+			"cost": [
+				2
+			],
+			"requires": [
+				"fr_step"
+			],
+			"requires_any": [],
+			"choice_group": "fr_choice",
+			"class": "",
+			"description": "Airborne kills grant {amount} overshield (cap {cap}).",
+			"drawback": "",
+			"values": {
+				"amount": 15,
+				"cap": 45
+			},
+			"effects": [
+				{
+					"script": "grant_overshield",
+					"params": {
+						"amount": 15,
+						"cap": 45
+					},
+					"on": [
+						"enemy_killed"
+					],
+					"if": {
+						"airborne": true
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"freerunner"
+			]
+		},
+		{
+			"id": "fr_legend",
+			"name": "Runner's Atlas",
+			"branch": "freerunner",
+			"type": "capstone",
+			"keystone": false,
+			"icon": "fr_legend",
+			"x": 9.5,
+			"y": 3,
+			"ranks": 1,
+			"cost": [
+				3
+			],
+			"requires": [],
+			"requires_any": [
+				"fr_battery",
+				"fr_skyplate"
+			],
+			"choice_group": "",
+			"class": "",
+			"description": "Unlocks Freerunner legendary cards. Freerunner cards show up x{mult} as often.",
+			"drawback": "",
+			"values": {
+				"mult": 1.5
+			},
+			"effects": [
+				{
+					"script": "unlock_cards",
+					"params": {
+						"branch": "freerunner",
+						"tier": "legendary"
+					}
+				},
+				{
+					"script": "offer_weight",
+					"params": {
+						"branch": "freerunner",
+						"mult": 1.5
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"freerunner"
+			]
+		},
+		{
+			"id": "fr_key",
+			"name": "Hollow Bones",
+			"branch": "freerunner",
+			"type": "keystone",
+			"keystone": true,
+			"icon": "fr_key",
+			"x": 9.5,
+			"y": 4,
+			"ranks": 1,
+			"cost": [
+				4
+			],
+			"requires": [
+				"fr_legend"
+			],
+			"requires_any": [],
+			"choice_group": "keystone",
+			"class": "",
+			"description": "+{jumps} wall jump and +{speed_pct}% move speed.",
+			"drawback": "Max health -{hp_pct}%.",
+			"values": {
+				"jumps": 1,
+				"speed_pct": 15,
+				"hp_pct": 20
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "max_wall_jumps_add",
+						"add": 1
+					}
+				},
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "move_speed",
+						"add": 0.15
+					}
+				},
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "max_health_mult",
+						"mult": 0.8
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"freerunner"
+			]
+		},
+		{
+			"id": "so_ram",
+			"name": "Battering Dash",
+			"branch": "soldier",
+			"type": "active",
+			"keystone": false,
+			"icon": "so_ram",
+			"x": 4,
+			"y": 4,
+			"ranks": 1,
+			"cost": [
+				2
+			],
+			"requires": [],
+			"requires_any": [],
+			"choice_group": "",
+			"class": "soldier",
+			"description": "Dash hits zombies in your path for {damage} damage and knocks them back.",
+			"drawback": "",
+			"values": {
+				"damage": 40
+			},
+			"effects": [
+				{
+					"script": "ability_mod",
+					"params": {
+						"contact_damage": 40,
+						"knockback": 8.0,
+						"radius": 1.5
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"soldier"
+			]
+		},
+		{
+			"id": "so_twin",
+			"name": "Twin Stride",
+			"branch": "soldier",
+			"type": "active",
+			"keystone": false,
+			"icon": "so_twin",
+			"x": 5,
+			"y": 4,
+			"ranks": 1,
+			"cost": [
+				2
+			],
+			"requires": [
+				"so_ram"
+			],
+			"requires_any": [],
+			"choice_group": "",
+			"class": "soldier",
+			"description": "Dash has {charges} charges.",
+			"drawback": "",
+			"values": {
+				"charges": 2
+			},
+			"effects": [
+				{
+					"script": "ability_mod",
+					"params": {
+						"charges": 1
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"soldier"
+			]
+		},
+		{
+			"id": "so_breacher",
+			"name": "Breacher's Rhythm",
+			"branch": "soldier",
+			"type": "active",
+			"keystone": false,
+			"icon": "so_breacher",
+			"x": 6,
+			"y": 4,
+			"ranks": 1,
+			"cost": [
+				3
+			],
+			"requires": [
+				"so_twin"
+			],
+			"requires_any": [],
+			"choice_group": "",
+			"class": "soldier",
+			"description": "A kill within {window}s of dashing refunds a dash charge. Unlocks the Soldier legendary card.",
+			"drawback": "",
+			"values": {
+				"window": 1.0
+			},
+			"effects": [
+				{
+					"script": "ability_refund",
+					"params": {
+						"window": 1.0
+					}
+				},
+				{
+					"script": "unlock_cards",
+					"params": {
+						"branch": "soldier",
+						"tier": "legendary"
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"soldier"
+			]
+		},
+		{
+			"id": "sc_fed",
+			"name": "Fed Rush",
+			"branch": "scout",
+			"type": "active",
+			"keystone": false,
+			"icon": "sc_fed",
+			"x": 4,
+			"y": 5,
+			"ranks": 1,
+			"cost": [
+				2
+			],
+			"requires": [],
+			"requires_any": [],
+			"choice_group": "",
+			"class": "scout",
+			"description": "Kills during Adrenaline extend it by {extend}s (max +{max_extend}s).",
+			"drawback": "",
+			"values": {
+				"extend": 0.5,
+				"max_extend": 3
+			},
+			"effects": [
+				{
+					"script": "ability_mod",
+					"params": {
+						"extend_on_kill": 0.5,
+						"max_extend": 3.0
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"scout"
+			]
+		},
+		{
+			"id": "sc_ghost",
+			"name": "Ghostline",
+			"branch": "scout",
+			"type": "active",
+			"keystone": false,
+			"icon": "sc_ghost",
+			"x": 5,
+			"y": 5,
+			"ranks": 1,
+			"cost": [
+				2
+			],
+			"requires": [
+				"sc_fed"
+			],
+			"requires_any": [],
+			"choice_group": "",
+			"class": "scout",
+			"description": "During Adrenaline, zombie swings have a {dodge_pct}% chance to miss you.",
+			"drawback": "",
+			"values": {
+				"dodge_pct": 50
+			},
+			"effects": [
+				{
+					"script": "damage_in_mod",
+					"params": {
+						"dodge": 0.5,
+						"cond": "ability_active"
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"scout"
+			]
+		},
+		{
+			"id": "sc_racing_heart",
+			"name": "Racing Heart",
+			"branch": "scout",
+			"type": "active",
+			"keystone": false,
+			"icon": "sc_racing_heart",
+			"x": 6,
+			"y": 5,
+			"ranks": 1,
+			"cost": [
+				3
+			],
+			"requires": [
+				"sc_ghost"
+			],
+			"requires_any": [],
+			"choice_group": "",
+			"class": "scout",
+			"description": "Adrenaline also gives +{rate_pct}% fire rate. Unlocks the Scout legendary card.",
+			"drawback": "Adrenaline cooldown +{cd_add}s.",
+			"values": {
+				"rate_pct": 25,
+				"cd_add": 4
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "fire_rate_mult",
+						"mult": 1.25,
+						"while": "ability_active"
+					}
+				},
+				{
+					"script": "ability_mod",
+					"params": {
+						"cooldown_add": 4.0
+					}
+				},
+				{
+					"script": "unlock_cards",
+					"params": {
+						"branch": "scout",
+						"tier": "legendary"
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"scout"
+			]
+		}
+	]
+}

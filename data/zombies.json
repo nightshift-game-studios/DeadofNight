@@ -1,0 +1,35 @@
+{
+	"_help": "Zombie variants (all share the UAL2 skeleton + clips). model_height = the model's real height in metres (auto-scale target, so nothing gets shrunk). health/speed/damage multipliers stack on top of main.gd's per-round stats. wave_mix: the entry with the highest from_round <= current round is used; weights are relative.",
+	"variants": {
+		"city": {
+			"display_name": "Walker",
+			"model": "res://assets/models/zombies/city_zombie.glb",
+			"model_height": 1.795,
+			"health_mult": 1.0,
+			"speed_mult": 1.0,
+			"damage_mult": 1.0
+		},
+		"worker": {
+			"display_name": "Foundry Worker",
+			"model": "res://assets/models/zombies/zombie_worker.glb",
+			"model_height": 1.821,
+			"health_mult": 1.0,
+			"speed_mult": 1.0,
+			"damage_mult": 1.0
+		},
+		"soldier": {
+			"display_name": "Soldier",
+			"model": "res://assets/models/zombies/zombie_soldier.glb",
+			"model_height": 1.821,
+			"health_mult": 1.2,
+			"speed_mult": 0.95,
+			"damage_mult": 1.1
+		}
+	},
+	"wave_mix": [
+		{"from_round": 1, "weights": {"city": 0.85, "worker": 0.15}},
+		{"from_round": 3, "weights": {"city": 0.65, "worker": 0.25, "soldier": 0.10}},
+		{"from_round": 6, "weights": {"city": 0.50, "worker": 0.30, "soldier": 0.20}},
+		{"from_round": 10, "weights": {"city": 0.40, "worker": 0.30, "soldier": 0.30}}
+	]
+}

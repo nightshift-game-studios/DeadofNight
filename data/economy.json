@@ -1,0 +1,13 @@
+{
+	"version": 1,
+	"_help": "Point economy (Skillz). Read by Progress (Progress.points_per_hit / points_per_kill / economy). main.gd should copy these into its points_per_hit / points_per_kill exports at _ready (see /workspace/skillz/MAIN_HOOKS.md). Ignite pays points_per_hit once when it lands (burn ticks pay nothing). Field Card skip/cache payouts live in data/run_picks.json -> offer. Costs (doors 750/1000/1250, rerolls) are unchanged.",
+	"points_per_hit": 5,
+	"points_per_kill": 50,
+	"_previous": {
+		"_help": "Values before the 2026-10-19 playtest halving, for reference only.",
+		"points_per_hit": 10,
+		"points_per_kill": 100,
+		"skip_points_per_round": 100,
+		"cache_points_per_round": 100
+	}
+}

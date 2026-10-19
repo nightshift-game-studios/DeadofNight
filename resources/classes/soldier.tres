@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="PlayerClass" format=3]
+
+[ext_resource type="Script" path="res://scripts/classes/player_class.gd" id="1_pc"]
+[ext_resource type="Script" path="res://scripts/abilities/dash_ability.gd" id="2_dash"]
+
+[sub_resource type="Resource" id="Resource_dash"]
+script = ExtResource("2_dash")
+dash_speed = 22.0
+display_name = "Dash"
+cooldown = 4.0
+duration = 0.18
+
+[resource]
+script = ExtResource("1_pc")
+display_name = "Soldier"
+description = "Balanced health and speed. Q: Dash. G: Frag Grenade."
+max_health = 100
+walk_speed = 5.0
+sprint_speed = 8.5
+jump_velocity = 5.0
+grenade_id = "frag"
+ability = SubResource("Resource_dash")

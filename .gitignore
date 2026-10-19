@@ -1,0 +1,35 @@
+# Godot 4 editor cache / imported data (regenerated on open). Note: *.import files are KEPT in Godot 4.
+.godot/
+
+# Godot 3 leftovers / Mono
+.import/
+.mono/
+data_*/
+mono_crash.*.json
+
+# Export presets can contain signing passwords / keystore paths
+export_presets.cfg
+export_credentials.cfg
+*.keystore
+!debug.keystore
+
+# Build output
+builds/
+build/
+export/
+*.exe
+*.pck
+*.zip
+*.zip.[0-9][0-9][0-9]
+
+# Temp / editor / OS junk
+*.tmp
+*~
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+__pycache__/
+
+# Local test scratch
+tests/_/
