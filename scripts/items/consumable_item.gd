@@ -9,6 +9,18 @@ enum Effect { HEAL, AMMO, HEAVY_AMMO }
 @export var auto_use: bool = false ## used instantly when walked over (ammo bricks)
 @export_file("*.glb", "*.gltf") var model_path: String = "" ## world model for the pickup
 @export var model_scale: float = 1.0
+## Art4: old world model kept as a fallback, used only when model_path is missing (e.g. a stripped build).
+@export_file("*.glb", "*.gltf") var fallback_model_path: String = ""
+@export var fallback_model_scale: float = 1.0
+
+
+## [path, scale] of the world model to show: model_path if it exists, else the fallback, else ["", 1.0].
+func world_model() -> Array:
+	if model_path != "" and ResourceLoader.exists(model_path):
+		return [model_path, model_scale]
+	if fallback_model_path != "" and ResourceLoader.exists(fallback_model_path):
+		return [fallback_model_path, fallback_model_scale]
+	return ["", 1.0]
 
 
 ## Returns true if the item was consumed.

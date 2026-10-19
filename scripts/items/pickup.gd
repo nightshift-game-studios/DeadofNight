@@ -22,12 +22,15 @@ func _ready() -> void:
 	var c: Color = gear.rarity_color() if gear else item.color
 	label.text = item.display_name
 	label.modulate = c.lightened(0.35)
-	if cons and cons.model_path != "" and ResourceLoader.exists(cons.model_path):
-		_visual = (load(cons.model_path) as PackedScene).instantiate()
-		_visual.scale = Vector3.ONE * cons.model_scale
+	var wm: Array = cons.world_model() if cons else ["", 1.0]
+	if wm[0] != "":
+		_visual = (load(wm[0]) as PackedScene).instantiate()
+		_visual.scale = Vector3.ONE * float(wm[1])
 		add_child(_visual)
 		if cons.effect == ConsumableItem.Effect.HEAVY_AMMO:
-			_tint(_visual, c)
+			# Desi's heavy_ammo.glb: tint only its TintBand stripe; the old fallback mesh has none, so tint it all.
+			var tb := _visual.find_child("TintBand", true, false)
+			_tint(tb if tb else _visual, c)
 		label.position.y = 0.8
 	else:
 		_visual = _make_loot_shard(c, gear != null and gear.rarity == Rarity.MYTHIC)
@@ -90,7 +93,10 @@ func _make_loot_shard(c: Color, mythic: bool) -> Node3D:
 
 
 func _tint(n: Node, c: Color) -> void:
-	for mi in n.find_children("*", "MeshInstance3D", true, false):
+	var meshes: Array = n.find_children("*", "MeshInstance3D", true, false)
+	if n is MeshInstance3D:
+		meshes.push_front(n) # TintBand itself is the mesh
+	for mi in meshes:
 		var m := StandardMaterial3D.new()
 		m.albedo_color = c
 		m.emission_enabled = true

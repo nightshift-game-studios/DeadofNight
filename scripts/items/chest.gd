@@ -4,6 +4,9 @@ extends StaticBody3D
 ## and pops the drops out as loot shards. main.gd re-arms every chest each round.
 ## Also rolls the chest Gravemark source (Armory.on_chest_opened); it pays straight into
 ## Progress and pops Desi's gravemark.glb token (scripts/items/gravemark_pickup.gd, cosmetic) (Progress.gravemark_gained fires for HUD popups).
+## Art4 (Skillz): Model = Desi's loot_chest.glb (identity transform, front +Z; Base / Lid / LootSpawn / InteractPoint).
+## Clips: Idle_Closed in _ready, Open on interact, Close on rearm (only if it was open). A model without an
+## AnimationPlayer (or a missing clip) is tolerated: play_clip() returns false and the chest still works.
 
 signal opened(chest: Chest)
 
@@ -14,13 +17,30 @@ var round_number: int = 1
 @onready var area: Area3D = $Area3D
 @onready var glow: OmniLight3D = $Glow
 @onready var model: Node3D = $Model
+var anim: AnimationPlayer
+var last_clip: String = "" ## last clip play_clip() started (tests / debug)
+
+const CLIP_IDLE := "Idle_Closed"
+const CLIP_OPEN := "Open"
+const CLIP_CLOSE := "Close"
 
 
 func _ready() -> void:
 	add_to_group("chests")
 	area.body_entered.connect(func(b): if b.has_method("set_nearby_interactable"): b.set_nearby_interactable(self, true))
 	area.body_exited.connect(func(b): if b.has_method("set_nearby_interactable"): b.set_nearby_interactable(self, false))
+	anim = model.find_child("AnimationPlayer", true, false) as AnimationPlayer if model else null
+	play_clip(CLIP_IDLE)
 	_update_visual()
+
+
+## Plays a chest clip on the model's AnimationPlayer. Returns false when there is nothing to play.
+func play_clip(clip: String) -> bool:
+	if anim == null or not anim.has_animation(clip):
+		return false
+	anim.play(clip)
+	last_clip = clip
+	return true
 
 
 func can_interact() -> bool:
@@ -35,6 +55,7 @@ func interact(_player: Node) -> void:
 	if is_open:
 		return
 	is_open = true
+	play_clip(CLIP_OPEN)
 	_update_visual()
 	var a := get_node_or_null("/root/Sfx")
 	if a:
@@ -60,6 +81,8 @@ func interact(_player: Node) -> void:
 
 func rearm(new_round: int) -> void:
 	round_number = new_round
+	if is_open:
+		play_clip(CLIP_CLOSE)
 	is_open = false
 	_update_visual()
 

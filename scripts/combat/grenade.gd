@@ -1,6 +1,12 @@
 class_name Grenade
 extends RigidBody3D
 ## Thrown physics grenade. Data (fuse, radius, damage, type...) comes from data/grenades.json.
+## Art4 (Skillz): visual = Desi's grenade.glb (Body / Spoon / Pin / Band / Fuse / Light, clip Arm). The emissive Band is
+## recoloured per grenade type (data color: frag orange, pulse blue) and pulses with the fuse light; Arm plays on throw.
+## Missing GLB -> the old dark sphere with an emissive tint. Collision stays SphereShape3D r 0.09 (GLB origin = body centre).
+
+const MODEL_PATH := "res://assets/models/pickups/grenade.glb"
+static var model_path: String = MODEL_PATH ## tests point this at a missing file to exercise the sphere fallback
 
 var data: Dictionary = {}
 var thrower: Node
@@ -12,6 +18,8 @@ var _light: OmniLight3D
 var _t: float = 0.0
 var _bounce_cd: float = 0.0
 var _loop: AudioStreamPlayer3D ## Tremor Charge pulse loop
+var visual: Node3D ## grenade.glb instance (or the fallback sphere)
+var band_material: StandardMaterial3D ## Band override (null on the fallback sphere)
 
 
 static func throw_from(player: Node, grenade_data: Dictionary, origin: Vector3, dir: Vector3, inherit: Vector3) -> Grenade:
@@ -42,6 +50,43 @@ func _ready() -> void:
 	shape.shape = s
 	add_child(shape)
 	var c := _color()
+	visual = make_visual(c)
+	add_child(visual)
+	band_material = visual.get_meta("band_material") if visual.has_meta("band_material") else null
+	_light = OmniLight3D.new()
+	_light.light_color = c
+	_light.light_energy = 1.0
+	_light.omni_range = 1.5
+	var lp := visual.find_child("Light", true, false) as Node3D
+	if lp:
+		_light.position = lp.position
+	add_child(_light)
+	var ap := visual.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if ap and ap.has_animation("Arm"):
+		ap.play("Arm") # spoon flies / pin out as it leaves the hand
+	_fuse = float(data.get("fuse", 1.5))
+	contact_monitor = true
+	max_contacts_reported = 2
+	body_entered.connect(_on_bounce)
+
+
+## Grenade visual tinted with `c`: grenade.glb with its Band recoloured (meta "band_material"), else the old sphere.
+## Static so a held / viewmodel grenade can reuse it.
+static func make_visual(c: Color) -> Node3D:
+	if model_path != "" and ResourceLoader.exists(model_path):
+		var vis := (load(model_path) as PackedScene).instantiate() as Node3D
+		var band := vis.find_child("Band", true, false) as MeshInstance3D
+		if band:
+			var bm := StandardMaterial3D.new()
+			bm.albedo_color = c
+			bm.emission_enabled = true
+			bm.emission = c
+			bm.emission_energy_multiplier = 2.0
+			band.material_override = bm
+			vis.set_meta("band_material", bm)
+		for mi in vis.find_children("*", "MeshInstance3D", true, false):
+			(mi as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		return vis
 	var mesh := MeshInstance3D.new()
 	var sm := SphereMesh.new()
 	sm.radius = 0.09
@@ -54,16 +99,7 @@ func _ready() -> void:
 	m.emission = c
 	m.emission_energy_multiplier = 0.8
 	mesh.material_override = m
-	add_child(mesh)
-	_light = OmniLight3D.new()
-	_light.light_color = c
-	_light.light_energy = 1.0
-	_light.omni_range = 1.5
-	add_child(_light)
-	_fuse = float(data.get("fuse", 1.5))
-	contact_monitor = true
-	max_contacts_reported = 2
-	body_entered.connect(_on_bounce)
+	return mesh
 
 
 func _sfx() -> Node:
@@ -88,6 +124,8 @@ func _physics_process(delta: float) -> void:
 	_t += delta
 	_bounce_cd = max(_bounce_cd - delta, 0.0)
 	_light.light_energy = 0.5 + 1.5 * absf(sin(_t * 18.0))
+	if band_material:
+		band_material.emission_energy_multiplier = 1.0 + 3.0 * absf(sin(_t * 18.0))
 	if _pulses_left > 0:
 		_pulse_timer -= delta
 		if _pulse_timer <= 0.0:

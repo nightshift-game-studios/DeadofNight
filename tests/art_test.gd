@@ -830,51 +830,62 @@ func _art_pass2b(A, Rig, world: Node3D, holder: Node3D, by_arch: Dictionary) -> 
 	check(fake_band.is_visible_in_tree() and fake_sib.visible, "...and is restored without a barrel part")
 	sg.queue_free()
 
-	# ------------------------------------------------------------ older guns: raised SightPoint ADS (Desi sightline 12:27)
-	# SightPoint.y = rear-sight top on all of them now. Aim: front post / bead top < 2 mm off the eye line, like the revolver.
-	# Scout / LMG / shotgun / sniper irons have a rear block 8.5-17.5 mm above the front (Desi's IronSights fix awaits approval),
-	# and the SMG is 2.5 mm, so those report PENDING instead of failing; the others must pass.
-	var older := {"weapon_pistol": "sidearm", "weapon_assault_rifle": "auto_rifle", "weapon_scout_rifle": "scout_rifle",
-		"weapon_smg": "smg", "weapon_shotgun": "shotgun", "weapon_lmg": "pulse_rifle", "weapon_sniper": "sniper_rifle"}
-	var mesh_pending := ["weapon_scout_rifle", "weapon_lmg", "weapon_shotgun", "weapon_sniper", "weapon_smg"]
-	for g in older:
-		var arch: String = older[g]
-		if not by_arch.has(arch) or str(by_arch[arch].get("model", "")) != GUN % g:
+	# ------------------------------------------------------------ ADS table, every gun (art pass 3: Desi's notch pass 12:57)
+	# SightPoint = front post / bead tip on every gun now (scout 0.1165, LMG 0.1550, sniper 0.0895, shotgun 0.0830).
+	# Aim: the front post top < 2 mm off the eye line at ADS. The sniper is measured on its backup irons (DefaultOptic
+	# hidden) and, with the default scope on, from OpticSightPoint (child of DefaultOptic) against the scope axis.
+	var ads_rows: Array = []
+	var archs: Array = by_arch.keys()
+	archs.sort()
+	for arch in archs:
+		var mp := str(by_arch[arch].get("model", ""))
+		if not mp.begins_with(GUN.get_slice("%s", 0)):
 			continue
+		var g := mp.get_file().get_basename()
 		var v := _view_gun(world, g, float(by_arch[arch].view.length))
 		var r: Dictionary = Rig.apply(v.model, arch, {})
+		var irons: Node3D = Rig.find_node(v.model, "IronSights")
+		if r.get("sight") == null or irons == null:
+			ads_rows.append("%s (%s): no SightPoint / IronSights" % [g, arch])
+			(v.cam as Node).queue_free()
+			continue
+		var dopt: Node3D = Rig.find_node(v.model, "DefaultOptic")
+		var osp: Node3D = Rig.find_node(v.model, "OpticSightPoint")
+		if dopt:
+			dopt.visible = false # irons first (the sniper's backup irons)
 		var sp: Vector3 = Rig.gun_point(v.model, r.sight)
-		var mzp: Vector3 = Rig.gun_point(v.model, Rig.find_node(v.model, "Muzzle"))
 		v.gun.position = Ads.ads_gun_position(Rig.ads_offset(r, v.gun), arch)
 		var eye: float = Ads.ads_eye_distance(arch)
 		var line: Vector3 = v.cam.to_local((v.model as Node3D).global_transform * Rig.sight_line(r))
 		var ft: Vector3 = _front_post_top(Rig, v.model)
 		var front_mm: float = v.cam.to_local((v.model as Node3D).global_transform * ft).y * 1000.0
-		var front_gun_mm: float = (ft.y - sp.y) * 1000.0
-		check(absf(sp.y - mzp.y) >= 0.002 and Rig.sight_line(r).is_equal_approx(sp) and line.distance_to(Vector3(0, 0, -eye)) < 1e-4,
-			"%s: raised SightPoint (y %.4f) is the sight line, on the screen centre at ADS" % [g, sp.y])
-		if absf(front_mm) < 2.0:
-			check(true, "%s ADS: front post %.2f mm off the eye line (< 2 mm)" % [g, front_mm])
-		elif g in mesh_pending:
-			_pend("%s ADS: front post %.1f mm below the eye line on screen (%.1f mm in the gun): rear sight taller than the front" % [g, front_mm, front_gun_mm])
-		else:
-			check(false, "%s ADS: front post %.2f mm off the eye line (< 2 mm)" % [g, front_mm])
+		var gun_mm: float = (ft.y - sp.y) * 1000.0
+		check(Rig.sight_line(r).is_equal_approx(sp) and line.distance_to(Vector3(0, 0, -eye)) < 1e-4,
+			"%s: SightPoint (y %.4f) is the sight line, on the screen centre at ADS" % [g, sp.y])
+		# art4: Desi's 14:47 launcher (sight fix + finish) brought it from +2.71 mm to +0.45 mm, so every gun is a hard check now.
+		check(absf(front_mm) < 2.0, "%s ADS: front post %.2f mm off the eye line (< 2 mm)" % [g, front_mm])
+		var row := "%-22s %-13s SightPoint y %.4f  front post %+.2f mm on screen (%+.2f mm in gun)" % [g, arch, sp.y, front_mm, gun_mm]
+		if dopt and osp:
+			dopt.visible = true
+			check(Rig.sight_line(r).is_equal_approx(Rig.gun_point(v.model, osp)), "%s: OpticSightPoint is the sight line while DefaultOptic shows" % g)
+			v.gun.position = Ads.ads_gun_position(Rig.ads_offset(r, v.gun), arch)
+			var oline: Vector3 = v.cam.to_local((v.model as Node3D).global_transform * Rig.sight_line(r))
+			var axis := _scope_axis(Rig, v.model, dopt)
+			var axis_cam: Vector3 = v.cam.to_local((v.model as Node3D).global_transform * axis)
+			var axis_mm := Vector2(axis_cam.x, axis_cam.y).length() * 1000.0
+			check(oline.distance_to(Vector3(0, 0, -eye)) < 1e-4 and axis_mm < 2.0,
+				"%s scope: OpticSightPoint on the screen centre, scope axis %.2f mm off it (< 2 mm)" % [g, axis_mm])
+			row += " | scope: OpticSightPoint y %.4f, scope axis %.2f mm off centre" % [Rig.gun_point(v.model, osp).y, axis_mm]
+		ads_rows.append(row)
 		(v.cam as Node).queue_free()
-	# sniper built-in scope: OpticSightPoint (proposed by Desi, not in the GLB yet) takes over while DefaultOptic shows
+	print("ADS_TABLE\n  " + "\n  ".join(ads_rows))
+	# a fitted optic's SightPoint still wins over the built-in scope
 	var vs := _view_gun(world, "weapon_sniper", float(by_arch.sniper_rifle.view.length))
-	var osp := Node3D.new()
-	osp.name = "OpticSightPoint"
-	osp.position = Vector3(-0.12, 0.140, 0.0)
-	Rig.find_node(vs.model, "SightPoint").get_parent().add_child(osp)
-	var rs: Dictionary = Rig.apply(vs.model, "sniper_rifle", {})
-	var has_real: bool = Rig.find_node(vs.model, "OpticSightPoint") != osp
-	check(Rig.sight_line(rs).is_equal_approx(Rig.gun_point(vs.model, osp)) or has_real, "sniper: OpticSightPoint wins while DefaultOptic is visible")
-	rs = Rig.apply(vs.model, "sniper_rifle", {"optic": "crows_eye_3x"})
+	var rs: Dictionary = Rig.apply(vs.model, "sniper_rifle", {"optic": "crows_eye_3x"})
 	check(rs.attached.has("optic") and (rs.attached.optic as Node3D).is_ancestor_of(rs.sight)
-		and Rig.sight_line(rs).is_equal_approx(Rig.gun_point(vs.model, rs.sight)), "...a fitted optic's SightPoint still wins over it")
-	osp.free()
-	if not has_real:
-		_pend("sniper DefaultOptic: no OpticSightPoint node in weapon_sniper.glb yet, so ADS lines up the backup irons (y 0.086), not the scope axis (y 0.140); code is ready")
+		and Rig.sight_line(rs).is_equal_approx(Rig.gun_point(vs.model, rs.sight)), "sniper: a fitted optic's SightPoint still wins over OpticSightPoint")
+	check(Rig.find_node(vs.model, "OpticSightPoint") != null and Rig.find_node(vs.model, "OpticSightPoint").get_parent().name == "DefaultOptic",
+		"weapon_sniper.glb: OpticSightPoint is a child of DefaultOptic")
 	(vs.cam as Node).queue_free()
 	var f := FileAccess.open(PENDING_LOG, FileAccess.WRITE)
 	if f:
