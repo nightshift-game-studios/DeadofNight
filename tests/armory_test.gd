@@ -390,6 +390,8 @@ func _run() -> void:
 		"upgrade cost curve still 3/6/11/20/36 after Mine Lamp")
 	check(A.attachment_ids().size() == 38, "38 attachments including Mine Lamp")
 
+	await _art_pass2b(prog, A)
+
 	# ------------------------------------------------------------ cleanup
 	_reset(prog)
 	D.set_active("")
@@ -397,3 +399,83 @@ func _run() -> void:
 	DirAccess.remove_absolute(prog.save_path)
 	print("armory_test: %d passed, %d failed" % [_passes, _fails])
 	quit(_fails)
+
+
+## Art pass 2b (G4M3N): Sawn Stub off the revolver + LMG, SMG Sawn Stub x Bonesaw exclusion, save clean-up.
+func _art_pass2b(prog: Node, A) -> void:
+	_reset(prog)
+	var api = A.new()
+	for arch in ["hand_cannon", "pulse_rifle"]:
+		check(not A.is_compatible("sawn_stub", arch) and str(A.equip_requirements("sawn_stub", arch)).contains("Does not fit")
+			and api.list_attachments(arch, "barrel").all(func(e): return e.id != "sawn_stub"), "Sawn Stub doesn't fit %s" % arch)
+	for arch in ["shotgun", "smg", "auto_rifle", "scout_rifle", "sniper_rifle"]:
+		check(A.is_compatible("sawn_stub", arch), "Sawn Stub still fits %s" % arch)
+	var ex: Array = A.exclusions("smg")
+	check(ex.size() == 1 and ex[0].parts == ["bonesaw_bayonet", "sawn_stub"] and A.exclusions("auto_rifle").is_empty()
+		and A.exclusions().size() == 1, "exclusions: one SMG rule (bonesaw_bayonet, sawn_stub)")
+	prog.armory.owned.append_array(["sawn_stub", "bonesaw_bayonet", "fluted_cooler", "ember_window_mag"])
+	prog.armory.upgrades["smg"] = 2
+	prog.armory.upgrades["auto_rifle"] = 2
+	prog.armory.upgrades["hand_cannon"] = 4
+	prog.notify_armory("load", "", false)
+	check(not A.equip("hand_cannon", "sawn_stub") and not A.equip("pulse_rifle", "sawn_stub"), "equip refuses Sawn Stub on hand_cannon / LMG")
+	check(A.equip("smg", "sawn_stub") and A.exclusion_reason("sawn_stub", "smg") == "", "SMG: Sawn Stub alone equips")
+	var why: String = A.exclusion_reason("bonesaw_bayonet", "smg")
+	check(why.contains("Sawn Stub") and why.contains(A.weapon_type("smg")) and why.contains(str(ex[0].reason))
+		and A.equip_requirements("bonesaw_bayonet", "smg").has(why), "Bonesaw on an SMG with Sawn Stub: reason \"%s\"" % why)
+	check(not A.equip("smg", "bonesaw_bayonet") and A.loadout("smg") == {"barrel": "sawn_stub"}, "...and equip refuses it")
+	var entry: Dictionary = api.list_attachments("smg", "grip").filter(func(e): return e.id == "bonesaw_bayonet")[0]
+	check(entry.state == "locked" and entry.conflict.get("with") == "sawn_stub" and entry.conflict.get("rule") == "smg_stub_bayonet"
+		and entry.requirements.has(why), "list_attachments: Bonesaw locked with conflict {with: sawn_stub} + reason")
+	check(A.exclusion_conflict("fluted_cooler", "smg").is_empty() and A.equip("smg", "fluted_cooler")
+		and A.equip("smg", "bonesaw_bayonet"), "swapping the barrel clears the conflict; Bonesaw equips")
+	check(A.exclusion_reason("sawn_stub", "smg").contains("Bonesaw Bayonet") and not A.equip("smg", "sawn_stub")
+		and A.loadout("smg") == {"barrel": "fluted_cooler", "grip": "bonesaw_bayonet"}, "the pair is blocked both ways")
+	check(A.equip("auto_rifle", "sawn_stub") and A.equip("auto_rifle", "bonesaw_bayonet"), "the exclusion is SMG-only (auto_rifle takes both)")
+	prog.armory.equipped["smg"] = {"barrel": "sawn_stub", "grip": "bonesaw_bayonet"}  # raw (pre-sanitize) state
+	prog.notify_armory("load", "", false)
+	check(A.loadout("smg") == {"grip": "bonesaw_bayonet"}, "loadout() never hands a blocked pair to the gun (Sawn Stub dropped)")
+
+	# old save holding blocked fits/pairs -> unequipped into the Armory stash (still owned), written back clean
+	var owned_before: Array = ["sawn_stub", "bonesaw_bayonet", "fluted_cooler", "ember_window_mag", "flare_cage"]
+	var cfg := ConfigFile.new()
+	cfg.set_value("meta", "save_version", 4)
+	cfg.set_value("armory", "gravemarks", 5)
+	cfg.set_value("armory", "data", {"upgrades": {"smg": 2, "hand_cannon": 4, "pulse_rifle": 1, "auto_rifle": 2},
+		"owned": owned_before.duplicate(),
+		"equipped": {"hand_cannon": {"barrel": "sawn_stub", "mag": "ember_window_mag", "muzzle": "flare_cage"},
+			"pulse_rifle": {"barrel": "sawn_stub"}, "smg": {"barrel": "sawn_stub", "grip": "bonesaw_bayonet"},
+			"auto_rifle": {"barrel": "sawn_stub", "grip": "bonesaw_bayonet"}, "future_gun": {"barrel": "sawn_stub"},
+			"shotgun": {"barrel": "not_shipped_yet"}}})
+	cfg.save(prog.save_path)
+	prog.load_data()
+	var moved: Array = prog.armory_unequipped_on_load.map(func(m): return "%s/%s/%s/%s" % [m.arch, m.slot, m.id, m.why])
+	moved.sort()
+	check(moved == ["hand_cannon/barrel/sawn_stub/fit", "hand_cannon/mag/ember_window_mag/fit", "pulse_rifle/barrel/sawn_stub/fit",
+		"smg/barrel/sawn_stub/smg_stub_bayonet"], "load: blocked parts unequipped %s" % [moved])
+	check(prog.armory.equipped.hand_cannon == {"muzzle": "flare_cage"} and prog.armory.equipped.pulse_rifle == {}
+		and prog.armory.equipped.smg == {"grip": "bonesaw_bayonet"}
+		and prog.armory.equipped.auto_rifle == {"barrel": "sawn_stub", "grip": "bonesaw_bayonet"},
+		"legal parts stay equipped (flare_cage on hand_cannon, the SMG keeps Bonesaw, auto_rifle keeps both)")
+	check(prog.armory.equipped.future_gun == {"barrel": "sawn_stub"} and prog.armory.equipped.shotgun == {"barrel": "not_shipped_yet"},
+		"unknown archetypes / ids are left alone")
+	var kept := true
+	for id in owned_before:
+		kept = kept and A.owned(id)
+	check(kept and prog.armory.owned.size() == owned_before.size(), "nothing lost: every unequipped part is still owned")
+	var sst: Dictionary = api.list_attachments("smg", "barrel").filter(func(e): return e.id == "sawn_stub")[0]
+	check(sst.owned and not sst.equipped and sst.state == "locked" and sst.conflict.get("with") == "bonesaw_bayonet",
+		"Armory shows the unequipped Sawn Stub as owned, blocked by the Bonesaw")
+	check(A.equip("hand_cannon", "fluted_cooler"), "the freed revolver barrel slot takes a legal part")
+	prog.save_data()
+	prog.armory = {"upgrades": {}, "owned": [], "equipped": {}}
+	prog.load_data()
+	check(prog.armory_unequipped_on_load.is_empty() and prog.armory.equipped.smg == {"grip": "bonesaw_bayonet"}
+		and prog.armory.equipped.hand_cannon == {"muzzle": "flare_cage", "barrel": "fluted_cooler"} and prog.gravemarks == 5,
+		"saved back clean: the next load has nothing to unequip")
+	var raw := {"equipped": {"smg": {"grip": "bonesaw_bayonet", "barrel": "sawn_stub"}}}
+	check(A.sanitize_armory(raw).size() == 1 and raw.equipped.smg == {"grip": "bonesaw_bayonet"}
+		and A.sanitize_armory({}).is_empty() and A.sanitize_armory({"equipped": 3}).is_empty(), "sanitize_armory is junk-safe")
+	_reset(prog)
+	if api is Node:
+		api.free()

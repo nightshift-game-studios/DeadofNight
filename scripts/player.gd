@@ -41,7 +41,7 @@ const ArmoryScr := preload("res://scripts/armory/armory.gd")
 const WeaponRigScr := preload("res://scripts/gear/weapon_rig.gd") ## Armory attachments on the view model (Skillz art pass)
 var _gun_model: Node3D ## current first-person gun model (re-fitted when the Armory loadout changes)
 var _gun_rig: Dictionary = {} ## last WeaponRig.apply() result: attached / hidden / missing / muzzle / sight / lamp
-## Mine Lamp (Skillz §10 + Mapz): camera SpotLight3D, F to toggle, gated on Armory.has_mine_lamp(archetype).
+## Mine Lamp (Skillz §10 + Mapz): camera SpotLight3D, F to toggle, gated on Armory.has_flashlight(archetype) (Mine Lamp or Lantern Rail).
 var _flashlight: SpotLight3D
 var _flashlight_on: bool = false
 const HEAD_HITBOX_LAYER := 32 ## zombie head hitboxes (enemy.gd); only weapon rays query it
@@ -1344,7 +1344,7 @@ func _toggle_flashlight() -> void:
 	if _flashlight == null or dead:
 		return
 	# Gate: only while Mine Lamp is on the weapon in hand (Armory loadout per archetype).
-	if not ArmoryScr.has_mine_lamp(_weapon_archetype()):
+	if not ArmoryScr.has_flashlight(_weapon_archetype()):
 		_set_flashlight(false)
 		return
 	_set_flashlight(not _flashlight_on)
@@ -1354,7 +1354,7 @@ func _set_flashlight(on: bool) -> void:
 	if _flashlight == null:
 		return
 	var was := _flashlight_on
-	_flashlight_on = on and ArmoryScr.has_mine_lamp(_weapon_archetype())
+	_flashlight_on = on and ArmoryScr.has_flashlight(_weapon_archetype())
 	if _flashlight_on:
 		_apply_flashlight_cfg(ArmoryScr.flashlight_config(_weapon_archetype()))
 	_flashlight.visible = _flashlight_on
@@ -1366,7 +1366,7 @@ func _set_flashlight(on: bool) -> void:
 
 ## Call whenever the active weapon or Armory loadout changes so an unequipped lamp cannot stay on.
 func _sync_flashlight() -> void:
-	if not ArmoryScr.has_mine_lamp(_weapon_archetype()):
+	if not ArmoryScr.has_flashlight(_weapon_archetype()):
 		_set_flashlight(false)
 
 

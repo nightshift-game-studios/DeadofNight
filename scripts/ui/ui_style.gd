@@ -475,3 +475,46 @@ static func attachment_icon(att_id: String, icon_size: int = 36, slot: String = 
 	gl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	g.add_child(gl)
 	return g
+
+
+# ------------------------------------------------------------------ shared dialog look (confirm card, notices)
+
+## Full-rect overlay with a dim backdrop and a CenterContainer: {overlay, dim, center}. Add the card to `center`.
+static func dialog_overlay(overlay_name: String = "DialogOverlay", dim_alpha: float = 0.72) -> Dictionary:
+	var overlay := Control.new()
+	overlay.name = overlay_name
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	var dim := ColorRect.new()
+	dim.name = "ConfirmDim"
+	dim.color = Color(0.02, 0.02, 0.015, dim_alpha)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.add_child(dim)
+	var center := CenterContainer.new()
+	center.name = "ConfirmCenter"
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(center)
+	return {"overlay": overlay, "dim": dim, "center": center}
+
+
+## Compact chunky card with a rust border (the Armory buy-confirm look).
+static func dialog_card(min_size: Vector2 = Vector2(460, 200), card_name: String = "DialogCard") -> PanelContainer:
+	var card := PanelContainer.new()
+	card.name = card_name
+	card.custom_minimum_size = min_size
+	var cst := cut_box(Color(0.07, 0.06, 0.05, 0.98), RUST.lightened(0.12), 4, 16)
+	cst.set_content_margin_all(18)
+	card.add_theme_stylebox_override("panel", cst)
+	return card
+
+
+## Primary (rust-filled) dialog button styling, e.g. CONFIRM / OK.
+static func style_primary_button(b: Button) -> void:
+	b.add_theme_stylebox_override("normal", cut_box(RUST.darkened(0.12), BONE, 2, 10))
+	b.add_theme_stylebox_override("hover", cut_box(RUST, BONE, 2, 10))
+	b.add_theme_stylebox_override("pressed", cut_box(RUST.darkened(0.25), BONE, 2, 10))
+	b.add_theme_stylebox_override("focus", cut_box(RUST, BONE, 3, 10))
+	b.add_theme_color_override("font_color", BONE)
+	b.add_theme_font_override("font", FONT_STENCIL)

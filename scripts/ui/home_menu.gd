@@ -14,6 +14,7 @@ const CharacterScreenScript := preload("res://scripts/ui/character_screen.gd")
 const MapPickerScript := preload("res://scripts/ui/map_picker.gd")
 const SettingsMenuScript := preload("res://scripts/ui/settings_menu.gd")
 const ArmoryMenuScript := preload("res://scripts/ui/armory_menu.gd")
+const ArmoryNoticeScript := preload("res://scripts/ui/armory_notice.gd")
 const KitProxyScript := preload("res://scripts/ui/kit_proxy.gd")
 const ArmoryScr := preload("res://scripts/armory/armory.gd")
 const MAIN_SCENE := "res://scenes/main.tscn"
@@ -44,6 +45,17 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_build()
 	call_deferred("_focus_first")
+	call_deferred("show_unequip_notice")
+
+
+## One-time "parts moved back to your Armory" notice (Progress.armory_unequipped_on_load, ARMORY_HANDOFF 2b).
+func show_unequip_notice() -> Node:
+	if not is_inside_tree() or not is_visible_in_tree():
+		return null
+	var n = ArmoryNoticeScript.show_if_pending(self)
+	if n:
+		n.dismissed.connect(_focus_first)
+	return n
 
 
 func _build() -> void:

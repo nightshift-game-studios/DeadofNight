@@ -260,6 +260,7 @@ static func loadout(arch: String) -> Dictionary:
 		if owned(id) and is_compatible(id, arch) and str(attachment(id).slot) == str(slot) \
 				and upgrade_tier(arch) >= tier_requirement(id):
 			out[str(slot)] = id
+	resolve_exclusions(arch, out)  # a blocked pair never reaches the gun, even before a save is sanitized
 	return out
 
 
@@ -275,6 +276,89 @@ static func equip_requirements(att_id: String, arch: String) -> Array:
 	var need := tier_requirement(att_id)
 	if need > 0 and upgrade_tier(arch) < need:
 		out.append("%s Rework tier %s" % [weapon_type(arch), tier_name(need)])
+	var why := exclusion_reason(att_id, arch)
+	if why != "":
+		out.append(why)
+	return out
+
+
+# ------------------------------------------------------------------ per-gun exclusions (art pass 2b)
+
+## attachments.json "exclusions" rules that apply to `arch` ("" = all): {id, classes, parts, reason}.
+static func exclusions(arch: String = "") -> Array:
+	return data().get("exclusions", []).filter(func(r): return arch == "" or arch in r.get("classes", []))
+
+
+## The rule + equipped part that blocks fitting `att_id` on `arch` next to `lo` (default: the current loadout).
+## A part in att_id's own slot doesn't count (equipping replaces it). {} = no conflict, else
+## {rule, with (attachment id), with_name, reason (the rule's text)}.
+static func exclusion_conflict(att_id: String, arch: String, lo = null) -> Dictionary:
+	var cur: Dictionary = lo if lo is Dictionary else loadout(arch)
+	var slot := str(attachment(att_id).get("slot", ""))
+	for r in exclusions(arch):
+		var parts: Array = r.get("parts", [])
+		if not (att_id in parts):
+			continue
+		for s in cur:
+			var other := str(cur[s])
+			if str(s) != slot and other != att_id and other in parts:
+				return {"rule": str(r.get("id", "")), "with": other, "with_name": str(attachment(other).get("name", other)),
+					"reason": str(r.get("reason", ""))}
+	return {}
+
+
+## UI text for an exclusion conflict ("" = none), e.g. "Not with Bonesaw Bayonet on the SMG: <rule reason>".
+static func exclusion_reason(att_id: String, arch: String, lo = null) -> String:
+	var c := exclusion_conflict(att_id, arch, lo)
+	if c.is_empty():
+		return ""
+	var why := str(c.reason)
+	return "Not with %s on the %s" % [c.with_name, weapon_type(arch)] + (": " + why if why != "" else "")
+
+
+## Drops blocked pairs from a {slot: id} loadout in place: for each rule, every listed part after the first one
+## present is removed (rule order = priority). Returns [{slot, id, rule}] removed.
+static func resolve_exclusions(arch: String, lo: Dictionary) -> Array:
+	var removed := []
+	for r in exclusions(arch):
+		var keep_one := false
+		for part in r.get("parts", []):
+			for s in lo.keys():
+				if str(lo[s]) == str(part):
+					if keep_one:
+						removed.append({"slot": str(s), "id": str(part), "rule": str(r.get("id", ""))})
+						lo.erase(s)
+					else:
+						keep_one = true
+	return removed
+
+
+## Save clean-up (Progress.load_data, art pass 2b): unequips parts the current data no longer allows where they sit:
+## wrong class / slot (e.g. Sawn Stub on hand_cannon or the LMG, Ember Window Mag on hand_cannon) and blocked pairs
+## (exclusions; the last listed part goes). Unequipped parts stay in `owned` (the Armory stash), so nothing is lost;
+## an equipped id that wasn't owned is not granted. Unknown ids / archetypes are left alone (data may add them back).
+## Mutates `armory_dict` ({upgrades, owned, equipped}); returns [{arch, slot, id, why: "fit" | rule id}].
+static func sanitize_armory(armory_dict: Dictionary) -> Array:
+	var out := []
+	var eq = armory_dict.get("equipped", {})
+	if typeof(eq) != TYPE_DICTIONARY:
+		return out
+	for arch in eq.keys():
+		var lo = eq[arch]
+		if typeof(lo) != TYPE_DICTIONARY or not is_archetype(str(arch)):
+			continue
+		for slot in lo.keys():
+			var id := str(lo[slot])
+			if is_attachment(id) and not (is_compatible(id, str(arch)) and str(attachment(id).slot) == str(slot)):
+				lo.erase(slot)
+				out.append({"arch": str(arch), "slot": str(slot), "id": id, "why": "fit"})
+		var known := {}
+		for slot in lo:
+			if is_attachment(str(lo[slot])):
+				known[slot] = lo[slot]
+		for r in resolve_exclusions(str(arch), known):
+			lo.erase(r.slot)
+			out.append({"arch": str(arch), "slot": str(r.slot), "id": str(r.id), "why": str(r.rule)})
 	return out
 
 
@@ -797,7 +881,8 @@ func list_upgrades(weapon_id: String = "") -> Array:
 
 
 ## Parts that fit `weapon_id` (optionally one slot). Entry: id, name, summary, description, drawback, cost, owned,
-## equipped (on this weapon), slot, tier, unique, icon, model, requirements (unmet, to equip here: tier gates),
+## equipped (on this weapon), slot, tier, unique, icon, model, requirements (unmet, to equip here: tier gates and
+## exclusion text), conflict (Armory.exclusion_conflict: {} or {rule, with, with_name, reason}),
 ## purchase_requirements (unmet, to buy), can_afford, state: "equipped" | "owned" | "locked" (requirements) | "available".
 func list_attachments(weapon_id: String, slot: String = "") -> Array:
 	var arch := resolve_weapon(weapon_id)
@@ -815,6 +900,7 @@ func list_attachments(weapon_id: String, slot: String = "") -> Array:
 			"slot": str(a.slot), "tier": int(a.get("tier", 1)), "unique": bool(a.get("unique", false)),
 			"icon": str(a.get("icon", id)), "model": str(a.get("model", "")), "weapon_id": arch,
 			"requirements": req, "purchase_requirements": preq, "can_afford": can_afford_id(id),
+			"conflict": exclusion_conflict(id, arch),
 			"state": "equipped" if eq else ("owned" if own and req.is_empty() else ("locked" if not req.is_empty() or (not own and not preq.is_empty()) else ("owned" if own else "available")))})
 	return out
 

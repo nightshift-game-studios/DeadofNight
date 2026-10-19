@@ -339,6 +339,134 @@ func _go() -> void:
 	stub.queue_free()
 	await process_frame
 
+	# ---- Art pass 2b: unequipped-on-load notice (Armory fallback), refusal reasons, icon fallback
+	var NoticeScr = load("res://scripts/ui/armory_notice.gd")
+	prog.gravemarks = 50
+	prog.armory = {"upgrades": {"smg": 3}, "owned": ["sawn_stub", "bonesaw_bayonet", "ember_window_mag", "lantern_rail"],
+		"equipped": {"smg": {"barrel": "sawn_stub", "grip": "bonesaw_bayonet"}, "hand_cannon": {"mag": "ember_window_mag"}}}
+	prog.save_data()
+	prog.load_data()
+	var ul: Array = prog.armory_unequipped_on_load
+	var ids_ul: Array = ul.map(func(e): return str(e.id))
+	check(ul.size() == 2 and "sawn_stub" in ids_ul and "ember_window_mag" in ids_ul, "load unequipped Sawn Stub (SMG) + Ember (Hand Cannon) (%s)" % str(ul))
+	check(ArmoryScr.owned("sawn_stub") and ArmoryScr.owned("ember_window_mag"), "unequipped parts stay owned")
+	check(str(ArmoryScr.loadout("smg").get("grip", "")) == "bonesaw_bayonet" and not ArmoryScr.loadout("smg").has("barrel"),
+		"Bonesaw stays, Sawn Stub comes off")
+	NoticeScr.reset_ack()
+	check(NoticeScr.is_pending(), "notice pending after a sanitizing load")
+	var e_stub: Dictionary = ul.filter(func(e): return str(e.id) == "sawn_stub")[0]
+	var e_ember: Dictionary = ul.filter(func(e): return str(e.id) == "ember_window_mag")[0]
+	var l_stub: Dictionary = NoticeScr.line_for(e_stub)
+	var l_ember: Dictionary = NoticeScr.line_for(e_ember)
+	check(l_stub.reason == ArmoryScr.exclusion_reason("sawn_stub", "smg") and "Bonesaw" in l_stub.reason,
+		"stub reason = Armory exclusion text (%s)" % l_stub.reason)
+	check(l_stub.part == "Sawn Stub" and l_stub.weapon == ArmoryScr.weapon_type("smg"), "stub line names part + weapon")
+	check(str(l_ember.reason).begins_with("Does not fit"), "ember reason = Armory fit text (%s)" % l_ember.reason)
+
+	var m2 = ArmoryMenuScr.new()
+	root.add_child(m2)
+	await process_frame
+	m2.open()
+	await process_frame
+	var nt = m2.find_child("ArmoryUnequipNotice", true, false)
+	check(nt != null, "Armory shows the notice when home wasn't shown first")
+	if nt:
+		var rows: Array = nt.find_children("NoticeRow_*", "", true, false)
+		check(rows.size() == 2, "notice lists both parts (%d)" % rows.size())
+		var reasons: Array = nt.find_children("NoticeReason", "", true, false).map(func(l): return l.text)
+		check(l_stub.reason in reasons and l_ember.reason in reasons, "notice shows Armory's reason strings")
+		check(nt.find_child("NoticeOK", true, false) is Button, "notice has OK button")
+		check(nt._card.get_parent() is CenterContainer and nt._card.custom_minimum_size.x >= 460, "notice uses centered dialog card")
+		nt.find_child("NoticeOK", true, false).emit_signal("pressed")
+		await process_frame
+		await process_frame
+	check(m2.find_child("ArmoryUnequipNotice", true, false) == null and not NoticeScr.is_pending(), "OK dismisses notice")
+	m2.close()
+	m2.open()
+	await process_frame
+	check(m2.find_child("ArmoryUnequipNotice", true, false) == null, "notice does not show again after dismissal")
+	prog.load_data() # same save, same list (not written yet): stays dismissed
+	m2.close()
+	m2.open()
+	await process_frame
+	check(m2.find_child("ArmoryUnequipNotice", true, false) == null, "same unequipped list stays dismissed for that load")
+	# Ember on hand cannon: row isn't listed (doesn't fit), no error
+	m2._select_weapon("hand_cannon")
+	await process_frame
+	var hc_ember := false
+	for row in m2._right.find_children("*", "PanelContainer", true, false):
+		if row.has_meta("att_id") and str(row.get_meta("att_id")) == "ember_window_mag":
+			hc_ember = true
+	check(not hc_ember and not ArmoryScr.loadout("hand_cannon").has("mag"), "Ember not on Hand Cannon rows; mag unequipped")
+
+	# Refusals: Sawn Stub vs Bonesaw on the SMG
+	m2._select_weapon("smg")
+	await process_frame
+	var stub_row: Node = null
+	for row in m2._right.find_children("*", "PanelContainer", true, false):
+		if row.has_meta("att_id") and str(row.get_meta("att_id")) == "sawn_stub":
+			stub_row = row
+	var conf_l = stub_row.find_child("ConflictReason", true, false) if stub_row else null
+	check(conf_l != null and conf_l.text == ArmoryScr.exclusion_reason("sawn_stub", "smg"), "locked row shows conflict reason ahead of time")
+	var eq_btn: Button = null
+	if stub_row:
+		for b in stub_row.find_children("*", "Button", true, false):
+			if b.text == "EQUIP":
+				eq_btn = b
+	check(eq_btn != null and eq_btn.disabled and "Bonesaw" in eq_btn.tooltip_text, "EQUIP disabled with Armory reason tooltip")
+	m2._do_equip("sawn_stub", "barrel")
+	await process_frame
+	check(not ArmoryScr.loadout("smg").has("barrel"), "refused equip does not equip")
+	var stub_row2: Node = null
+	for row in m2._right.find_children("*", "PanelContainer", true, false):
+		if row.has_meta("att_id") and str(row.get_meta("att_id")) == "sawn_stub":
+			stub_row2 = row
+	var rr = stub_row2.find_child("RefusalReason", true, false) if stub_row2 else null
+	check(rr != null and ArmoryScr.exclusion_reason("sawn_stub", "smg") in rr.text, "refused equip shows reason inline on the row")
+	check(m2._toast.visible and "Can't equip Sawn Stub" in m2._toast.text and "Bonesaw" in m2._toast.text,
+		"refusal toast near actions (%s)" % m2._toast.text)
+	# buy refusal (balance)
+	prog.gravemarks = 0
+	prog.currency_changed.emit(0)
+	var buy2_id := ""
+	for a in m2.api.list_attachments("smg"):
+		if not bool(a.owned) and a.get("purchase_requirements", []).is_empty() and int(a.cost) > 0:
+			buy2_id = str(a.id)
+			break
+	m2._ask_buy(buy2_id, "attachment")
+	m2._confirm_yes()
+	await process_frame
+	var need_txt := "Need %d Gravemarks (you have 0)" % int(ArmoryScr.cost_of(buy2_id))
+	check(str(m2._refusal.get("text", "")) == need_txt and m2._toast.text.ends_with(need_txt),
+		"refused buy shows balance reason (%s)" % m2._toast.text)
+	check(m2.refusal_reason("upg_smg", "buy").begins_with("Need "), "upgrade refusal reason when broke")
+	m2._toast_t = 0.01
+	await process_frame
+	await process_frame
+	check(not m2._toast.visible, "toast hides after a few seconds")
+	# success clears the inline refusal: Lantern Rail swaps the Bonesaw, then Sawn Stub fits
+	m2._do_equip("lantern_rail", "grip")
+	await process_frame
+	check(m2._refusal.is_empty() and ArmoryScr.has_flashlight("smg"), "successful equip clears refusal; Lantern Rail counts for has_flashlight")
+	m2._do_equip("sawn_stub", "barrel")
+	await process_frame
+	check(str(ArmoryScr.loadout("smg").get("barrel", "")) == "sawn_stub", "Sawn Stub equips once Bonesaw is gone")
+	m2.close()
+	m2.queue_free()
+	await process_frame
+
+	# Icon fallback: every part without att_<id>.png uses the letter box
+	var no_art := 0
+	var glyph_ok := true
+	for a in ArmoryScr.data().get("attachments", []):
+		if UIStyle.attachment_tex(str(a.id)) == null:
+			no_art += 1
+			var ic = UIStyle.attachment_icon(str(a.id), 32, str(a.slot))
+			glyph_ok = glyph_ok and ic.name == "AttGlyph"
+			ic.free()
+	check(no_art == 37 and glyph_ok, "37 parts without art use the letter-box fallback (%d)" % no_art)
+	prog.armory_unequipped_on_load = []
+
 	# ---- G4M3N fix: ads rebind + aim migration
 	var st = SettingsScr.get_or_create(root)
 	# Write legacy aim binding into cfg

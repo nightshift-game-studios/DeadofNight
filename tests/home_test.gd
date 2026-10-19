@@ -163,6 +163,53 @@ func _go() -> void:
 	pm._quit_to_home()
 	check(pm.quit_home_calls == 1, "Quit to Home increments quit_home_calls (dry_run)")
 
+	# --- Art pass 2b: one-time unequipped-on-load notice on the home menu
+	var NoticeScr = load("res://scripts/ui/armory_notice.gd")
+	prog.armory = {"upgrades": {"smg": 3}, "owned": ["sawn_stub", "bonesaw_bayonet"],
+		"equipped": {"smg": {"barrel": "sawn_stub", "grip": "bonesaw_bayonet"}}}
+	prog.save_data()
+	prog.load_data()
+	NoticeScr.reset_ack()
+	check(prog.armory_unequipped_on_load.size() == 1, "blocked save gives 1 unequipped part")
+	var home2 = Home.new()
+	home2.dry_run = true
+	root.add_child(home2)
+	await process_frame
+	await process_frame
+	var nt = home2.find_child("ArmoryUnequipNotice", true, false)
+	check(nt != null, "home shows the unequipped-on-load notice")
+	if nt:
+		var rs = nt.find_child("NoticeReason", true, false)
+		check(rs != null and "Bonesaw" in rs.text, "home notice shows Armory's reason (%s)" % (rs.text if rs else "?"))
+		check(nt.find_child("NoticePart", true, false).text == "SAWN STUB", "home notice names the part")
+		# Armory opened while it's up doesn't stack a second one
+		home2._armory.open()
+		await process_frame
+		check(home2._armory.find_child("ArmoryUnequipNotice", true, false) == null, "Armory doesn't duplicate the home notice")
+		home2._armory.close()
+		var ev := InputEventAction.new()
+		ev.action = "ui_accept"
+		ev.pressed = true
+		Input.parse_input_event(ev)
+		await process_frame
+		await process_frame
+	check(home2.find_child("ArmoryUnequipNotice", true, false) == null and not NoticeScr.is_pending(), "ENTER dismisses the notice")
+	home2.queue_free()
+	await process_frame
+	var home3 = Home.new()
+	home3.dry_run = true
+	root.add_child(home3)
+	await process_frame
+	await process_frame
+	check(home3.find_child("ArmoryUnequipNotice", true, false) == null, "notice not shown again on the next home visit")
+	home3._armory.open()
+	await process_frame
+	check(home3._armory.find_child("ArmoryUnequipNotice", true, false) == null, "nor in the Armory")
+	home3._armory.close()
+	home3.queue_free()
+	prog.armory_unequipped_on_load = []
+	await process_frame
+
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(prog.save_path))
 	print("HOME TEST: %s (%d passed, %d failed)" % ["OK" if _fails == 0 else "FAILED", _passes, _fails])
 	quit(_fails)

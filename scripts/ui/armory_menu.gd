@@ -5,6 +5,7 @@ extends MenuBase
 
 const ArmoryScr := preload("res://scripts/armory/armory.gd")
 const ICON_GM := "res://assets/icons/gravemark.png"
+const ArmoryNoticeScr := preload("res://scripts/ui/armory_notice.gd")
 
 var api: RefCounted
 var _weapon_id: String = "sidearm"
@@ -23,6 +24,10 @@ var _hold_t: float = 0.0
 var _holding: bool = false
 var _weapon_btns: Dictionary = {} ## id -> Button
 var _focusables: Array = [] ## Controls for nav dump
+var _refusal: Dictionary = {} ## {id, kind, text}: last refused buy / equip, shown inline on that row (§2b)
+var _toast: Label ## short refusal toast in the footer, near the actions
+var _toast_t: float = 0.0
+const TOAST_SECS := 3.5
 
 
 func _init() -> void:
@@ -110,30 +115,12 @@ func _build() -> void:
 
 	# Confirm overlay on CanvasLayer root (self), NOT inside panel — PanelContainer
 	# stretches every direct child to fill, which blew the old card across the armory.
-	_confirm_overlay = Control.new()
-	_confirm_overlay.name = "BuyConfirmOverlay"
+	var dlg := UIStyle.dialog_overlay("BuyConfirmOverlay")
+	_confirm_overlay = dlg.overlay
 	_confirm_overlay.visible = false
-	_confirm_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_confirm_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_confirm_overlay)
-	var dim := ColorRect.new()
-	dim.name = "ConfirmDim"
-	dim.color = Color(0.02, 0.02, 0.015, 0.72)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	_confirm_overlay.add_child(dim)
-	var center := CenterContainer.new()
-	center.name = "ConfirmCenter"
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_confirm_overlay.add_child(center)
-	_confirm = PanelContainer.new()
-	_confirm.name = "BuyConfirm"
-	_confirm.custom_minimum_size = Vector2(460, 200)
-	var cst := UIStyle.cut_box(Color(0.07, 0.06, 0.05, 0.98), UIStyle.RUST.lightened(0.12), 4, 16)
-	cst.set_content_margin_all(18)
-	_confirm.add_theme_stylebox_override("panel", cst)
-	center.add_child(_confirm)
+	_confirm = UIStyle.dialog_card(Vector2(460, 200), "BuyConfirm")
+	(dlg.center as CenterContainer).add_child(_confirm)
 	var cv := VBoxContainer.new()
 	cv.add_theme_constant_override("separation", 12)
 	cv.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -161,10 +148,7 @@ func _build() -> void:
 	var yes := _btn("CONFIRM", _confirm_yes)
 	yes.name = "ConfirmYes"
 	yes.custom_minimum_size = Vector2(140, 44)
-	yes.add_theme_stylebox_override("normal", UIStyle.cut_box(UIStyle.RUST.darkened(0.12), UIStyle.BONE, 2, 10))
-	yes.add_theme_stylebox_override("hover", UIStyle.cut_box(UIStyle.RUST, UIStyle.BONE, 2, 10))
-	yes.add_theme_stylebox_override("pressed", UIStyle.cut_box(UIStyle.RUST.darkened(0.25), UIStyle.BONE, 2, 10))
-	yes.add_theme_color_override("font_color", UIStyle.BONE)
+	UIStyle.style_primary_button(yes)
 	var no := _btn("CANCEL", _confirm_no)
 	no.name = "ConfirmNo"
 	no.custom_minimum_size = Vector2(120, 44)
@@ -184,6 +168,14 @@ func _build() -> void:
 	foot.add_child(UIStyle.label("BUY / EQUIP", 11, UIStyle.BONE_DIM))
 	foot.add_child(UIStyle.key_cap("ESC", 11))
 	foot.add_child(UIStyle.label("BACK", 11, UIStyle.BONE_DIM))
+	var fsp := Control.new()
+	fsp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	foot.add_child(fsp)
+	_toast = UIStyle.label("", 12, UIStyle.BONE, true)
+	_toast.name = "RefusalToast"
+	_toast.visible = false
+	_toast.add_theme_color_override("font_color", UIStyle.BLOOD.lightened(0.35))
+	foot.add_child(_toast)
 
 
 func _btn(text: String, cb: Callable) -> Button:
@@ -210,6 +202,8 @@ func open() -> void:
 	_wire_api()
 	super.open()
 	refresh()
+	# Fallback for the one-time unequipped-on-load notice when the home menu wasn't shown first.
+	ArmoryNoticeScr.show_if_pending(self)
 
 
 func refresh() -> void:
@@ -268,6 +262,7 @@ func _wire_weapon_neighbors() -> void:
 
 func _select_weapon(id: String) -> void:
 	_weapon_id = id
+	_refusal = {}
 	_ui_snd("ui_hover")
 	refresh()
 
@@ -425,10 +420,28 @@ func _att_row(a: Dictionary) -> PanelContainer:
 		v.add_child(UIStyle.label(drawback, 11, UIStyle.BLOOD.lightened(0.25)))
 	var reqs: Array = a.get("requirements", [])
 	var preqs: Array = a.get("purchase_requirements", [])
-	if not reqs.is_empty():
-		v.add_child(UIStyle.label("Need: " + ", ".join(reqs), 10, UIStyle.RUST.lightened(0.2)))
+	var conflict: Dictionary = a.get("conflict", {}) if a.get("conflict", {}) is Dictionary else {}
+	var why_conf := ""
+	if not conflict.is_empty() and api.has_method("exclusion_reason"):
+		why_conf = str(api.exclusion_reason(str(a.id), _weapon_id))
+	var tier_reqs: Array = reqs.filter(func(r): return str(r) != why_conf)
+	if not tier_reqs.is_empty():
+		v.add_child(UIStyle.label("Need: " + ", ".join(tier_reqs), 10, UIStyle.RUST.lightened(0.2)))
 	elif not bool(a.get("owned", false)) and not preqs.is_empty():
 		v.add_child(UIStyle.label("Buy needs: " + ", ".join(preqs), 10, UIStyle.RUST.lightened(0.2)))
+	var refused_here: bool = str(_refusal.get("id", "")) == str(a.id) and why_conf in str(_refusal.get("text", ""))
+	if why_conf != "" and not refused_here: # the refusal line below repeats it
+		var cl := UIStyle.label(why_conf, 10, UIStyle.BLOOD.lightened(0.35))
+		cl.name = "ConflictReason"
+		cl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		cl.custom_minimum_size.x = 420
+		v.add_child(cl)
+	if str(_refusal.get("id", "")) == str(a.id):
+		var rl := UIStyle.label("✕ " + str(_refusal.text), 11, UIStyle.BLOOD.lightened(0.35), true)
+		rl.name = "RefusalReason"
+		rl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		rl.custom_minimum_size.x = 420
+		v.add_child(rl)
 	var actions := VBoxContainer.new()
 	actions.add_theme_constant_override("separation", 4)
 	h.add_child(actions)
@@ -447,31 +460,72 @@ func _att_row(a: Dictionary) -> PanelContainer:
 		var eq := _btn("EQUIP", func(): _do_equip(str(a.id), str(a.get("slot", ""))))
 		eq.disabled = not a.get("requirements", []).is_empty()
 		if eq.disabled:
-			eq.tooltip_text = "Need: " + ", ".join(a.get("requirements", []))
+			eq.tooltip_text = refusal_reason(str(a.id), "equip")
 		actions.add_child(eq)
 	return p
 
 
 func _disable_reason(id: String, is_upgrade: bool) -> String:
+	return refusal_reason(id, "buy")
+
+
+## Why a buy ("buy") or equip ("equip") is refused, in Armory's words where Armory has them (§2b):
+## equip -> Armory.equip_requirements (fit, Rework tier, exclusion text); buy -> purchase_requirements / balance.
+## Armory's purchase()/equip() only return bool, so the reason is derived from the same checks they run.
+func refusal_reason(id: String, kind: String) -> String:
 	if api == null:
-		return "unavailable"
-	if is_upgrade:
-		if not api.can_afford(id):
-			return "Need %d Gravemarks" % int(api.cost(id))
-		return "unavailable"
-	# attachment
+		return "Armory unavailable"
+	var bal := int(api.currency_balance())
+	if id.begins_with("upg_"):
+		var arch := id.substr(4)
+		if int(ArmoryScr.upgrade_tier(arch)) >= int(ArmoryScr.max_tier()):
+			return "%s Rework is maxed" % ArmoryScr.weapon_type(arch)
+		var c := int(api.cost(id))
+		if bal < c:
+			return "Need %d Gravemarks (you have %d)" % [c, bal]
+		return "Can't buy this right now"
+	if kind == "equip":
+		if not api.is_owned(id):
+			return "Buy it first"
+		var reqs: Array = ArmoryScr.equip_requirements(id, ArmoryScr.resolve_weapon(_weapon_id))
+		if not reqs.is_empty():
+			return "; ".join(reqs)
+		return "Can't equip this right now"
 	if api.is_owned(id):
-		return "already owned"
-	var preq: Array = []
-	for a in api.list_attachments(_weapon_id):
-		if str(a.id) == id:
-			preq = a.get("purchase_requirements", [])
-			break
+		return "Already owned"
+	var preq: Array = ArmoryScr.purchase_requirements(id)
 	if not preq.is_empty():
 		return "Need: " + ", ".join(preq)
-	if not api.can_afford(id):
-		return "Need %d Gravemarks" % int(api.cost(id))
-	return "unavailable"
+	var cost := int(api.cost(id))
+	if bal < cost:
+		return "Need %d Gravemarks (you have %d)" % [cost, bal]
+	return "Can't buy this right now"
+
+
+## Show a refused buy / equip: inline on its row + footer toast + error cue.
+func _refuse(id: String, kind: String, text: String = "") -> void:
+	if text == "":
+		text = refusal_reason(id, kind)
+	_refusal = {"id": id, "kind": kind, "text": text}
+	_ui_error()
+	refresh()
+	if _toast:
+		var nm := id
+		if not id.begins_with("upg_"):
+			nm = str(ArmoryScr.attachment(id).get("name", id))
+		else:
+			nm = "%s Rework" % ArmoryScr.weapon_type(id.substr(4))
+		_toast.text = "%s %s: %s" % ["Can't equip" if kind == "equip" else "Can't buy", nm, text]
+		_toast.visible = true
+		_toast_t = TOAST_SECS
+
+
+## Error cue: "ui_error" if a sound with that key ever ships, else the soft ui_hover click.
+func _ui_error() -> void:
+	var a := get_node_or_null("/root/Sfx")
+	if a == null:
+		return
+	a.play("ui_error" if a.has_method("has") and a.has("ui_error") else "ui_hover")
 
 
 func _ask_buy(id: String, kind: String) -> void:
@@ -531,21 +585,31 @@ func _execute_pending() -> void:
 		_show_confirm(false)
 		return
 	var ok := false
+	var pid := _pending_id
+	var why := ""
 	if _pending_kind == "buy":
-		ok = bool(api.purchase(_pending_id))
+		why = refusal_reason(pid, "buy") if not bool(api.can_afford(pid)) else ""
+		ok = bool(api.purchase(pid))
 	_show_confirm(false)
 	_pending_id = ""
 	if ok:
+		_refusal = {}
 		_ui_snd("ui_equip")
+		refresh()
 	else:
-		_ui_snd("ui_hover")
-	refresh()
+		_refuse(pid, "buy", why)
 
 
 func _do_equip(id: String, slot: String) -> void:
-	if api and api.equip_attachment(_weapon_id, slot, id):
+	if api == null:
+		return
+	var why := refusal_reason(id, "equip")
+	if api.equip_attachment(_weapon_id, slot, id):
+		_refusal = {}
 		_ui_snd("ui_equip")
 		refresh()
+	else:
+		_refuse(id, "equip", why)
 
 
 func _do_unequip(slot: String) -> void:
@@ -555,6 +619,10 @@ func _do_unequip(slot: String) -> void:
 
 
 func _process(delta: float) -> void:
+	if _toast_t > 0.0:
+		_toast_t -= delta
+		if _toast_t <= 0.0 and _toast:
+			_toast.visible = false
 	if not visible or not _confirm.visible:
 		_holding = false
 		_hold_t = 0.0

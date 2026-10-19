@@ -64,6 +64,9 @@ var gravemarks_lifetime: int = 0
 var match_gravemarks: int = 0 ## earned in the current match (reset by begin_match_gravemarks / record_match)
 var last_match_gravemarks: int = 0 ## what the last finished match paid (game-over screen)
 var armory: Dictionary = {"upgrades": {}, "owned": [], "equipped": {}}
+## Parts the last load unequipped because the current data blocks them ([{arch, slot, id, why}], Armory.sanitize_armory).
+## They stay owned. For a one-time UI notice ("moved back to your Armory"); empty on a clean save.
+var armory_unequipped_on_load: Array = []
 var armory_rev: int = 0 ## bumped on every armory change (WeaponItem / AdsProfile caches key on it)
 
 ## Point economy (data/economy.json). Defaults = halved playtest values.
@@ -113,6 +116,8 @@ func load_data() -> void:
 	gravemarks = maxi(int(cfg.get_value("armory", "gravemarks", 0)), 0)
 	gravemarks_lifetime = maxi(int(cfg.get_value("armory", "gravemarks_lifetime", gravemarks)), gravemarks)
 	armory = migrate_armory(cfg.get_value("armory", "data") if cfg.has_section_key("armory", "data") else null)
+	# Art pass 2b: blocked fits / pairs from older data are unequipped (still owned); written on the next save.
+	armory_unequipped_on_load = load(ARMORY_SCRIPT).sanitize_armory(armory)
 	armory_rev += 1
 	_recompute_spent()
 	currency_changed.emit(gravemarks)

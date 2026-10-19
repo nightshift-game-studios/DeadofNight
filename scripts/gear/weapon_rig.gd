@@ -42,6 +42,8 @@ const META_REST := "weapon_rig_rest" ## original local transform of an animated 
 const GLOW_ON := 1.6 ## Gravesight Lens/Ocular emission multiplier while outline_elites is active
 const GLOW_OFF := 0.15
 const HEARTBEAT_SCRIPT := "res://scripts/gear/heartbeat_label.gd"
+const META_ROCKET_SEQ := "weapon_rig_rocket_seq" ## bumped by every shot / reload / refit: a stale re-chamber timer does nothing
+const META_ROCKET_AMMO := "weapon_rig_rocket_ammo" ## ammo_after of the last shot (fallback when no player is above the model)
 
 
 static func slot_def(slot: String) -> Dictionary:
@@ -136,6 +138,10 @@ static func apply(model: Node3D, arch: String, loadout = null, shadows: bool = f
 	out.barrel_scale = barrel_scale(model)
 	out.cylinder = _rest(find_node(model, "Cylinder"))
 	out.rocket = _rest(find_node(model, "Rocket"))
+	if out.rocket != null:
+		_bump_rocket(out.rocket, -1)  # refit cancels pending re-chambers
+		if live_ammo(model, arch) == 0:
+			out.rocket.visible = false  # swapped back to an empty launcher: no Rocket until reload (art pass 2b)
 	var gun_muzzle: Node3D = find_node(model, socket_name("muzzle"))
 	var muzzle_parent: Node3D = gun_muzzle
 	for slot in ORDER:
@@ -195,12 +201,16 @@ static func apply(model: Node3D, arch: String, loadout = null, shadows: bool = f
 	# Hide the default parts the fitted parts replace (only for parts that actually got fitted).
 	for slot in out.attached:
 		for h in hides_for(str(p.attach[slot].id), slot, arch):
-			var n := find_node(model, str(h))
-			if n and n.visible and not n.has_meta(META_ATT):
-				n.visible = false
-				n.set_meta(META_HIDDEN, true)
-				if not out.hidden.has(h):
-					out.hidden.append(h)
+			# The named part (its children go with it, e.g. Desi's shotgun barrel band once it sits under DefaultBarrel)
+			# plus split-off siblings named "<part>_*" (e.g. DefaultBarrel_Band), never anything inside an attachment.
+			var targets: Array = [find_node(model, str(h))]
+			targets.append_array(model.find_children(str(h) + "_*", "Node3D", true, false))
+			for n in targets:
+				if n and (n as Node3D).visible and not n.has_meta(META_ATT) and not _inside_attachment(n, model):
+					(n as Node3D).visible = false
+					n.set_meta(META_HIDDEN, true)
+					if not out.hidden.has(str(n.name)):
+						out.hidden.append(str(n.name))
 	# Effective points.
 	var mz: Node3D = null
 	if out.attached.has("muzzle"):
@@ -268,7 +278,8 @@ static func _rest(n: Node3D) -> Node3D:
 	return n
 
 
-## Root-space ADS sight line point: optic SightPoint, else the gun's SightPoint. Guns whose SightPoint sits at bore
+## Root-space ADS sight line point: optic SightPoint, else OpticSightPoint while the built-in DefaultOptic shows, else the
+## gun's SightPoint (since Desi's 12:27 sightline pass: the rear-sight top on all guns). Guns whose SightPoint sits at bore
 ## height (the 8 pre-revolver guns, |SightPoint.y - Muzzle.y| < 2 mm) use the top of the visible IronSights instead,
 ## so the iron sights line up on the screen centre rather than the bore. The revolver's SightPoint (y 0.0793) is
 ## already on the real sight line and is used as is.
@@ -280,6 +291,12 @@ static func sight_line(rig: Dictionary) -> Vector3:
 	var p := gun_point(model, sp)
 	if rig.get("attached", {}).has("optic") and (rig.attached.optic as Node3D).is_ancestor_of(sp):
 		return p
+	# Built-in scope (sniper DefaultOptic): an OpticSightPoint node on the scope axis wins while DefaultOptic shows
+	# (Desi's NOTES 2026-10-19 proposal; not in the GLB yet, so this is inert until it lands).
+	var osp := find_node(model, "OpticSightPoint")
+	var dopt := find_node(model, "DefaultOptic")
+	if osp and dopt and dopt.visible and not _inside_attachment(osp, model):
+		return gun_point(model, osp)
 	var mz := find_node(model, "Muzzle")
 	var irons := find_node(model, "IronSights")
 	if mz and irons is MeshInstance3D and irons.visible and absf(p.y - gun_point(model, mz).y) < 0.002:
@@ -308,7 +325,7 @@ static func _tw(n: Node3D) -> Tween:
 
 
 ## Per shot: revolver Cylinder turns one chamber (60 deg on local X); launcher Rocket hidden (shown again on reload,
-## or after `rechamber` s if rounds are left); Echo Drum dial ticks. Safe on any rig ({} included).
+## or after `rechamber` s only if the magazine still has a round then; see _rechamber); Echo Drum dial ticks. Safe on any rig ({} included).
 static func on_fire(rig: Dictionary, ammo_after: int = 0, rechamber: float = 0.4) -> void:
 	var cyl = rig.get("cylinder")
 	if _ok(cyl):
@@ -318,13 +335,47 @@ static func on_fire(rig: Dictionary, ammo_after: int = 0, rechamber: float = 0.4
 		t.tween_property(c, "rotation:x", to, 0.06)
 	var rk = rig.get("rocket")
 	if rk != null and is_instance_valid(rk):
-		(rk as Node3D).visible = false
-		if ammo_after > 0 and _ok(rk):
-			(rk as Node3D).get_tree().create_timer(rechamber).timeout.connect(func():
-				if is_instance_valid(rk): (rk as Node3D).visible = true)
+		var r := rk as Node3D
+		r.visible = false
+		var seq := _bump_rocket(r, ammo_after)
+		if ammo_after > 0 and _ok(r):
+			r.get_tree().create_timer(rechamber).timeout.connect(func(): _rechamber(rig, r, seq))
 	var dial = rig.get("anim", {}).get("dial")
 	if _ok(dial):
 		_tw(dial).tween_property(dial, "rotation:z", (dial as Node3D).rotation.z - deg_to_rad(30.0), 0.05)
+
+
+## Rounds left in the live magazine of the weapon this model belongs to: the nearest ancestor with current_weapon()
+## (player.gd's public API) whose weapon archetype is `arch`. -1 = unknown (no player above the model, or another gun).
+static func live_ammo(model: Node, arch: String = "") -> int:
+	var n: Node = model
+	while n != null:
+		if n.has_method("current_weapon"):
+			var w = n.current_weapon()
+			if w != null and is_instance_valid(w) and (arch == "" or str(w.get("archetype")) == arch):
+				return int(w.get("ammo"))
+			return -1
+		n = n.get_parent()
+	return -1
+
+
+static func _bump_rocket(r: Node3D, ammo_after: int) -> int:
+	var seq := int(r.get_meta(META_ROCKET_SEQ, 0)) + 1
+	r.set_meta(META_ROCKET_SEQ, seq)
+	r.set_meta(META_ROCKET_AMMO, ammo_after)
+	return seq
+
+
+## Re-chamber timer (art pass 2b): show the Rocket only if no later shot/reload/refit happened and the magazine still
+## has a round (live player ammo when available, else the ammo_after passed to on_fire).
+static func _rechamber(rig: Dictionary, r: Node3D, seq: int) -> void:
+	if not is_instance_valid(r) or int(r.get_meta(META_ROCKET_SEQ, 0)) != seq:
+		return
+	var left := live_ammo(rig.get("model"), str(rig.get("arch", "")))
+	if left < 0:
+		left = int(r.get_meta(META_ROCKET_AMMO, 0))
+	if left > 0:
+		r.visible = true
 
 
 ## Reload: Rocket shown; Cylinder spins a full turn; speedloader seats from 3 cm behind; Second Mouth tube racks
@@ -333,6 +384,7 @@ static func on_fire(rig: Dictionary, ammo_after: int = 0, rechamber: float = 0.4
 static func on_reload(rig: Dictionary, time: float = 0.6) -> void:
 	var rk = rig.get("rocket")
 	if rk != null and is_instance_valid(rk):
+		_bump_rocket(rk, -1)
 		(rk as Node3D).visible = true
 	if time <= 0.0:
 		return
