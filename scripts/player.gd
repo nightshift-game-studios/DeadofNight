@@ -703,11 +703,18 @@ func _on_weapon_equipped(w: WeaponItem) -> void:
 	emit_ammo()
 
 
+## Scope overlay (Gooey, scripts/ui/scope_overlay.gd): hides the first-person viewmodel while scoped.
+var viewmodel_hidden_by_scope: bool = false
+func set_viewmodel_hidden(hidden: bool) -> void:
+	viewmodel_hidden_by_scope = hidden
+	gun.visible = (not hidden) and inventory.get_equipped_weapon() != null
+
+
 ## Loads the weapon's glTF model and fits it into the first-person view.
 func _build_view_model(w: WeaponItem) -> void:
 	for c in gun_model_root.get_children():
 		c.queue_free()
-	gun.visible = true
+	gun.visible = not viewmodel_hidden_by_scope
 	var view: Dictionary = w.arch.get("view", {})
 	var length: float = float(view.get("length", 0.4))
 	var off: Array = view.get("offset", [0.2, -0.2, -0.45])

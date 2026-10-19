@@ -20,6 +20,8 @@ const MAP_PICKER_PATH := "res://scripts/ui/map_picker.gd" ## Gooey's map picker
 var map_picker: Node
 const PAUSE_MENU_PATH := "res://scripts/ui/pause_menu.gd"
 const SETTINGS_MENU_PATH := "res://scripts/ui/settings_menu.gd"
+const SCOPE_OVERLAY_PATH := "res://scripts/ui/scope_overlay.gd"
+var scope_overlay: Node ## Gooey's sniper scope overlay (hidden on pause / death / swap / home)
 var pause_menu: Node
 var settings_menu: Node
 const RUN_PICK_MENU_PATH := "res://scripts/ui/run_pick_menu.gd" ## Gooey's chooser (listens to RunState.offer_ready)
@@ -120,6 +122,11 @@ func _ready() -> void:
 	add_child(hit_sfx)
 	player.hit_registered.connect(hit_sfx.on_hit)
 	player.died.connect(_on_player_died)
+	if ResourceLoader.exists(SCOPE_OVERLAY_PATH):
+		scope_overlay = load(SCOPE_OVERLAY_PATH).new()
+		scope_overlay.name = "ScopeOverlay"
+		add_child(scope_overlay)
+		scope_overlay.bind(player, hud)
 	player.points_changed.connect(_on_points_changed)
 	RunState.player = player
 	RunState.clear() # new match: no Field Cards, free rerolls / banishes refilled from the meta tree
@@ -609,6 +616,8 @@ const HOME_SCENE := "res://scenes/ui/home.tscn"
 
 ## Pause "Quit to Home" / game-over exit: save stash, unpause, leave the match.
 func return_to_home() -> void:
+	if scope_overlay and scope_overlay.has_method("force_hide"):
+		scope_overlay.force_hide()
 	var prog := get_node_or_null("/root/Progress")
 	if prog and prog.has_method("save_stash"):
 		prog.save_stash()

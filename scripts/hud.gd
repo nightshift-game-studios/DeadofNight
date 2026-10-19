@@ -34,6 +34,9 @@ var _other_weapons: HBoxContainer
 var _indicators: Dictionary = {} ## "grenade"/"ability"/"melee" -> CooldownIcon
 var _loot_feed: VBoxContainer
 var _hit_marker: HitMarker
+var _cross_parts: Array[CanvasItem] = [] ## crosshair ticks + dot (dimmed by set_scoped; the hit marker is not in here)
+var scoped: bool = false ## scope overlay up (crosshair dimmed)
+const SCOPED_CROSS_ALPHA := 0.12
 var _last_hit: Dictionary = {} ## last hit_registered payload (tests / debugging)
 var _last_health: int = -1
 var _health_frac: float = 1.0
@@ -93,16 +96,19 @@ func _ready() -> void:
 		o.position = r.position - Vector2(1, 1)
 		o.size = r.size + Vector2(2, 2)
 		cross.add_child(o)
+		_cross_parts.append(o)
 		var bar := ColorRect.new()
 		bar.color = Color(UIStyle.BONE, 0.9)
 		bar.position = r.position
 		bar.size = r.size
 		cross.add_child(bar)
+		_cross_parts.append(bar)
 	var dot := ColorRect.new() # tiny blood-red centre dot
 	dot.color = Color(UIStyle.BLOOD.lightened(0.2), 0.9)
 	dot.position = Vector2(-1, -1)
 	dot.size = Vector2(2, 2)
 	cross.add_child(dot)
+	_cross_parts.append(dot)
 	_hit_marker = HitMarker.new()
 	_hit_marker.size = Vector2(90, 90)
 	_hit_marker.position = Vector2(-45, -45)
@@ -676,6 +682,15 @@ func set_round(round_number: int) -> void:
 
 func set_points(points: int) -> void:
 	_points_label.text = "%d" % points
+
+
+## Scope overlay (scripts/ui/scope_overlay.gd) up / down: dims the crosshair ticks so the scope reticle reads, while
+## the hit marker (same centre container) stays at full strength at the screen centre.
+func set_scoped(on: bool) -> void:
+	scoped = on
+	for c in _cross_parts:
+		if is_instance_valid(c):
+			c.modulate.a = SCOPED_CROSS_ALPHA if on else 1.0
 
 
 ## player.hit_registered -> crosshair hit marker (body X / red headshot X / kill flourish).
