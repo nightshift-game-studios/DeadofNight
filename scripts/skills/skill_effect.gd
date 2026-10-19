@@ -14,7 +14,8 @@ var script_id: String = ""
 var params: Dictionary = {}
 var rank: int = 1
 var source_id: String = "" ## node or card id
-var source_kind: String = "" ## "meta" or "card"
+var source_kind: String = "" ## "meta", "card" or "armory"
+var weapon_arch: String = "" ## armory effects: only active while a weapon of this archetype is in hand (SkillRunner gates it)
 var on: Array = []
 var cond: Dictionary = {}
 var runner ## SkillRunner (untyped so effects can call its helpers)

@@ -1,0 +1,49 @@
+{
+	"version": 1,
+	"_help": "Difficulty profiles (Skillz). A map picks one through data/maps.json -> maps[].difficulty (arena=easy, rustwell_foundry=medium, lockout_substation=hard; a missing field means 'default'). Difficulty.apply_to_main(main) scales main.gd's wave exports: *_mult multiply the base value, *_add add to it. 'easy' is exactly the current tuning (all 1.0 / 0), so the Arena plays as before. wave: zombie stats and spawning. variants: wave_mix_round_offset = use the zombies.json wave_mix of round n+offset (Soldiers show up sooner); weight_mult multiplies a variant's weight. boss: cadence for data/bosses.json (first_round, every N rounds, count = base + per_cycle x cycles so far, capped at max_count; hp_mult/damage_mult on top of the boss's own stats). rewards: xp_mult (match XP), loot_rarity_bias (each rarity tier's drop weight x (1+bias)^tier: 0 = unchanged, 0.3 = Mythic weight x2.86), rare_currency_drop_mult (read by the Armory currency drop, coming with attachments), points_mult (kept at 1.0; points are tuned in economy.json).",
+	"default": "easy",
+	"profiles": {
+		"easy": {
+			"name": "Easy",
+			"color": [0.45, 0.75, 0.4],
+			"wave": {
+				"health_mult": 1.0, "health_ramp_mult": 1.0,
+				"speed_mult": 1.0, "speed_ramp_mult": 1.0, "max_speed_add": 0.0,
+				"damage_mult": 1.0, "damage_ramp_mult": 1.0,
+				"count_mult": 1.0, "count_ramp_mult": 1.0,
+				"spawn_interval_mult": 1.0, "max_alive_add": 0
+			},
+			"variants": {"wave_mix_round_offset": 0, "weight_mult": {}},
+			"boss": {"first_round": 10, "every": 10, "base_count": 1, "per_cycle": 0, "max_count": 1, "hp_mult": 1.0, "damage_mult": 1.0},
+			"rewards": {"xp_mult": 1.0, "loot_rarity_bias": 0.0, "rare_currency_drop_mult": 1.0, "points_mult": 1.0}
+		},
+		"medium": {
+			"name": "Medium",
+			"color": [0.9, 0.72, 0.25],
+			"wave": {
+				"health_mult": 1.15, "health_ramp_mult": 1.15,
+				"speed_mult": 1.05, "speed_ramp_mult": 1.1, "max_speed_add": 0.3,
+				"damage_mult": 1.1, "damage_ramp_mult": 1.1,
+				"count_mult": 1.15, "count_ramp_mult": 1.15,
+				"spawn_interval_mult": 0.9, "max_alive_add": 2
+			},
+			"variants": {"wave_mix_round_offset": 1, "weight_mult": {"worker": 1.2, "soldier": 1.5}},
+			"boss": {"first_round": 8, "every": 8, "base_count": 1, "per_cycle": 0, "max_count": 2, "hp_mult": 1.15, "damage_mult": 1.1},
+			"rewards": {"xp_mult": 1.25, "loot_rarity_bias": 0.15, "rare_currency_drop_mult": 1.35, "points_mult": 1.0}
+		},
+		"hard": {
+			"name": "Hard",
+			"color": [0.78, 0.3, 0.25],
+			"wave": {
+				"health_mult": 1.35, "health_ramp_mult": 1.3,
+				"speed_mult": 1.12, "speed_ramp_mult": 1.2, "max_speed_add": 0.6,
+				"damage_mult": 1.25, "damage_ramp_mult": 1.25,
+				"count_mult": 1.3, "count_ramp_mult": 1.3,
+				"spawn_interval_mult": 0.8, "max_alive_add": 4
+			},
+			"variants": {"wave_mix_round_offset": 2, "weight_mult": {"worker": 1.3, "soldier": 2.5}},
+			"boss": {"first_round": 6, "every": 5, "base_count": 1, "per_cycle": 1, "max_count": 3, "hp_mult": 1.3, "damage_mult": 1.2},
+			"rewards": {"xp_mult": 1.6, "loot_rarity_bias": 0.3, "rare_currency_drop_mult": 1.75, "points_mult": 1.0}
+		}
+	}
+}

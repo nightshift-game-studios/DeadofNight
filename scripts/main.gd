@@ -11,6 +11,7 @@ extends Node3D
 ## Zombie variants: data/zombies.json (ZombieVariants.pick(round) mixes city / worker / soldier per round).
 
 const ZOMBIE_SCENE := preload("res://scenes/enemy.tscn")
+const BossCatalogScr := preload("res://scripts/enemies/boss_catalog.gd")
 const PICKUP_SCENE := preload("res://scenes/pickup.tscn")
 const CharacterScreen := preload("res://scripts/ui/character_screen.gd")
 const SkillTreeMenu := preload("res://scripts/ui/skill_tree_menu.gd")
@@ -25,7 +26,8 @@ const CHEST_SCENE := preload("res://scenes/chest.tscn")
 const PICKUP_ITEMS := {"health_pack": "res://resources/items/health_pack.tres", "heavy_ammo": "res://resources/items/heavy_ammo.tres",
 	"primary_ammo": "res://resources/items/ammo_box.tres", "ammo_box": "res://resources/items/ammo_box.tres"}
 ## Arena nodes a loaded map replaces (the map brings its own).
-const ARENA_NODES := ["NavigationRegion3D", "SpawnPoints", "Chests", "Decor", "WorldEnvironment", "Sun", "PowerWeaponSpot"]
+const ARENA_NODES := ["NavigationRegion3D", "SpawnPoints", "Chests", "Decor", "WorldEnvironment", "Sun", "PowerWeaponSpot",
+	"NightLights", "AmbienceEmitters"] ## arena night kit (Mapz) goes too when a map loads
 
 @export_group("Waves")
 @export var first_round_zombies: int = 6
@@ -92,6 +94,9 @@ func _ready() -> void:
 		points_per_kill = prog.points_per_kill
 	_player_spawn = player.global_transform
 	_load_map()
+	# Difficulty (Skillz): scale the wave exports by the map's profile (data/difficulty.json) and make it active.
+	# Also turns on the reward scaling (XP in Progress.record_match, loot rarity bias in GearDB.roll_rarity).
+	Difficulty.apply_to_main(self)
 	_setup_ambience()
 	# Bake the navmesh from the level's static colliders at startup, so it always
 	# matches the level even after you move things around in the editor.
@@ -221,6 +226,10 @@ func _start_round(n: int) -> void:
 	_update_hint()
 	_to_spawn = first_round_zombies + zombies_per_round * (n - 1)
 	_spawn_timer = 0.0
+	# Bosses (Skillz): cadence from Difficulty; identities from BossCatalog / data/bosses.json.
+	if Difficulty.is_boss_round(n):
+		for boss_id in BossCatalogScr.pick_roster(n):
+			_spawn_boss(str(boss_id))
 	player.refill_ammo()
 	for c in get_tree().get_nodes_in_group("chests"):
 		c.rearm(n) # chests can be opened once per round
@@ -260,7 +269,7 @@ func _spawn_zombie() -> void:
 	var spd: float = stats.speed * (1.35 if randf() < 0.25 else 1.0)
 	z.setup(stats.health, spd, stats.damage)
 	if use_zombie_variants:
-		var vid := ZombieVariants.pick(current_round)
+		var vid := Difficulty.pick_variant(current_round) # profile-weighted mix (more Soldiers, sooner, on Hard)
 		var sc := ZombieVariants.scene(vid)
 		if sc:
 			z.set_variant(vid, ZombieVariants.get_variant(vid), sc)
@@ -270,6 +279,54 @@ func _spawn_zombie() -> void:
 	z.global_position = spawn.global_position + Vector3(randf_range(-0.5, 0.5), 0.0, randf_range(-0.5, 0.5))
 	_to_spawn -= 1
 	_alive += 1
+
+
+func _spawn_boss(boss_id: String) -> void:
+	var points := active_spawn_points()
+	if points.is_empty():
+		return
+	var candidates: Array = points.filter(func(p): return p.global_position.distance_to(player.global_position) > 10.0)
+	if candidates.is_empty():
+		candidates = points
+	var spawn: Node3D = candidates.pick_random()
+	var stats := _zombie_stats(current_round)
+	var z = ZOMBIE_SCENE.instantiate()
+	var script_path := BossCatalogScr.script_path(boss_id)
+	if script_path != "" and ResourceLoader.exists(script_path):
+		z.set_script(load(script_path))
+	# Base wave stats first; configure_boss replaces HP with catalog formula (x Difficulty.boss_cfg.hp_mult).
+	z.setup(stats.health, stats.speed, stats.damage)
+	if z.has_method("configure_boss"):
+		z.configure_boss(boss_id, current_round, Difficulty.active_id())
+	z.hit.connect(_on_zombie_hit)
+	z.died.connect(_on_zombie_died)
+	if z.has_signal("request_echo"):
+		z.request_echo.connect(_on_boss_request_echo)
+	zombies_root.add_child(z)
+	z.global_position = spawn.global_position + Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0))
+	_alive += 1
+
+
+func _on_boss_request_echo(host: Node, count: int) -> void:
+	# Choir Host adds: 0.4x normal HP, no Gravemark, standard kill points.
+	for i in count:
+		var points := active_spawn_points()
+		if points.is_empty():
+			return
+		var spawn: Node3D = points.pick_random()
+		var stats := _zombie_stats(current_round)
+		var z = ZOMBIE_SCENE.instantiate()
+		var ehp := BossCatalogScr.echo_hp(current_round, base_health, health_per_round)
+		var echo: Dictionary = BossCatalogScr.echo_cfg()
+		z.setup(ehp, stats.speed * float(echo.get("speed_mult", 1.1)),
+			maxi(int(round(stats.damage * float(echo.get("damage_mult", 0.7)))), 1))
+		z.set_meta("boss_echo", true)
+		z.hit.connect(_on_zombie_hit)
+		z.died.connect(_on_zombie_died)
+		zombies_root.add_child(z)
+		var origin: Vector3 = host.global_position if host is Node3D else spawn.global_position
+		z.global_position = origin + Vector3(randf_range(-2.0, 2.0), 0.0, randf_range(-2.0, 2.0))
+		_alive += 1
 
 
 var _hit_paid: Dictionary = {} ## zombie instance id -> physics frame its hit points were last paid
@@ -294,7 +351,16 @@ func _on_zombie_died(zombie: Node) -> void:
 	if _game_over:
 		return
 	kills += 1
-	player.add_points(int(round(points_per_kill * player.mod_stat("points_kill_mult", 1.0))), "kill")
+	var pay := points_per_kill
+	var gravemark_gain := 0
+	if zombie.has_meta("is_boss") and zombie.get_meta("is_boss"):
+		var bid := str(zombie.get_meta("boss_id", ""))
+		pay = BossCatalogScr.kill_points(bid, points_per_kill)
+		gravemark_gain = BossCatalogScr.gravemark_scaled(bid) # int for Progress when currency lands
+	elif zombie.has_meta("boss_echo"):
+		pay = points_per_kill # echoes: normal kill, no Gravemark
+	player.add_points(int(round(pay * player.mod_stat("points_kill_mult", 1.0))), "kill")
+	# TODO (attachments pass): Progress.add_gravemark(gravemark_gain) when Gravemark is wired
 	for item in GearDB.roll_table("zombie", current_round, player.mod_stat("drop_chance_add", 0.0)):
 		spawn_pickup(item, (zombie as Node3D).global_position)
 	hud.set_enemies(_to_spawn + _alive)
@@ -512,7 +578,7 @@ func _setup_ambience() -> int:
 		return 0
 	if a.has_method("set_map_ambience"):
 		a.set_map_ambience(map_id)
-	var root: Node = map if map else get_node_or_null("NavigationRegion3D")
+	var root: Node = map if map else self # arena: AmbienceEmitters sits under Main
 	if root == null:
 		return 0
 	var n := 0
@@ -532,6 +598,17 @@ func restart_with_map(id: String) -> bool:
 	get_tree().paused = false
 	get_tree().reload_current_scene()
 	return true
+
+
+const HOME_SCENE := "res://scenes/ui/home.tscn"
+
+## Pause "Quit to Home" / game-over exit: save stash, unpause, leave the match.
+func return_to_home() -> void:
+	var prog := get_node_or_null("/root/Progress")
+	if prog and prog.has_method("save_stash"):
+		prog.save_stash()
+	get_tree().paused = false
+	get_tree().change_scene_to_file(HOME_SCENE)
 
 
 ## The map after the current one in data/maps.json (wraps around). Used by the M key before round 1 / after game over.

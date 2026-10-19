@@ -1,0 +1,1222 @@
+{
+	"version": 1,
+	"_help": "Weapon attachments (Skillz). Bought once with Gravemark (account-wide unlock), then equipped per weapon archetype: every weapon of that archetype uses the archetype's loadout. classes[archetype].slots = slots it has (DESI_ATTACHMENTS.md §1); optic_cap limits optic size (micro<short<mid<long). attachment.classes = optional allow list (default: every class with that slot). tier 1/2/3: equipping needs the weapon's upgrade tier >= tier_requires[tier] (0/2/4). mods (WeaponItem, multiply unless *_add): damage_mult rpm_mult mag_mult reload_mult (time) spread_mult (all fire) hip_spread_mult (not ADS) recoil_mult range_mult (falloff start) swap_mult (time) pellets_add headshot_add reserve_mags_add. ads (AdsProfile): fov (ADS FOV override; the narrowest wins) move_mult spread_mult (multiply the ADS penalties). flags = presentation hooks for player.gd/HUD (tracer_hidden, flash_mult, scope_overlay, outline_elites, heartbeat_counter, bipod, flashlight). effects = SkillEffect defs (same format as skill_tree.json) run by the player's SkillRunner only while a weapon of that archetype is in hand.",
+	"slots": [
+		{
+			"id": "optic",
+			"name": "Optic",
+			"socket": "Rail",
+			"hides": "IronSights"
+		},
+		{
+			"id": "muzzle",
+			"name": "Muzzle",
+			"socket": "Muzzle",
+			"hides": "MuzzleDevice"
+		},
+		{
+			"id": "barrel",
+			"name": "Barrel",
+			"socket": "Barrel",
+			"hides": "DefaultBarrel"
+		},
+		{
+			"id": "grip",
+			"name": "Grip",
+			"socket": "Underbarrel",
+			"hides": "DefaultGrip"
+		},
+		{
+			"id": "mag",
+			"name": "Magazine",
+			"socket": "MagWell",
+			"hides": "DefaultMag"
+		},
+		{
+			"id": "stock",
+			"name": "Stock",
+			"socket": "Stock",
+			"hides": "DefaultStock"
+		}
+	],
+	"optic_sizes": [
+		"micro",
+		"short",
+		"mid",
+		"long"
+	],
+	"tier_requires": {
+		"1": 0,
+		"2": 2,
+		"3": 4
+	},
+	"classes": {
+		"sidearm": {
+			"slots": [
+				"optic",
+				"muzzle",
+				"mag"
+			],
+			"optic_cap": "micro"
+		},
+		"hand_cannon": {
+			"slots": [
+				"optic",
+				"muzzle",
+				"barrel",
+				"mag"
+			],
+			"optic_cap": "micro"
+		},
+		"auto_rifle": {
+			"slots": [
+				"optic",
+				"muzzle",
+				"barrel",
+				"grip",
+				"mag",
+				"stock"
+			],
+			"optic_cap": "mid"
+		},
+		"scout_rifle": {
+			"slots": [
+				"optic",
+				"muzzle",
+				"barrel",
+				"grip",
+				"mag",
+				"stock"
+			],
+			"optic_cap": "long"
+		},
+		"pulse_rifle": {
+			"slots": [
+				"optic",
+				"muzzle",
+				"barrel",
+				"grip",
+				"mag",
+				"stock"
+			],
+			"optic_cap": "mid"
+		},
+		"smg": {
+			"slots": [
+				"optic",
+				"muzzle",
+				"barrel",
+				"grip",
+				"mag",
+				"stock"
+			],
+			"optic_cap": "short"
+		},
+		"shotgun": {
+			"slots": [
+				"optic",
+				"muzzle",
+				"barrel",
+				"grip",
+				"mag",
+				"stock"
+			],
+			"optic_cap": "short"
+		},
+		"sniper_rifle": {
+			"slots": [
+				"optic",
+				"muzzle",
+				"barrel",
+				"grip",
+				"mag",
+				"stock"
+			],
+			"optic_cap": "long"
+		},
+		"rocket_launcher": {
+			"slots": [
+				"optic",
+				"grip",
+				"mag"
+			],
+			"optic_cap": "mid"
+		}
+	},
+	"attachments": [
+		{
+			"id": "pinhole",
+			"name": "Pinhole",
+			"slot": "optic",
+			"tier": 1,
+			"cost": 2,
+			"unique": false,
+			"summary": "Pistol dot: light zoom, stay mobile while aiming.",
+			"description": "ADS zoom 62 FOV. ADS movement penalty halved.",
+			"drawback": "",
+			"icon": "att_pinhole",
+			"model": "res://assets/models/attachments/optic/pinhole.glb",
+			"mods": {},
+			"ads": {
+				"fov": 62,
+				"move_mult": 1.2
+			},
+			"flags": {},
+			"effects": [],
+			"size": "micro"
+		},
+		{
+			"id": "lamplight_reflex",
+			"name": "Lamplight Reflex",
+			"slot": "optic",
+			"tier": 1,
+			"cost": 3,
+			"unique": false,
+			"summary": "Warm reflex dot that tightens aimed fire.",
+			"description": "ADS zoom 60 FOV. ADS spread -20%.",
+			"drawback": "",
+			"icon": "att_lamplight_reflex",
+			"model": "res://assets/models/attachments/optic/lamplight_reflex.glb",
+			"mods": {},
+			"ads": {
+				"fov": 60,
+				"spread_mult": 0.8
+			},
+			"flags": {},
+			"effects": [],
+			"size": "short"
+		},
+		{
+			"id": "tallow_holo",
+			"name": "Tallow Holo",
+			"slot": "optic",
+			"tier": 1,
+			"cost": 3,
+			"unique": false,
+			"summary": "Wide holo window you can fire from the hip.",
+			"description": "ADS zoom 58 FOV. Hip-fire spread -15%.",
+			"drawback": "",
+			"icon": "att_tallow_holo",
+			"model": "res://assets/models/attachments/optic/tallow_holo.glb",
+			"mods": {
+				"hip_spread_mult": 0.85
+			},
+			"ads": {
+				"fov": 58
+			},
+			"flags": {},
+			"effects": [],
+			"size": "short"
+		},
+		{
+			"id": "crows_eye_3x",
+			"name": "Crow's Eye 3x",
+			"slot": "optic",
+			"tier": 2,
+			"cost": 5,
+			"unique": false,
+			"summary": "Prism scope that punishes targets past falloff.",
+			"description": "ADS zoom 40 FOV. +15% damage beyond falloff range while aiming.",
+			"drawback": "ADS movement -15%.",
+			"icon": "att_crows_eye_3x",
+			"model": "res://assets/models/attachments/optic/crows_eye_3x.glb",
+			"mods": {},
+			"ads": {
+				"fov": 40,
+				"move_mult": 0.85
+			},
+			"flags": {},
+			"effects": [
+				{
+					"script": "conditional_damage",
+					"params": {
+						"cond": [
+							"ads",
+							"beyond_falloff"
+						],
+						"mult": 0.15,
+						"sources": [
+							"gun"
+						]
+					}
+				}
+			],
+			"size": "mid"
+		},
+		{
+			"id": "longwatch_6x",
+			"name": "Longwatch 6x",
+			"slot": "optic",
+			"tier": 3,
+			"cost": 7,
+			"unique": false,
+			"summary": "Long scope with a full overlay and heavier crits.",
+			"description": "ADS zoom 22 FOV with scope overlay. Precision multiplier +0.4.",
+			"drawback": "Hip-fire spread +40%. ADS movement -25%.",
+			"icon": "att_longwatch_6x",
+			"model": "res://assets/models/attachments/optic/longwatch_6x.glb",
+			"mods": {
+				"headshot_add": 0.4,
+				"hip_spread_mult": 1.4
+			},
+			"ads": {
+				"fov": 22,
+				"move_mult": 0.75
+			},
+			"flags": {
+				"scope_overlay": true
+			},
+			"effects": [],
+			"classes": [
+				"sniper_rifle",
+				"scout_rifle"
+			],
+			"size": "long"
+		},
+		{
+			"id": "gravesight",
+			"name": "Gravesight",
+			"slot": "optic",
+			"tier": 3,
+			"cost": 8,
+			"unique": true,
+			"summary": "Outlines elites and bosses through walls.",
+			"description": "ADS zoom 45 FOV. Bosses and elites are outlined through walls. +15% damage to them.",
+			"drawback": "",
+			"icon": "att_gravesight",
+			"model": "res://assets/models/attachments/optic/gravesight.glb",
+			"mods": {},
+			"ads": {
+				"fov": 45
+			},
+			"flags": {
+				"outline_elites": true
+			},
+			"effects": [
+				{
+					"script": "conditional_damage",
+					"params": {
+						"cond": "target_boss",
+						"mult": 0.15
+					}
+				}
+			],
+			"size": "mid"
+		},
+		{
+			"id": "heartbeat_counter",
+			"name": "Heartbeat Counter",
+			"slot": "optic",
+			"tier": 2,
+			"cost": 4,
+			"unique": true,
+			"summary": "Rail box that counts the dead around you.",
+			"description": "HUD shows zombies within 10 m. +12% damage while 5 or more are that close.",
+			"drawback": "No zoom: ADS keeps the iron-sight FOV.",
+			"icon": "att_heartbeat_counter",
+			"model": "res://assets/models/attachments/optic/heartbeat_counter.glb",
+			"mods": {},
+			"ads": {},
+			"flags": {
+				"heartbeat_counter": true,
+				"heartbeat_radius": 10.0
+			},
+			"effects": [
+				{
+					"script": "conditional_damage",
+					"params": {
+						"cond": "crowded",
+						"mult": 0.12,
+						"count": 5,
+						"radius": 10.0
+					}
+				}
+			],
+			"size": "micro"
+		},
+		{
+			"id": "pocket_hush",
+			"name": "Pocket Hush",
+			"slot": "muzzle",
+			"tier": 1,
+			"cost": 3,
+			"unique": false,
+			"summary": "Short can: hidden tracers, ambush first hits.",
+			"description": "No tracers, muzzle flash -80%. +20% damage to unhurt zombies.",
+			"drawback": "Range -10%.",
+			"icon": "att_pocket_hush",
+			"model": "res://assets/models/attachments/muzzle/pocket_hush.glb",
+			"mods": {
+				"range_mult": 0.9
+			},
+			"ads": {},
+			"flags": {
+				"tracer_hidden": true,
+				"flash_mult": 0.2
+			},
+			"effects": [
+				{
+					"script": "conditional_damage",
+					"params": {
+						"cond": "target_unhurt",
+						"mult": 0.2,
+						"sources": [
+							"gun"
+						]
+					}
+				}
+			],
+			"classes": [
+				"sidearm",
+				"hand_cannon",
+				"smg"
+			]
+		},
+		{
+			"id": "hush_can",
+			"name": "Hush Can",
+			"slot": "muzzle",
+			"tier": 1,
+			"cost": 4,
+			"unique": false,
+			"summary": "Rifle suppressor built for opening shots.",
+			"description": "No tracers, muzzle flash -80%. +25% damage to unhurt zombies.",
+			"drawback": "Range -8%.",
+			"icon": "att_hush_can",
+			"model": "res://assets/models/attachments/muzzle/hush_can.glb",
+			"mods": {
+				"range_mult": 0.92
+			},
+			"ads": {},
+			"flags": {
+				"tracer_hidden": true,
+				"flash_mult": 0.2
+			},
+			"effects": [
+				{
+					"script": "conditional_damage",
+					"params": {
+						"cond": "target_unhurt",
+						"mult": 0.25,
+						"sources": [
+							"gun"
+						]
+					}
+				}
+			],
+			"classes": [
+				"auto_rifle",
+				"scout_rifle",
+				"pulse_rifle",
+				"smg",
+				"sniper_rifle"
+			]
+		},
+		{
+			"id": "mourners_sleeve",
+			"name": "Mourner's Sleeve",
+			"slot": "muzzle",
+			"tier": 2,
+			"cost": 6,
+			"unique": false,
+			"summary": "Heavy wrapped can: silent, brutal first shot.",
+			"description": "No tracers or flash. +40% damage to unhurt zombies.",
+			"drawback": "Swap time +15%.",
+			"icon": "att_mourners_sleeve",
+			"model": "res://assets/models/attachments/muzzle/mourners_sleeve.glb",
+			"mods": {
+				"swap_mult": 1.15
+			},
+			"ads": {},
+			"flags": {
+				"tracer_hidden": true,
+				"flash_mult": 0.0
+			},
+			"effects": [
+				{
+					"script": "conditional_damage",
+					"params": {
+						"cond": "target_unhurt",
+						"mult": 0.4,
+						"sources": [
+							"gun"
+						]
+					}
+				}
+			],
+			"classes": [
+				"sniper_rifle",
+				"scout_rifle"
+			]
+		},
+		{
+			"id": "splitjaw_brake",
+			"name": "Splitjaw Brake",
+			"slot": "muzzle",
+			"tier": 1,
+			"cost": 3,
+			"unique": false,
+			"summary": "Muzzle brake: much less kick, a lot more flash.",
+			"description": "Recoil -40%.",
+			"drawback": "Muzzle flash +80%.",
+			"icon": "att_splitjaw_brake",
+			"model": "res://assets/models/attachments/muzzle/splitjaw_brake.glb",
+			"mods": {
+				"recoil_mult": 0.6
+			},
+			"ads": {},
+			"flags": {
+				"flash_mult": 1.8
+			},
+			"effects": []
+		},
+		{
+			"id": "flare_cage",
+			"name": "Flare Cage",
+			"slot": "muzzle",
+			"tier": 1,
+			"cost": 2,
+			"unique": false,
+			"summary": "Flash hider that keeps your view clean.",
+			"description": "Muzzle flash -60%. Spread -8%.",
+			"drawback": "",
+			"icon": "att_flare_cage",
+			"model": "res://assets/models/attachments/muzzle/flare_cage.glb",
+			"mods": {
+				"spread_mult": 0.92
+			},
+			"ads": {},
+			"flags": {
+				"flash_mult": 0.4
+			},
+			"effects": [],
+			"classes": [
+				"sidearm",
+				"hand_cannon",
+				"smg",
+				"sniper_rifle",
+				"auto_rifle",
+				"scout_rifle",
+				"pulse_rifle"
+			]
+		},
+		{
+			"id": "tightjaw_choke",
+			"name": "Tightjaw Choke",
+			"slot": "muzzle",
+			"tier": 1,
+			"cost": 3,
+			"unique": false,
+			"summary": "Tight choke: narrow pattern with longer reach.",
+			"description": "Pellet spread -40%. Range +25%.",
+			"drawback": "2 fewer pellets.",
+			"icon": "att_tightjaw_choke",
+			"model": "res://assets/models/attachments/muzzle/tightjaw_choke.glb",
+			"mods": {
+				"spread_mult": 0.6,
+				"range_mult": 1.25,
+				"pellets_add": -2
+			},
+			"ads": {},
+			"flags": {},
+			"effects": [],
+			"classes": [
+				"shotgun"
+			]
+		},
+		{
+			"id": "bell_choke",
+			"name": "Bell Choke",
+			"slot": "muzzle",
+			"tier": 2,
+			"cost": 6,
+			"unique": true,
+			"summary": "Flared choke: wide cone that drags the horde down.",
+			"description": "+3 pellets, spread +60%. Hits slow zombies 25% for 1.5 s.",
+			"drawback": "Range -25%.",
+			"icon": "att_bell_choke",
+			"model": "res://assets/models/attachments/muzzle/bell_choke.glb",
+			"mods": {
+				"spread_mult": 1.6,
+				"pellets_add": 3,
+				"range_mult": 0.75
+			},
+			"ads": {},
+			"flags": {},
+			"effects": [
+				{
+					"script": "apply_status",
+					"on": [
+						"hit"
+					],
+					"if": {
+						"source": "gun"
+					},
+					"params": {
+						"status": "slow",
+						"dur": 1.5,
+						"amp": 0.25
+					}
+				}
+			],
+			"classes": [
+				"shotgun"
+			]
+		},
+		{
+			"id": "long_spine_barrel",
+			"name": "Long Spine Barrel",
+			"slot": "barrel",
+			"tier": 1,
+			"cost": 4,
+			"unique": false,
+			"summary": "Extended barrel: reach over handling.",
+			"description": "Range +30%.",
+			"drawback": "Swap time +15%. ADS movement -10%.",
+			"icon": "att_long_spine_barrel",
+			"model": "res://assets/models/attachments/barrel/long_spine_barrel.glb",
+			"mods": {
+				"range_mult": 1.3,
+				"swap_mult": 1.15
+			},
+			"ads": {
+				"move_mult": 0.9
+			},
+			"flags": {},
+			"effects": []
+		},
+		{
+			"id": "sawn_stub",
+			"name": "Sawn Stub",
+			"slot": "barrel",
+			"tier": 1,
+			"cost": 3,
+			"unique": false,
+			"summary": "Cut-down barrel for point-blank work.",
+			"description": "Swap time -25%. +20% damage within 6 m.",
+			"drawback": "Range -30%. Spread +20%.",
+			"icon": "att_sawn_stub",
+			"model": "res://assets/models/attachments/barrel/sawn_stub.glb",
+			"mods": {
+				"range_mult": 0.7,
+				"swap_mult": 0.75,
+				"spread_mult": 1.2
+			},
+			"ads": {},
+			"flags": {},
+			"effects": [
+				{
+					"script": "conditional_damage",
+					"params": {
+						"cond": "close",
+						"mult": 0.2,
+						"sources": [
+							"gun"
+						],
+						"range": 6.0
+					}
+				}
+			]
+		},
+		{
+			"id": "fluted_cooler",
+			"name": "Fluted Cooler",
+			"slot": "barrel",
+			"tier": 2,
+			"cost": 5,
+			"unique": false,
+			"summary": "Heat-shrouded barrel that runs faster.",
+			"description": "Fire rate +8%.",
+			"drawback": "Recoil +10%.",
+			"icon": "att_fluted_cooler",
+			"model": "res://assets/models/attachments/barrel/fluted_cooler.glb",
+			"mods": {
+				"rpm_mult": 1.08,
+				"recoil_mult": 1.1
+			},
+			"ads": {},
+			"flags": {},
+			"effects": [],
+			"classes": [
+				"auto_rifle",
+				"scout_rifle",
+				"pulse_rifle",
+				"smg",
+				"hand_cannon",
+				"shotgun"
+			]
+		},
+		{
+			"id": "gutter_ported_barrel",
+			"name": "Gutter Ported Barrel",
+			"slot": "barrel",
+			"tier": 1,
+			"cost": 4,
+			"unique": false,
+			"summary": "Top ports bleed off recoil.",
+			"description": "Recoil -25%.",
+			"drawback": "Range -10%.",
+			"icon": "att_gutter_ported_barrel",
+			"model": "res://assets/models/attachments/barrel/gutter_ported_barrel.glb",
+			"mods": {
+				"recoil_mult": 0.75,
+				"range_mult": 0.9
+			},
+			"ads": {},
+			"flags": {},
+			"effects": []
+		},
+		{
+			"id": "fence_post",
+			"name": "Fence Post",
+			"slot": "grip",
+			"tier": 1,
+			"cost": 2,
+			"unique": false,
+			"summary": "Vertical foregrip: steady but heavy in the hand.",
+			"description": "Recoil -20%.",
+			"drawback": "ADS movement -10%.",
+			"icon": "att_fence_post",
+			"model": "res://assets/models/attachments/grip/fence_post.glb",
+			"mods": {
+				"recoil_mult": 0.8
+			},
+			"ads": {
+				"move_mult": 0.9
+			},
+			"flags": {},
+			"effects": []
+		},
+		{
+			"id": "knuckle_stub",
+			"name": "Knuckle Stub",
+			"slot": "grip",
+			"tier": 1,
+			"cost": 2,
+			"unique": false,
+			"summary": "Stubby grip for fast hands.",
+			"description": "Swap time -15%. Recoil -8%.",
+			"drawback": "",
+			"icon": "att_knuckle_stub",
+			"model": "res://assets/models/attachments/grip/knuckle_stub.glb",
+			"mods": {
+				"swap_mult": 0.85,
+				"recoil_mult": 0.92
+			},
+			"ads": {},
+			"flags": {},
+			"effects": []
+		},
+		{
+			"id": "lean_grip",
+			"name": "Lean Grip",
+			"slot": "grip",
+			"tier": 1,
+			"cost": 3,
+			"unique": false,
+			"summary": "Angled grip: move almost freely while aiming.",
+			"description": "ADS movement penalty cut by a third. ADS spread -10%.",
+			"drawback": "",
+			"icon": "att_lean_grip",
+			"model": "res://assets/models/attachments/grip/lean_grip.glb",
+			"mods": {},
+			"ads": {
+				"move_mult": 1.3,
+				"spread_mult": 0.9
+			},
+			"flags": {},
+			"effects": []
+		},
+		{
+			"id": "halfmoon_stop",
+			"name": "Halfmoon Stop",
+			"slot": "grip",
+			"tier": 1,
+			"cost": 2,
+			"unique": false,
+			"summary": "Hand stop for shooting on the slide.",
+			"description": "Spread -35% while sliding.",
+			"drawback": "",
+			"icon": "att_halfmoon_stop",
+			"model": "res://assets/models/attachments/grip/halfmoon_stop.glb",
+			"mods": {},
+			"ads": {},
+			"flags": {},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "spread_mult",
+						"mult": 0.65,
+						"while": "sliding"
+					}
+				}
+			]
+		},
+		{
+			"id": "crutch_bipod",
+			"name": "Crutch Bipod",
+			"slot": "grip",
+			"tier": 2,
+			"cost": 4,
+			"unique": false,
+			"summary": "Folding bipod: plant your feet and own the lane.",
+			"description": "Standing still: spread -50% and +10% damage.",
+			"drawback": "ADS movement -20%.",
+			"icon": "att_crutch_bipod",
+			"model": "res://assets/models/attachments/grip/crutch_bipod.glb",
+			"mods": {},
+			"ads": {
+				"move_mult": 0.8
+			},
+			"flags": {
+				"bipod": true
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "spread_mult",
+						"mult": 0.5,
+						"while": "still"
+					}
+				},
+				{
+					"script": "conditional_damage",
+					"params": {
+						"cond": "still",
+						"mult": 0.1,
+						"sources": [
+							"gun"
+						]
+					}
+				}
+			],
+			"classes": [
+				"sniper_rifle",
+				"scout_rifle",
+				"auto_rifle"
+			]
+		},
+		{
+			"id": "second_mouth",
+			"name": "Second Mouth",
+			"slot": "grip",
+			"tier": 3,
+			"cost": 8,
+			"unique": true,
+			"summary": "Underbarrel launcher that answers your hits.",
+			"description": "A gun hit fires a 3 m blast at the target for 120% of the hit (every 6 s).",
+			"drawback": "Swap time +20%.",
+			"icon": "att_second_mouth",
+			"model": "res://assets/models/attachments/grip/second_mouth.glb",
+			"mods": {
+				"swap_mult": 1.2
+			},
+			"ads": {},
+			"flags": {},
+			"effects": [
+				{
+					"script": "on_event_explode",
+					"on": [
+						"hit"
+					],
+					"if": {
+						"source": "gun"
+					},
+					"params": {
+						"damage_frac": 1.2,
+						"radius": 3.0,
+						"icd": 6.0,
+						"knockback": 5.0
+					}
+				}
+			],
+			"classes": [
+				"auto_rifle",
+				"scout_rifle",
+				"pulse_rifle",
+				"smg",
+				"shotgun"
+			]
+		},
+		{
+			"id": "lantern_rail",
+			"name": "Lantern Rail",
+			"slot": "grip",
+			"tier": 2,
+			"cost": 6,
+			"unique": true,
+			"summary": "Flashlight beam that staggers what it finds.",
+			"description": "Gun hits slow zombies 35% for 1 s.",
+			"drawback": "",
+			"icon": "att_lantern_rail",
+			"model": "res://assets/models/attachments/grip/lantern_rail.glb",
+			"mods": {},
+			"ads": {},
+			"flags": {
+				"flashlight": true
+			},
+			"effects": [
+				{
+					"script": "apply_status",
+					"on": [
+						"hit"
+					],
+					"if": {
+						"source": "gun"
+					},
+					"params": {
+						"status": "slow",
+						"dur": 1.0,
+						"amp": 0.35
+					}
+				}
+			],
+			"classes": [
+				"auto_rifle",
+				"scout_rifle",
+				"pulse_rifle",
+				"smg",
+				"shotgun",
+				"sniper_rifle"
+			]
+		},
+		{
+			"id": "bonesaw_bayonet",
+			"name": "Bonesaw Bayonet",
+			"slot": "grip",
+			"tier": 2,
+			"cost": 5,
+			"unique": true,
+			"summary": "Blade under the muzzle for melee builds.",
+			"description": "Melee damage +60% with this weapon out.",
+			"drawback": "Swap time +10%.",
+			"icon": "att_bonesaw_bayonet",
+			"model": "res://assets/models/attachments/grip/bonesaw_bayonet.glb",
+			"mods": {
+				"swap_mult": 1.1
+			},
+			"ads": {},
+			"flags": {},
+			"effects": [
+				{
+					"script": "conditional_damage",
+					"params": {
+						"cond": "",
+						"mult": 0.6,
+						"sources": [
+							"melee"
+						]
+					}
+				}
+			],
+			"classes": [
+				"auto_rifle",
+				"scout_rifle",
+				"pulse_rifle",
+				"smg",
+				"shotgun"
+			]
+		},
+		{
+			"id": "fat_drum",
+			"name": "Fat Drum",
+			"slot": "mag",
+			"tier": 2,
+			"cost": 4,
+			"unique": false,
+			"summary": "Drum mag: shoot longer, reload slower.",
+			"description": "Magazine +60%.",
+			"drawback": "Reload time +35%. Swap time +15%.",
+			"icon": "att_fat_drum",
+			"model": "res://assets/models/attachments/mag/fat_drum.glb",
+			"mods": {
+				"mag_mult": 1.6,
+				"reload_mult": 1.35,
+				"swap_mult": 1.15
+			},
+			"ads": {},
+			"flags": {},
+			"effects": [],
+			"classes": [
+				"auto_rifle",
+				"scout_rifle",
+				"pulse_rifle",
+				"smg",
+				"sniper_rifle"
+			]
+		},
+		{
+			"id": "quickpull_clip",
+			"name": "Quickpull Clip",
+			"slot": "mag",
+			"tier": 1,
+			"cost": 3,
+			"unique": false,
+			"summary": "Pull-tab mag for fast reloads.",
+			"description": "Reload time -25%.",
+			"drawback": "Magazine -15%.",
+			"icon": "att_quickpull_clip",
+			"model": "res://assets/models/attachments/mag/quickpull_clip.glb",
+			"mods": {
+				"reload_mult": 0.75,
+				"mag_mult": 0.85
+			},
+			"ads": {},
+			"flags": {},
+			"effects": [],
+			"classes": [
+				"sidearm",
+				"smg",
+				"sniper_rifle",
+				"rocket_launcher",
+				"auto_rifle",
+				"scout_rifle",
+				"pulse_rifle"
+			]
+		},
+		{
+			"id": "twin_taped_mags",
+			"name": "Twin-Taped Mags",
+			"slot": "mag",
+			"tier": 1,
+			"cost": 3,
+			"unique": false,
+			"summary": "Two mags taped: flip and go.",
+			"description": "Reload time -30%.",
+			"drawback": "One fewer reserve magazine.",
+			"icon": "att_twin_taped_mags",
+			"model": "res://assets/models/attachments/mag/twin_taped_mags.glb",
+			"mods": {
+				"reload_mult": 0.7,
+				"reserve_mags_add": -1
+			},
+			"ads": {},
+			"flags": {},
+			"effects": [],
+			"classes": [
+				"auto_rifle",
+				"scout_rifle",
+				"pulse_rifle",
+				"smg"
+			]
+		},
+		{
+			"id": "speedloader_ring",
+			"name": "Speedloader Ring",
+			"slot": "mag",
+			"tier": 1,
+			"cost": 3,
+			"unique": false,
+			"summary": "Cylinder speedloader.",
+			"description": "Reload time -40%.",
+			"drawback": "",
+			"icon": "att_speedloader_ring",
+			"model": "res://assets/models/attachments/mag/speedloader_ring.glb",
+			"mods": {
+				"reload_mult": 0.6
+			},
+			"ads": {},
+			"flags": {},
+			"effects": [],
+			"classes": [
+				"hand_cannon"
+			]
+		},
+		{
+			"id": "shell_saddle",
+			"name": "Shell Saddle",
+			"slot": "mag",
+			"tier": 1,
+			"cost": 3,
+			"unique": false,
+			"summary": "Side carrier: more shells on hand.",
+			"description": "+2 reserve loads. Reload time -10%.",
+			"drawback": "",
+			"icon": "att_shell_saddle",
+			"model": "res://assets/models/attachments/mag/shell_saddle.glb",
+			"mods": {
+				"reserve_mags_add": 2,
+				"reload_mult": 0.9
+			},
+			"ads": {},
+			"flags": {},
+			"effects": [],
+			"classes": [
+				"shotgun"
+			]
+		},
+		{
+			"id": "ember_window_mag",
+			"name": "Ember Window Mag",
+			"slot": "mag",
+			"tier": 3,
+			"cost": 7,
+			"unique": true,
+			"summary": "Incendiary rounds: precision hits ignite.",
+			"description": "Precision hits set zombies burning (8 dps for 3 s).",
+			"drawback": "Magazine -15%.",
+			"icon": "att_ember_window_mag",
+			"model": "res://assets/models/attachments/mag/ember_window_mag.glb",
+			"mods": {
+				"mag_mult": 0.85
+			},
+			"ads": {},
+			"flags": {},
+			"effects": [
+				{
+					"script": "apply_status",
+					"on": [
+						"hit"
+					],
+					"if": {
+						"source": "gun",
+						"is_headshot": true
+					},
+					"params": {
+						"status": "burn",
+						"dur": 3.0,
+						"dps": 8.0
+					}
+				}
+			],
+			"classes": [
+				"auto_rifle",
+				"scout_rifle",
+				"pulse_rifle",
+				"smg",
+				"sidearm",
+				"hand_cannon",
+				"sniper_rifle"
+			]
+		},
+		{
+			"id": "echo_drum",
+			"name": "Echo Drum",
+			"slot": "mag",
+			"tier": 3,
+			"cost": 8,
+			"unique": true,
+			"summary": "Spinning drum that returns rounds on precision kills.",
+			"description": "Magazine +30%. Precision kills put 3 rounds back in the mag.",
+			"drawback": "Reload time +25%.",
+			"icon": "att_echo_drum",
+			"model": "res://assets/models/attachments/mag/echo_drum.glb",
+			"mods": {
+				"mag_mult": 1.3,
+				"reload_mult": 1.25
+			},
+			"ads": {},
+			"flags": {},
+			"effects": [
+				{
+					"script": "refill_mag",
+					"on": [
+						"enemy_killed"
+					],
+					"if": {
+						"source": "gun",
+						"is_headshot": true
+					},
+					"params": {
+						"mode": "amount",
+						"amount": 3
+					}
+				}
+			],
+			"classes": [
+				"auto_rifle",
+				"scout_rifle",
+				"pulse_rifle",
+				"smg",
+				"sniper_rifle"
+			]
+		},
+		{
+			"id": "wire_stock",
+			"name": "Wire Stock",
+			"slot": "stock",
+			"tier": 1,
+			"cost": 2,
+			"unique": false,
+			"summary": "Skeletal stock: light and quick.",
+			"description": "Swap time -15%. ADS movement +10%.",
+			"drawback": "Recoil +10%.",
+			"icon": "att_wire_stock",
+			"model": "res://assets/models/attachments/stock/wire_stock.glb",
+			"mods": {
+				"swap_mult": 0.85,
+				"recoil_mult": 1.1
+			},
+			"ads": {
+				"move_mult": 1.1
+			},
+			"flags": {},
+			"effects": []
+		},
+		{
+			"id": "padded_stock",
+			"name": "Padded Stock",
+			"slot": "stock",
+			"tier": 1,
+			"cost": 3,
+			"unique": false,
+			"summary": "Heavy padded stock that soaks recoil.",
+			"description": "Recoil -25%.",
+			"drawback": "Swap time +10%.",
+			"icon": "att_padded_stock",
+			"model": "res://assets/models/attachments/stock/padded_stock.glb",
+			"mods": {
+				"recoil_mult": 0.75,
+				"swap_mult": 1.1
+			},
+			"ads": {},
+			"flags": {},
+			"effects": []
+		},
+		{
+			"id": "ratchet_stock",
+			"name": "Ratchet Stock",
+			"slot": "stock",
+			"tier": 2,
+			"cost": 4,
+			"unique": false,
+			"summary": "Adjustable stock tuned for aimed fire.",
+			"description": "ADS spread -15%. Recoil -10%.",
+			"drawback": "",
+			"icon": "att_ratchet_stock",
+			"model": "res://assets/models/attachments/stock/ratchet_stock.glb",
+			"mods": {
+				"recoil_mult": 0.9
+			},
+			"ads": {
+				"spread_mult": 0.85
+			},
+			"flags": {},
+			"effects": []
+		},
+		{
+			"id": "stub_cap",
+			"name": "Stub Cap",
+			"slot": "stock",
+			"tier": 1,
+			"cost": 2,
+			"unique": false,
+			"summary": "No stock at all: snap to targets.",
+			"description": "Swap time -30%. ADS movement +15%.",
+			"drawback": "Hip-fire spread +15%.",
+			"icon": "att_stub_cap",
+			"model": "res://assets/models/attachments/stock/stub_cap.glb",
+			"mods": {
+				"swap_mult": 0.7,
+				"hip_spread_mult": 1.15
+			},
+			"ads": {
+				"move_mult": 1.15
+			},
+			"flags": {},
+			"effects": []
+		}
+	]
+}

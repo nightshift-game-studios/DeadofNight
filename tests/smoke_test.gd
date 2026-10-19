@@ -118,11 +118,14 @@ func _run() -> void:
 	check(int(JSON.parse_string(JSON.stringify(wp.to_dict())).item_power) == 100, "item power saved in item data")
 	# Balance: Impact is excluded from the IP stat bonus, so the IP damage multiplier is the only
 	# IP damage dial and IP 400 = 2.2x (see damage_table.md).
+	# Owned by gear/IP balance (G4M3N). Seeded: with stat_variance=12, SE of |mean_400-mean_100|
+	# over 300 rolls is ~0.6; threshold 1.5 is only ~2.6σ (~1% flake). Seed keeps it deterministic.
 	check("impact" in gear.item_power_cfg().get("ip_stat_exclude", []), "Impact excluded from the IP stat bonus (loot_tables.json)")
 	var dmg_lo := 0.0
 	var dmg_hi := 0.0
 	var imp_lo := 0.0
 	var imp_hi := 0.0
+	seed(0xDEAD0F42) # deterministic Impact / damage averages across fresh extracts
 	for i in 300:
 		var a100 = gear.roll_weapon("hand_cannon", Rarity.RARE, 1, "", 100)
 		var a400 = gear.roll_weapon("hand_cannon", Rarity.RARE, 1, "", 400)
@@ -650,11 +653,23 @@ func _run() -> void:
 	var bang_style: PanelContainer = UIStyle.unseen_badge(14)
 	check(bang_style != null and bang_style.name == "UnseenBadge", "UIStyle.unseen_badge builds a named plate")
 	bang_style.free()
-	# Fresh unseen stash item lights tile + slot header badges
+	# Deterministic unseen stash item: clear leftover unseen from earlier pickups, then
+	# put ONE known secondary into the backpack (slot fixed, seen=false). Avoid WeaponItem.new()
+	# here — naming that class in this -s script trips a GearDB↔WeaponItem parse cycle.
+	inv.mark_all_seen()
+	await process_frame
+	if inv.equipped.get("secondary") == null:
+		var filler = gear.roll_weapon("smg", Rarity.COMMON, 1, "secondary")
+		filler.seen = true
+		inv.add_item(filler)
+		inv.mark_all_seen()
 	var unseen_w = gear.roll_weapon("smg", Rarity.RARE, 2, "secondary")
 	unseen_w.seen = false
-	inv.add_item(unseen_w)
-	check(not unseen_w.seen and inv.has_unseen("secondary") and inv.unseen_count() >= 1, "unseen secondary in stash")
+	unseen_w.display_name = "TEST UNSEEN SMG"
+	unseen_w.slot = "secondary"
+	check(inv.add_item(unseen_w) and inv.backpack.secondary.has(unseen_w) and not unseen_w.seen,
+		"explicit unseen secondary landed in stash (not auto-equipped)")
+	check(inv.unseen_count("secondary") == 1 and inv.has_unseen("secondary"), "unseen secondary in stash")
 	main.hud._bind_player()
 	main.hud.refresh_unseen_hint()
 	check(main.hud._unseen_chip != null and main.hud._unseen_chip.visible and int(main.hud._unseen_count_label.text) >= 1,
@@ -677,24 +692,26 @@ func _run() -> void:
 				slot_wrap = c
 				break
 	var slot_bang = slot_wrap.find_child("SlotUnseen", true, false) if slot_wrap else null
-	check(slot_bang != null and slot_bang.visible, "slot header '!' badge when has_unseen(secondary)")
-	var tile_bang = null
+	check(slot_bang != null and (slot_bang as CanvasItem).visible, "slot header '!' badge when has_unseen(secondary)")
+	var tile_bang: Node = null
 	if slot_wrap:
 		for n in slot_wrap.find_children("*", "Button", true, false):
 			if n.has_meta("gear") and n.get_meta("gear") == unseen_w:
 				tile_bang = n.find_child("UnseenBadge", true, false)
 				break
-	check(tile_bang != null and tile_bang.visible, "stash tile '!' badge for unseen item")
-	# Hover / open card marks seen and clears badges in place
+	check(tile_bang != null and (tile_bang as CanvasItem).visible, "stash tile '!' badge for unseen item")
+	# Hover marks seen; await seen_changed → in-place badge hide
 	cs._on_tile_hover(unseen_w, false)
 	await process_frame
+	await process_frame
 	check(unseen_w.seen and not inv.has_unseen("secondary"), "hover mark_seen clears unseen for that item")
-	check(tile_bang == null or not tile_bang.visible, "tile badge hidden after seen_changed")
-	check(slot_bang == null or not slot_bang.visible, "slot badge hidden after seen_changed")
+	check(tile_bang != null and is_instance_valid(tile_bang) and not (tile_bang as CanvasItem).visible, "tile badge hidden after seen_changed")
+	check(slot_bang != null and is_instance_valid(slot_bang) and not (slot_bang as CanvasItem).visible, "slot badge hidden after seen_changed")
 	main.hud.refresh_unseen_hint()
 	# Legacy/seen items show no badges (Skillz: missing 'seen' key loads as true)
 	var leg = gear.roll_weapon("smg", Rarity.COMMON, 1, "secondary")
 	leg.seen = true
+	leg.display_name = "LEGACY SEEN SMG"
 	inv.add_item(leg)
 	cs.refresh()
 	await process_frame
@@ -773,7 +790,7 @@ func _run() -> void:
 	var total_streams := 0
 	for k in sfx.bank:
 		total_streams += sfx.bank[k].size()
-	check(total_streams == 141, "all 141 audio files load into the bank (%d)" % total_streams)
+	check(total_streams == 148, "all 148 audio files load into the bank (%d)" % total_streams)
 	var keys_missing := []
 	for k in ["sidearm_fire", "hand_cannon_fire", "auto_rifle_fire", "scout_rifle_fire", "smg_fire", "shotgun_fire",
 			"pulse_rifle_burst", "sniper_fire", "rocket_launcher_fire", "rocket_explosion", "reload_mag_out", "reload_mag_in",

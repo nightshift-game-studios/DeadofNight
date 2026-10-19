@@ -18,7 +18,7 @@ func _init() -> void:
 
 func _ready() -> void:
 	super._ready()
-	panel.custom_minimum_size = Vector2(420, 280)
+	panel.custom_minimum_size = Vector2(420, 340)
 	if main == null:
 		main = get_parent()
 	_build()
@@ -36,6 +36,7 @@ func _build() -> void:
 	content.add_child(line)
 	content.add_child(_menu_btn("RESUME", close))
 	content.add_child(_menu_btn("SETTINGS", _open_settings))
+	content.add_child(_menu_btn("QUIT TO HOME", _quit_to_home))
 	var foot := HBoxContainer.new()
 	foot.add_theme_constant_override("separation", 6)
 	content.add_child(foot)
@@ -81,6 +82,28 @@ func can_open() -> bool:
 	if settings_menu != null and settings_menu.visible:
 		return false
 	return true
+
+
+const HOME_SCENE := "res://scenes/ui/home.tscn"
+var dry_run: bool = false ## tests: skip change_scene
+var quit_home_calls: int = 0
+
+
+## Save stash, unpause, return to the title screen. main.return_to_home() if present.
+func _quit_to_home() -> void:
+	quit_home_calls += 1
+	_ui_snd("menu_close")
+	var prog := get_node_or_null("/root/Progress")
+	if prog and prog.has_method("save_stash"):
+		prog.save_stash()
+	visible = false
+	get_tree().paused = false
+	if dry_run:
+		return
+	if main and main.has_method("return_to_home"):
+		main.return_to_home()
+		return
+	get_tree().change_scene_to_file(HOME_SCENE)
 
 
 func _open_settings() -> void:

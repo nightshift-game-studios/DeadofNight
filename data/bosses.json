@@ -1,0 +1,102 @@
+{
+	"version": 1,
+	"_help": "Boss zombies (Skillz). Cadence comes from Difficulty.boss_* (data/difficulty.json). HP = round(normal_round_hp * hp_mult * Difficulty.boss_cfg().hp_mult), where normal_round_hp = main.base_health + main.health_per_round*(round-1). Kill points = points_per_kill * kill_points_mult (halved economy: 50 base). gravemark_reward is an int for the future Gravemark currency (multiply by Difficulty.rare_currency_drop_mult when wired). Echo adds use echo_* and pay no Gravemark. Spawn roster: BossCatalog.pick_roster(round, difficulty_id).",
+	"default_points_per_kill": 50,
+	"bosses": {
+		"bellwether": {
+			"id": "bellwether",
+			"name": "Bellwether",
+			"role": "tank_bruiser",
+			"script": "res://scripts/enemies/bellwether.gd",
+			"hp_mult": 8.0,
+			"speed_mult": 0.85,
+			"damage_mult": 1.6,
+			"kill_points_mult": 8.0,
+			"gravemark_reward": 2,
+			"spawn_weight": 10,
+			"spawn_slot_preference": 0,
+			"model_height": 2.4,
+			"size_variety": 0.0,
+			"telegraph": {
+				"slam_windup": 1.2,
+				"slam_radius": 3.5,
+				"slam_damage_mult": 2.2,
+				"slam_stun": 1.0,
+				"slam_cooldown": 5.0,
+				"enrage_hp_frac": 0.5,
+				"enrage_slam_cooldown": 3.2,
+				"charge_windup": 0.7,
+				"charge_damage_mult": 1.4,
+				"charge_speed_mult": 2.4,
+				"charge_duration": 0.85,
+				"charge_cooldown": 4.5
+			}
+		},
+		"choir_host": {
+			"id": "choir_host",
+			"name": "Choir Host",
+			"role": "summoner_support",
+			"script": "res://scripts/enemies/choir_host.gd",
+			"hp_mult": 5.0,
+			"speed_mult": 0.7,
+			"damage_mult": 0.9,
+			"kill_points_mult": 6.0,
+			"gravemark_reward": 2,
+			"spawn_weight": 8,
+			"spawn_slot_preference": 1,
+			"model_height": 2.1,
+			"size_variety": 0.0,
+			"telegraph": {
+				"channel_duration": 4.0,
+				"channel_cooldown": 6.0,
+				"shield_hp_frac": 0.3,
+				"echo_interval": 2.0,
+				"echo_count_min": 2,
+				"echo_count_max": 3,
+				"walk_between_channels": true
+			},
+			"echo": {
+				"hp_mult": 0.4,
+				"speed_mult": 1.1,
+				"damage_mult": 0.7,
+				"kill_points_mult": 1.0,
+				"gravemark_reward": 0,
+				"lifetime": 18.0
+			}
+		},
+		"lantern_stalker": {
+			"id": "lantern_stalker",
+			"name": "Lantern Stalker",
+			"role": "ambusher_ranged",
+			"script": "res://scripts/enemies/lantern_stalker.gd",
+			"hp_mult": 4.5,
+			"speed_mult": 1.15,
+			"damage_mult": 1.1,
+			"kill_points_mult": 5.0,
+			"gravemark_reward": 3,
+			"spawn_weight": 7,
+			"spawn_slot_preference": 2,
+			"model_height": 1.95,
+			"size_variety": 0.0,
+			"telegraph": {
+				"dark_duration": 1.6,
+				"dark_speed_mult": 1.45,
+				"beam_windup": 0.8,
+				"beam_length": 18.0,
+				"beam_half_angle_deg": 12.0,
+				"spit_damage_mult": 1.8,
+				"spit_speed": 14.0,
+				"sidestep_distance": 2.4,
+				"cycle_cooldown": 3.5
+			}
+		}
+	},
+	"roster_rules": {
+		"_help": "pick_roster fills Difficulty.boss_count slots. Slot 0 = Bellwether on the first cadence round (and always on Hard / multi-boss). From the second cadence round on Easy/Medium solo, Choir Host and Lantern Stalker alternate as the solo. Slot 1 = Choir Host. Slot 2+ = Lantern Stalker.",
+		"first_slot_default": "bellwether",
+		"second_slot": "choir_host",
+		"third_slot": "lantern_stalker",
+		"solo_alternate_from_cycle": 1,
+		"solo_alternate": ["choir_host", "lantern_stalker"]
+	}
+}

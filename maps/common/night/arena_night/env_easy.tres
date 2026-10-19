@@ -1,0 +1,25 @@
+[gd_resource type="Environment" format=3]
+
+[ext_resource type="Texture2D" path="res://maps/common/night/hdri/dikhololo_night_2k.hdr" id="1_xw5to"]
+
+[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_sjt25"]
+panorama = ExtResource("1_xw5to")
+energy_multiplier = 0.22
+
+[sub_resource type="Sky" id="Sky_ih4hu"]
+sky_material = SubResource("PanoramaSkyMaterial_sjt25")
+
+[resource]
+background_mode = 2
+sky = SubResource("Sky_ih4hu")
+ambient_light_source = 3
+ambient_light_energy = 0.28
+reflected_light_source = 2
+tonemap_mode = 3
+tonemap_exposure = 1.05
+ssao_enabled = true
+glow_enabled = true
+fog_enabled = true
+fog_light_color = Color(0.12, 0.14, 0.22, 1)
+fog_density = 0.008
+fog_sky_affect = 0.55

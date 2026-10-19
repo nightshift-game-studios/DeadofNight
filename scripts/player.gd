@@ -31,6 +31,12 @@ signal grenade_charges_changed(charges: int, max_charges: int)
 signal ability_charges_changed(charges: int, max_charges: int)
 
 enum Move { NORMAL, CROUCH, SLIDE }
+
+# ADS (Skillz MAIN_HOOKS §8): AdsProfile tables, Settings.ads_mode hold|toggle, RMB action "ads".
+const AdsProfileScr := preload("res://scripts/combat/ads_profile.gd")
+signal ads_changed(active: bool) ## Gooey sniper scope overlay listens when AdsProfile.wants_scope_overlay(archetype)
+var ads_active: bool = false
+var _hip_fov: float = 75.0
 const HEAD_HITBOX_LAYER := 32 ## zombie head hitboxes (enemy.gd); only weapon rays query it
 
 ## Class (stats + Q ability + grenade). If empty, the class chosen in Progress is loaded.
@@ -372,6 +378,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _physics_process(delta: float) -> void:
 	_tick_timers(delta)
+	_tick_ads(delta)
 	var on_floor := is_on_floor()
 	if on_floor and not _was_on_floor:
 		if _fall_speed > 3.5:
@@ -467,6 +474,7 @@ func _physics_process(delta: float) -> void:
 		elif sprinting:
 			speed = sprint_speed
 		speed *= speed_multiplier
+		speed *= AdsProfileScr.move_speed_mult(ads_active) # ~0.7 while aiming
 		var wish := wish_dir * speed
 		if on_floor:
 			velocity.x = lerp(velocity.x, wish.x, clamp(acceleration * delta, 0.0, 1.0))
@@ -759,6 +767,7 @@ func _fire_round(w: WeaponItem) -> void:
 		var cam_basis := camera.global_basis
 		var max_range: float = float(w.arch.get("base_range", 20)) * 4.0
 		var spread := deg_to_rad(w.spread_deg() * PerkSystem.spread_mult(w, self) * mod_stat("spread_mult", 1.0) \
+			* AdsProfileScr.spread_mult(ads_active) \
 			* (1.4 if not is_on_floor() else 1.0) * (0.7 if move_state != Move.NORMAL else 1.0))
 		var impact_sounds := {} # one impact sound per surface per round (shotguns!)
 		for i in w.pellets():
@@ -1257,5 +1266,35 @@ func _apply_look_settings() -> void:
 		return
 	mouse_sensitivity = float(s.mouse_sensitivity)
 	invert_y = bool(s.invert_y)
+	_hip_fov = float(s.fov) if s else AdsProfileScr.HIP_FOV
+	if not ads_active and camera:
+		camera.fov = _hip_fov
+
+
+## ADS tick (Skillz MAIN_HOOKS §8d): hold or toggle per Settings.ads_mode, FOV lerps to the weapon family's ADS FOV.
+func _tick_ads(_delta: float) -> void:
+	var settings := get_node_or_null("/root/Settings")
+	var mode := AdsProfileScr.resolve_mode(settings) # missing Settings -> "hold"
+	var action := AdsProfileScr.input_action()
+	# Ensure action exists even before project.godot lands:
+	if not InputMap.has_action(action):
+		InputMap.add_action(action)
+		var mb := InputEventMouseButton.new()
+		mb.button_index = MOUSE_BUTTON_RIGHT
+		InputMap.action_add_event(action, mb)
+	var can_aim := input_enabled and not dead
+	var pressed := can_aim and Input.is_action_pressed(action)
+	var just := can_aim and Input.is_action_just_pressed(action)
+	var next := AdsProfileScr.next_ads_state(ads_active, mode, pressed, just)
+	if dead: # §8g: drop ADS on death
+		next = false
+	if next != ads_active:
+		ads_active = next
+		ads_changed.emit(ads_active)
+	var arch := ""
+	var w = inventory.get_equipped_weapon() if inventory else null
+	if w and "archetype" in w:
+		arch = str(w.archetype)
+	var want := AdsProfileScr.target_fov(ads_active, arch, _hip_fov)
 	if camera:
-		camera.fov = float(s.fov)
+		camera.fov = lerpf(camera.fov, want, clampf(12.0 * _delta, 0.0, 1.0))

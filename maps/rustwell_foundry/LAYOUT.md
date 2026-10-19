@@ -206,3 +206,12 @@ They're replaced by procedural walls and Fence006 alpha cards. Every asset gets 
 - Door open anim + L1/lane path checks pass; car/debris tops nav-carved (no islands/perches).
 
 **Issues for G4M3N:** copy full `maps/` (assets + `common/map_door.gd`, `desi_lod_prop.gd`, `props_root.gd`); enable occlusion culling; Clip/ ceilings + Desi Geometry colliders are new; railings visual-only.
+
+## DeadofNight (Medium)
+- Relight only (no geo/col/nav edits). Shared kit `maps/common/night/`.
+- NightKit: 4 shadowed + 25 unshadowed. Strong furnace glow in Foundry Hall (emissive mouth + warm shadowed Omni + fill spot).
+- Sparks: warehouse rack + foundry panel (ties to sparking_box ambience).
+- Interactables: door cost-sign glows, chests, pickups, perk/box/power fills lit.
+- AmbienceEmitters/ (10, ≥8 m): sodium×2 (Yard, Rail), spark×4 (WH×2, Foundry×2), drip×4 (Tank pipes/under, Foundry ceil, WH corner). Lean drips+sparks.
+- BEFORE/AFTER: `screenshots/day/*_art.png` vs `*_night.png`; pairs in `screenshots/pairs/`.
+- Nav island fix: Carve_DesiOriginGhost seals 3.75 m² Desi -col ghost top at ~(0,1.75,0); verify fails=0.

@@ -7,6 +7,8 @@ extends MenuBase
 ## Keys: up/down or d-pad choose, Enter / A load, M / Esc / B close.
 
 const PREVIEW_PATHS := ["res://maps/%s/preview.png", "res://maps/%s/preview.jpg", "res://assets/ui/maps/%s.png"]
+const HARD_NOTE := "Hard: tougher zombies, better rare-currency drops."
+const DIFF_ORDER := {"easy": 0, "medium": 1, "hard": 2}
 
 static var _meta_cache: Dictionary = {}
 
@@ -25,6 +27,10 @@ var _play_btn: Button
 var _gate_label: Label
 var restart_calls: Array = [] ## ids passed to restart (tests read this; set dry_run to skip the reload)
 var dry_run: bool = false
+## Home title screen: always openable, sorts Easy→Hard, difficulty badges, emits map_chosen.
+var home_mode: bool = false
+signal map_chosen(map_id: String)
+var _diff_note: Label
 
 
 func _init() -> void:
@@ -43,7 +49,10 @@ func _ready() -> void:
 
 
 ## M is only live before round 1 and at game over (same gate as main's map cycling).
+## Home mode (title Play → map select) always allows open.
 func can_open() -> bool:
+	if home_mode:
+		return true
 	if main == null or not is_instance_valid(main):
 		return false
 	return int(main.get("current_round")) == 0 or bool(main.get("_game_over"))
@@ -141,6 +150,11 @@ func _build() -> void:
 	_play_btn.pressed.connect(func(): load_map(_sel))
 	_play_btn.mouse_entered.connect(_ui_snd.bind("ui_hover"))
 	detail.add_child(_play_btn)
+	_diff_note = UIStyle.label(HARD_NOTE, 12, UIStyle.BONE_DIM)
+	_diff_note.name = "DiffNote"
+	_diff_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_diff_note.custom_minimum_size.x = 600
+	detail.add_child(_diff_note)
 	var foot := HBoxContainer.new()
 	foot.add_theme_constant_override("separation", 6)
 	content.add_child(foot)
@@ -159,7 +173,7 @@ func refresh() -> void:
 	for c in _list.get_children():
 		c.queue_free()
 	_rows.clear()
-	_ids = MapRegistry.list().map(func(m): return str(m.get("id", "")))
+	_ids = sorted_map_ids()
 	var cur := MapRegistry.current_id()
 	_list.add_child(UIStyle.label("MAPS // %d" % _ids.size(), 16, UIStyle.RUST, true))
 	for id in _ids:
@@ -171,7 +185,13 @@ func refresh() -> void:
 		var b: Button = _rows[keys[i]]
 		b.focus_neighbor_top = b.get_path_to(_rows[keys[(i - 1 + keys.size()) % keys.size()]])
 		b.focus_neighbor_bottom = b.get_path_to(_rows[keys[(i + 1) % keys.size()]])
-	_gate_label.text = "GAME OVER // PICK THE NEXT MAP" if bool(main.get("_game_over")) else "BEFORE ROUND 1"
+	if home_mode:
+		_gate_label.text = "CHOOSE YOUR DROP"
+		_play_btn.text = "DEPLOY"
+	elif main:
+		_gate_label.text = "GAME OVER // PICK THE NEXT MAP" if bool(main.get("_game_over")) else "BEFORE ROUND 1"
+	else:
+		_gate_label.text = ""
 	select_row(cur if _rows.has(cur) else (_ids[0] if not _ids.is_empty() else ""))
 	if _rows.has(_sel):
 		(_rows[_sel] as Button).call_deferred("grab_focus")
@@ -206,6 +226,7 @@ func _make_row(id: String, current: bool) -> Button:
 	var nl := UIStyle.label(str(info.get("display_name", id)).to_upper(), 16, UIStyle.BONE if valid else UIStyle.BONE_DIM, true)
 	nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(nl)
+	h.add_child(difficulty_badge(map_difficulty(id)))
 	if current:
 		h.add_child(UIStyle.label("CURRENT", 10, UIStyle.OLIVE.lightened(0.35), true))
 	var m := map_meta(id)
@@ -243,19 +264,28 @@ func select_row(id: String) -> void:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.custom_minimum_size.x = 600
 		_hint.add_child(l)
-	_play_btn.text = ("RESTART ON %s" if cur else "LOAD %s") % _name.text
+	if home_mode:
+		_play_btn.text = "DEPLOY ON %s" % _name.text
+	else:
+		_play_btn.text = ("RESTART ON %s" if cur else "LOAD %s") % _name.text
 	_play_btn.disabled = not MapRegistry.is_valid(id)
 
 
 ## Selects `id` in MapRegistry and restarts the match on it through main.restart_with_map.
+## Home mode: select + emit map_chosen (home starts the match / change_scene).
 func load_map(id: String) -> bool:
 	if id == "" or not MapRegistry.is_valid(id) or not can_open():
 		return false
 	restart_calls.append(id)
 	_ui_snd("ui_equip")
+	MapRegistry.select(id)
+	map_chosen.emit(id)
 	if dry_run:
-		return MapRegistry.select(id)
+		return true
 	visible = false
+	if home_mode:
+		# Host (home_menu) listens to map_chosen → start_match / change_scene.
+		return true
 	return bool(main.restart_with_map(id))
 
 
@@ -291,6 +321,58 @@ func _preview_texture(id: String, info: Dictionary) -> Texture2D:
 
 
 ## {doors: [{name, cost, opens, pos}], areas: {area -> [Vector2]}, start, bounds: Rect2, spawn: Vector2, open: bool}
+
+# ---------------------------------------------------------------- difficulty (Pass 5 home / map select)
+
+## maps.json difficulty field; missing/unknown → "medium" (Pass 5 UI default).
+static func map_difficulty(id: String) -> String:
+	var d := str(MapRegistry.get_info(id).get("difficulty", "")).strip_edges().to_lower()
+	if d in ["easy", "medium", "hard"]:
+		return d
+	return "medium"
+
+
+static func difficulty_color(diff: String) -> Color:
+	match diff:
+		"easy":
+			return UIStyle.GOOD
+		"hard":
+			return UIStyle.BLOOD.lightened(0.15)
+		_:
+			return UIStyle.RUST.lightened(0.35) # amber / medium
+
+
+static func difficulty_badge(diff: String) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.name = "DiffBadge"
+	p.set_meta("difficulty", diff)
+	var c := difficulty_color(diff)
+	var st := UIStyle.cut_box(c.darkened(0.35), c, 2, 5)
+	st.set_content_margin_all(2)
+	st.content_margin_left = 6
+	st.content_margin_right = 6
+	p.add_theme_stylebox_override("panel", st)
+	p.add_child(UIStyle.label(diff.to_upper(), 10, UIStyle.INK if diff != "hard" else UIStyle.BONE, true))
+	return p
+
+
+## Easy → Hard, stable by display name within a tier.
+static func sorted_map_ids() -> Array:
+	var rows: Array = []
+	for m in MapRegistry.list():
+		var id := str(m.get("id", ""))
+		if id == "":
+			continue
+		rows.append({"id": id, "diff": map_difficulty(id), "name": str(m.get("display_name", id))})
+	rows.sort_custom(func(a, b):
+		var oa: int = int(DIFF_ORDER.get(a.diff, 1))
+		var ob: int = int(DIFF_ORDER.get(b.diff, 1))
+		if oa != ob:
+			return oa < ob
+		return str(a.name) < str(b.name))
+	return rows.map(func(r): return str(r.id))
+
+
 ## Parsed from the .tscn text (doors = nodes with opens_areas; cost defaults to 750 when omitted), cached.
 static func map_meta(id: String) -> Dictionary:
 	if _meta_cache.has(id):

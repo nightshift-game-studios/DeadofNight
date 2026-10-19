@@ -18,15 +18,24 @@ extends Node
 ## when the Inventory leaves the tree (restart / map change) and on window close; restore_stash() at match start.
 ## See /workspace/skillz/STASH_HANDOFF.md.
 ##
+## Save version 4 (2026-10-19): adds [armory] (Gravemark balance, weapon upgrade tiers, owned + equipped attachments, see
+## scripts/armory/armory.gd and /workspace/skillz/ARMORY_HANDOFF.md) and a stable per-item `item_id` on stash gear.
+## v3 saves load with 0 Gravemarks / no armory, and their stash items get an item_id on load (written on the next save).
+##
 ## Economy: data/economy.json -> points_per_hit / points_per_kill (main.gd reads them, see skillz/MAIN_HOOKS.md).
 
 signal ranks_changed ## any rank bought, reset or loaded
 signal rank_changed(id: String, new_rank: int) ## one node bought / ranked up (respec emits ranks_changed)
 signal stash_saved ## the gear stash was captured from the live Inventory and written to disk
+signal currency_changed(balance: int) ## Gravemark balance changed (earned in a match, spent in the Armory, loaded)
+signal gravemark_gained(amount: int, source: String) ## a drop paid out (source: boss/elite/special/regular/chest/milestone)
+signal armory_changed(kind: String, id: String) ## kind: "purchase" / "upgrade" / "equip" / "unequip" / "load"
 
-const SAVE_VERSION := 3 ## 1 = v1 skills, 2 = skill ranks, 3 = + persistent gear stash
+const SAVE_VERSION := 4 ## 1 = v1 skills, 2 = skill ranks, 3 = + persistent gear stash, 4 = + armory / Gravemark / item_id
 const SKILL_TREE_PATH := "res://data/skill_tree.json"
 const ECONOMY_PATH := "res://data/economy.json"
+const ARMORY_SCRIPT := "res://scripts/armory/armory.gd" ## loaded lazily (Armory reads Progress; no compile cycle)
+const DIFFICULTY_SCRIPT := "res://scripts/world/difficulty.gd" ## loaded lazily: a preload const here breaks the WeaponItem <-> GearDB compile cycle
 
 ## Tests point this elsewhere. Changing it drops the in-memory stash so a test never restores the real save's gear.
 var save_path: String = "user://progress.cfg":
@@ -47,6 +56,15 @@ var loaded_save_version: int = 0 ## version of the file last loaded (0 = no file
 ## Persistent gear: Inventory.to_save_dict() ({version, equipped{slot: item|null}, backpack{slot: [items]}}), or {}.
 var stash: Dictionary = {}
 var _inventory_ref: WeakRef = null
+
+## Armory (save v4). Gravemark = the rare persistent currency; armory = {upgrades: {archetype: tier}, owned: [attachment ids],
+## equipped: {archetype: {slot: attachment id}}}. Mutate through Armory (scripts/armory/armory.gd), which calls notify_armory().
+var gravemarks: int = 0
+var gravemarks_lifetime: int = 0
+var match_gravemarks: int = 0 ## earned in the current match (reset by begin_match_gravemarks / record_match)
+var last_match_gravemarks: int = 0 ## what the last finished match paid (game-over screen)
+var armory: Dictionary = {"upgrades": {}, "owned": [], "equipped": {}}
+var armory_rev: int = 0 ## bumped on every armory change (WeaponItem / AdsProfile caches key on it)
 
 ## Point economy (data/economy.json). Defaults = halved playtest values.
 var economy: Dictionary = {}
@@ -92,7 +110,13 @@ func load_data() -> void:
 	skill_ranks = migrate_ranks(ranks_v, cfg.get_value("skills", "unlocked", []))
 	loaded_save_version = int(cfg.get_value("meta", "save_version", cfg.get_value("skills", "version", 1)))
 	stash = migrate_stash(cfg.get_value("stash", "data") if cfg.has_section_key("stash", "data") else null)
+	gravemarks = maxi(int(cfg.get_value("armory", "gravemarks", 0)), 0)
+	gravemarks_lifetime = maxi(int(cfg.get_value("armory", "gravemarks_lifetime", gravemarks)), gravemarks)
+	armory = migrate_armory(cfg.get_value("armory", "data") if cfg.has_section_key("armory", "data") else null)
+	armory_rev += 1
 	_recompute_spent()
+	currency_changed.emit(gravemarks)
+	armory_changed.emit("load", "")
 
 
 ## v2 and older saves have no stash -> {} (starter loadout). Anything that isn't a {equipped, backpack} dict is dropped.
@@ -103,6 +127,47 @@ func migrate_stash(v) -> Dictionary:
 	var out: Dictionary = v.duplicate(true)
 	if typeof(out.get("backpack")) != TYPE_DICTIONARY:
 		out["backpack"] = {}
+	# v3 -> v4: every stored item gets a stable item_id (Armory identity), kept from here on.
+	for s in out.equipped:
+		if typeof(out.equipped[s]) == TYPE_DICTIONARY:
+			ensure_item_id(out.equipped[s])
+	for s in out.backpack:
+		if typeof(out.backpack[s]) == TYPE_ARRAY:
+			for d in out.backpack[s]:
+				if typeof(d) == TYPE_DICTIONARY:
+					ensure_item_id(d)
+	return out
+
+
+## Gives an item dict a stable "item_id" if it has none (legacy v3 gear). Returns the id.
+static func ensure_item_id(d: Dictionary) -> String:
+	if str(d.get("item_id", "")) == "":
+		d["item_id"] = load("res://scripts/items/gear_item.gd").new_item_id()
+	return str(d.item_id)
+
+
+## Armory section -> {upgrades{arch: int}, owned[ids], equipped{arch: {slot: id}}}. Junk is dropped; unknown ids are
+## kept (data may add them back) but Armory ignores anything not in data/attachments.json.
+static func migrate_armory(v) -> Dictionary:
+	var out := {"upgrades": {}, "owned": [], "equipped": {}}
+	if typeof(v) != TYPE_DICTIONARY:
+		return out
+	if typeof(v.get("upgrades")) == TYPE_DICTIONARY:
+		for k in v.upgrades:
+			if int(v.upgrades[k]) > 0:
+				out.upgrades[str(k)] = int(v.upgrades[k])
+	if typeof(v.get("owned")) == TYPE_ARRAY:
+		for id in v.owned:
+			if not (str(id) in out.owned):
+				out.owned.append(str(id))
+	if typeof(v.get("equipped")) == TYPE_DICTIONARY:
+		for a in v.equipped:
+			if typeof(v.equipped[a]) == TYPE_DICTIONARY:
+				var lo := {}
+				for slot in v.equipped[a]:
+					if str(v.equipped[a][slot]) != "":
+						lo[str(slot)] = str(v.equipped[a][slot])
+				out.equipped[str(a)] = lo
 	return out
 
 
@@ -136,6 +201,10 @@ func save_data() -> void:
 	if not stash.is_empty():
 		cfg.set_value("stash", "version", int(stash.get("version", 1)))
 		cfg.set_value("stash", "data", stash)
+	cfg.set_value("armory", "version", 1)
+	cfg.set_value("armory", "gravemarks", gravemarks)
+	cfg.set_value("armory", "gravemarks_lifetime", gravemarks_lifetime)
+	cfg.set_value("armory", "data", armory)
 	var err := cfg.save(save_path)
 	if err != OK:
 		push_warning("Could not save progress (error %d)" % err)
@@ -147,15 +216,63 @@ func xp_for_match(kills: int, round_reached: int) -> int:
 
 
 ## Called at game over. Returns the XP earned this match. Also saves the gear stash.
+## XP is scaled by the active difficulty (data/difficulty.json -> rewards.xp_mult; 1.0 on Easy).
 func record_match(kills: int, round_reached: int) -> int:
-	var earned := xp_for_match(kills, round_reached)
+	var earned := int(round(xp_for_match(kills, round_reached) * float(load(DIFFICULTY_SCRIPT).xp_mult())))
 	total_kills += kills
 	best_round = max(best_round, round_reached)
 	xp += earned
 	games_played += 1
+	last_match_gravemarks = match_gravemarks
+	begin_match_gravemarks()
 	capture_stash()
 	save_data()
 	return earned
+
+
+# ---------------------------------------------------------------- Gravemark (rare currency, save v4)
+
+func gravemark_balance() -> int:
+	return gravemarks
+
+
+## Adds n Gravemarks (n <= 0 is ignored). Drop rules, difficulty scaling and the per-match cap live in Armory
+## (Armory.award / on_zombie_died ...); this is the raw ledger. Not saved here: match end / quit / scene exit save,
+## and Armory purchases save at once.
+func add_gravemark(n: int, source: String = "") -> int:
+	if n <= 0:
+		return gravemarks
+	gravemarks += n
+	gravemarks_lifetime += n
+	match_gravemarks += n
+	gravemark_gained.emit(n, source)
+	currency_changed.emit(gravemarks)
+	return gravemarks
+
+
+## Spends n if affordable. Returns false (nothing changes) otherwise.
+func spend_gravemark(n: int) -> bool:
+	if n < 0 or n > gravemarks:
+		return false
+	gravemarks -= n
+	currency_changed.emit(gravemarks)
+	return true
+
+
+## New match: per-match Gravemark counters back to 0 (also resets Armory's per-round drop limits).
+func begin_match_gravemarks() -> void:
+	match_gravemarks = 0
+	var A = load(ARMORY_SCRIPT)
+	if A:
+		A.reset_match_state()
+
+
+## Armory calls this after changing `armory`: bump the cache key, save, signal.
+func notify_armory(kind: String, id: String, save := true) -> void:
+	armory_rev += 1
+	if save:
+		save_data()
+	armory_changed.emit(kind, id)
 
 
 # ---------------------------------------------------------------- persistent gear stash

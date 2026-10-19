@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+[node name="AmbienceEmitters" type="Node3D" unique_id=1507868897]
+
+[node name="Amb_SodiumA" type="Marker3D" parent="." unique_id=415856948]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 1.6, 10)
+metadata/ambience_key = "ambience_emitter_sodium_buzz_loop"
+
+[node name="Amb_SodiumB" type="Marker3D" parent="." unique_id=1992371302]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 1.6, -8)
+metadata/ambience_key = "ambience_emitter_sodium_buzz_loop"
+
+[node name="Amb_SodiumC" type="Marker3D" parent="." unique_id=1726328189]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 1.6, 10)
+metadata/ambience_key = "ambience_emitter_sodium_buzz_loop"
+
+[node name="Amb_SodiumD" type="Marker3D" parent="." unique_id=1290755458]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 1.6, -10)
+metadata/ambience_key = "ambience_emitter_sodium_buzz_loop"
+
+[node name="Amb_SparkTower" type="Marker3D" parent="." unique_id=1442925548]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, -14)
+metadata/ambience_key = "ambience_emitter_sparking_box_loop"
+
+[node name="Amb_DripAlleyW" type="Marker3D" parent="." unique_id=345804081]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 1.6, 2)
+metadata/ambience_key = "ambience_emitter_drip_pipe_loop"
+
+[node name="Amb_DripAlleyE" type="Marker3D" parent="." unique_id=659423269]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 1.6, 4)
+metadata/ambience_key = "ambience_emitter_drip_pipe_loop"

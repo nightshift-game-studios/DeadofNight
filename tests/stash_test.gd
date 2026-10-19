@@ -173,12 +173,12 @@ func _run() -> void:
 	check(prog.save_stash(), "save_stash() captures the bound inventory")
 	var c2 := ConfigFile.new()
 	c2.load(prog.save_path)
-	check(int(c2.get_value("meta", "save_version", 0)) == 3 and c2.has_section_key("stash", "data") and int(c2.get_value("stash", "version", 0)) == 1,
-		"save written as v3: [meta] save_version 3, [stash] version + data")
+	check(int(c2.get_value("meta", "save_version", 0)) == prog.SAVE_VERSION and prog.SAVE_VERSION >= 3 and c2.has_section_key("stash", "data") and int(c2.get_value("stash", "version", 0)) == 1,
+		"save written as current version (>= v3): [meta] save_version, [stash] version + data")
 	check(c2.get_value("skills", "ranks", {}) == {"mk_root": 1}, "skills survive the v3 rewrite")
 	prog.stash = {}
 	prog.load_data()
-	check(prog.loaded_save_version == 3 and prog.has_stash(), "v3 save reloads its stash")
+	check(prog.loaded_save_version == prog.SAVE_VERSION and prog.has_stash(), "v3+ save reloads its stash")
 	var inv_r = _new_inv()
 	check(prog.restore_stash(inv_r) and inv_r.carried_count() == inv.carried_count() and inv_r.unseen_count() == inv.unseen_count()
 		and inv_r.equipped.primary.display_name == inv.equipped.primary.display_name, "restore_stash rebuilds equipped + carried + seen")

@@ -1,0 +1,115 @@
+{
+	"version": 1,
+	"_help": "Armory economy (Skillz). currency = Gravemark: persistent (Progress [armory]), separate from points, kept on death. Every source's amount or chance is multiplied by Difficulty.rare_currency_drop_mult() (easy 1.0, medium 1.35, hard 1.75); chances above 1 pay the whole part plus a roll for the rest. match_cap = most Gravemarks one match can pay. upgrades = per-archetype tiers bought in order; cost[tier-1] x archetype_cost_mult; item_power = TOTAL bonus at that tier added to the weapon's Item Power (damage x(1+IP*0.004)); mods = that tier's extra WeaponItem mods (they stack with lower tiers). expected = assumptions for Armory.expected_match_income() (tests + the matches-to-max table).",
+	"currency": {
+		"id": "gravemark",
+		"name": "Gravemark",
+		"plural": "Gravemarks",
+		"icon": "gravemark",
+		"pickup_model": "res://assets/models/pickups/gravemark.glb",
+		"match_cap": 30,
+		"sources": {
+			"boss": {
+				"_help": "BossCatalog gravemark_reward (2-3) for the first boss killed in a round; later bosses that round pay extra_boss_amount.",
+				"extra_boss_amount": 1
+			},
+			"elite": {
+				"_help": "zombie meta 'elite' = true, or a variant listed here (none yet; G4M3N's armored variants).",
+				"chance": 0.2,
+				"amount": 1,
+				"variants": []
+			},
+			"special": {
+				"_help": "Tougher regular variants.",
+				"chance": 0.006,
+				"amount": 1,
+				"variants": [
+					"soldier"
+				]
+			},
+			"regular": {
+				"chance": 0.0015,
+				"amount": 1
+			},
+			"chest": {
+				"chance": 0.04,
+				"amount": 1,
+				"per_round_max": 1,
+				"match_max": 2
+			},
+			"milestone": {
+				"every": 10,
+				"amount": 1
+			}
+		}
+	},
+	"upgrades": {
+		"name_template": "{type} Rework",
+		"tiers": [
+			{
+				"tier": 1,
+				"name": "I",
+				"cost": 3,
+				"item_power": 8,
+				"mods": {},
+				"summary": "+8 Item Power."
+			},
+			{
+				"tier": 2,
+				"name": "II",
+				"cost": 6,
+				"item_power": 16,
+				"mods": {
+					"reload_mult": 0.95
+				},
+				"summary": "+16 Item Power, reload -5%. Unlocks tier 2 attachments."
+			},
+			{
+				"tier": 3,
+				"name": "III",
+				"cost": 11,
+				"item_power": 26,
+				"mods": {
+					"reserve_mags_add": 1
+				},
+				"summary": "+26 Item Power, +1 reserve mag."
+			},
+			{
+				"tier": 4,
+				"name": "IV",
+				"cost": 20,
+				"item_power": 38,
+				"mods": {
+					"recoil_mult": 0.9
+				},
+				"summary": "+38 Item Power, recoil -10%. Unlocks tier 3 attachments."
+			},
+			{
+				"tier": 5,
+				"name": "V",
+				"cost": 36,
+				"item_power": 55,
+				"mods": {
+					"mag_mult": 1.1,
+					"swap_mult": 0.9
+				},
+				"summary": "Masterwork: +55 Item Power, magazine +10%, swap -10%."
+			}
+		],
+		"archetype_cost_mult": {
+			"rocket_launcher": 1.25
+		},
+		"min_growth": 1.6
+	},
+	"expected": {
+		"_help": "Income model: kills = main.gd wave counts x Difficulty count mults; chest_opens_per_round; bosses killed as rostered.",
+		"chest_opens_per_round": 2,
+		"first_round_zombies": 6,
+		"zombies_per_round": 3,
+		"typical_rounds": {
+			"easy": 15,
+			"medium": 13,
+			"hard": 11
+		}
+	}
+}

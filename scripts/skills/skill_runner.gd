@@ -56,7 +56,34 @@ func rebuild() -> void:
 		for id in rs.cards:
 			if rs.card_class_ok(id):
 				_add_def(rs.card_def(id), int(rs.cards[id]), id, "card")
+	_add_armory()
 	_index()
+
+
+## Armory attachments (data/attachments.json -> effects): one effect per equipped part per archetype, gated by
+## weapon_arch (the effect only runs / modifies while that archetype is the weapon in ctx or in hand).
+func _add_armory() -> void:
+	var A = load("res://scripts/armory/armory.gd")
+	if A == null or get_node_or_null("/root/Progress") == null:
+		return
+	for e in A.effect_defs():
+		var eff: SkillEffect = EffectRegistry.make(e.def, 1, "armory:%s@%s" % [e.id, e.arch], "armory")
+		if eff == null:
+			continue
+		eff.weapon_arch = str(e.arch)
+		eff.runner = self
+		effects.append(eff)
+		eff.attach()
+
+
+## Armory gate: the ctx weapon (or the weapon in hand) must be of the effect's archetype.
+func arch_ok(e: SkillEffect, ctx: Dictionary) -> bool:
+	if e.weapon_arch == "":
+		return true
+	var w = ctx.get("weapon")
+	if not (w is WeaponItem) and player and player.has_method("current_weapon"):
+		w = player.current_weapon()
+	return w is WeaponItem and w.archetype == e.weapon_arch
 
 
 ## Attach (or re-rank) one Field Card without touching anything else.
@@ -109,6 +136,8 @@ func _index() -> void:
 func modify(stat: String, base: float, ctx: Dictionary = {}) -> float:
 	var v := base
 	for e in _by_stat.get(stat, []):
+		if e.weapon_arch != "" and not arch_ok(e, ctx):
+			continue
 		v = e.modify(stat, v, ctx)
 	return v
 
@@ -134,7 +163,7 @@ func _on_event(name: StringName, ctx: Dictionary) -> void:
 		return
 	_dispatching += 1
 	for e in _by_event[name].duplicate():
-		if e.runner == self and e.wants(ctx):
+		if e.runner == self and (e.weapon_arch == "" or arch_ok(e, ctx)) and e.wants(ctx):
 			e.on_event(name, ctx)
 	_dispatching -= 1
 
@@ -172,6 +201,22 @@ func cond(name: String, ctx: Dictionary, p: Dictionary = {}) -> bool:
 			if t2 == null or not is_instance_valid(t2) or not ("health" in t2):
 				return false
 			return float(t2.health) / maxf(float(t2.max_health), 1.0) < float(p.get("threshold", 0.25))
+		"ads": # aiming down sights (player.ads_active)
+			return SkillEffect.truthy(ctx.get("ads")) if ctx.has("ads") else (pl != null and "ads_active" in pl and pl.ads_active)
+		"target_unhurt": # Armory suppressors: zombie still at full health
+			var t3 = ctx.get("target")
+			return t3 != null and is_instance_valid(t3) and "health" in t3 and float(t3.health) >= float(t3.max_health)
+		"target_boss": # Gravesight: bosses and elites
+			var t4 = ctx.get("target")
+			return t4 != null and is_instance_valid(t4) and ((t4.has_meta("is_boss") and t4.get_meta("is_boss")) \
+				or (t4.has_meta("elite") and t4.get_meta("elite")))
+		"close": # within params.range metres (ctx.distance)
+			return ctx.has("distance") and float(ctx.distance) <= float(p.get("range", 6.0))
+		"crowded": # at least params.count zombies within params.radius of the player (Heartbeat Counter)
+			if ctx.has("crowded"):
+				return SkillEffect.truthy(ctx.crowded)
+			return pl != null and enemies_near(pl.global_position + Vector3(0, 0.9, 0), float(p.get("radius", 10.0))).size() \
+				>= int(p.get("count", 5))
 		"ability_active":
 			return pl != null and pl.is_ability_active()
 		"health_below":

@@ -6,13 +6,22 @@
 			"id": "arena",
 			"display_name": "Arena",
 			"scene": "",
-			"description": "The original walled arena: brick alley, tower, platform. Fully open, 7 spawns."
+			"description": "The original walled arena: brick alley, tower, platform. Fully open, 7 spawns.",
+			"difficulty": "easy"
 		},
 		{
 			"id": "rustwell_foundry",
 			"display_name": "Rustwell Foundry",
 			"scene": "res://maps/rustwell_foundry/rustwell_foundry.tscn",
-			"description": "Overrun steel works. Start in the Loading Yard and buy doors (750 / 1000 / 1250) to open the Rail Spur, Warehouse, Foundry Hall and Tank Farm."
+			"description": "Overrun steel works. Start in the Loading Yard and buy doors (750 / 1000 / 1250) to open the Rail Spur, Warehouse, Foundry Hall and Tank Farm.",
+			"difficulty": "medium"
+		},
+		{
+			"id": "lockout_substation",
+			"display_name": "Lockout Substation",
+			"scene": "res://maps/lockout_substation/lockout_substation.tscn",
+			"description": "Quarantined municipal substation. Open switchyard with a grated deck; buy the Vault Hatch (750) for the 20×12 m battery vault boss floor.",
+			"difficulty": "hard"
 		}
 	]
 }

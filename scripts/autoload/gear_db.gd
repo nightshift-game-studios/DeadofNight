@@ -7,6 +7,7 @@ const ARMOR_PATH := "res://data/armor.json"
 const PERKS_PATH := "res://data/perks.json"
 const LOOT_PATH := "res://data/loot_tables.json"
 const GRENADES_PATH := "res://data/grenades.json"
+const DIFFICULTY_SCRIPT := "res://scripts/world/difficulty.gd" ## loaded lazily: a preload const here breaks the WeaponItem <-> GearDB compile cycle
 const SECONDARY_ELEMENTS: Array[String] = ["volt", "blaze", "blight"]
 const ELEMENT_COLORS := {"ballistic": Color(0.85, 0.85, 0.85), "volt": Color(0.35, 0.75, 1.0),
 	"blaze": Color(1.0, 0.45, 0.1), "blight": Color(0.55, 0.95, 0.2)}
@@ -158,6 +159,9 @@ func roll_rarity(weights: Dictionary, round_bonus: Dictionary = {}, round_number
 		var id: String = Rarity.IDS[i]
 		var w: float = float(weights.get(id, 0.0)) + float(round_bonus.get(id, 0.0)) * max(round_number - 1, 0)
 		ws.append(w)
+	# difficulty reward scaling (data/difficulty.json -> rewards.loot_rarity_bias; 0 on Easy / before main applies one)
+	ws = load(DIFFICULTY_SCRIPT).bias_rarity_weights(ws, load(DIFFICULTY_SCRIPT).loot_rarity_bias())
+	for w in ws:
 		total += w
 	var r := randf() * total
 	for i in ws.size():

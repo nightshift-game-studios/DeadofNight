@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[node name="ArenaMoon" type="Node3D" unique_id=1834015459]
+
+[node name="Moon" type="DirectionalLight3D" parent="." unique_id=2141043673]
+transform = Transform3D(-0.64278764, -0.5125838, 0.56928194, 0, 0.7431448, 0.6691306, -0.76604444, 0.4301089, -0.4776843, 0, 0, 0)
+light_color = Color(0.55, 0.65, 0.95, 1)
+light_energy = 0.55
+shadow_enabled = true
+directional_shadow_max_distance = 55.0

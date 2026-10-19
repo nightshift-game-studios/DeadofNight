@@ -22,13 +22,26 @@ extends Item
 ## New rolls/pickups start false; Inventory marks auto-equipped items seen; legacy saves (no key) load true.
 @export var seen: bool = false
 
+## Stable identity (save v4): generated once when the item is rolled, saved with it and kept across matches.
+## The Armory and UI can key on it; `id` / `uid` are per-session. Legacy items get one on load (Progress.migrate_stash).
+@export var item_id: String = ""
+
 static var _next_uid: int = 1
+static var _id_serial: int = 0
 var uid: int = 0 ## unique per instance (handy for UI / vault)
 
 
 func _init() -> void:
 	uid = _next_uid
 	_next_uid += 1
+	item_id = new_item_id()
+
+
+## "g" + 16 hex chars: unix ms time + a session serial + random bits. Unique enough for one player's saves.
+static func new_item_id() -> String:
+	_id_serial += 1
+	var t := int(Time.get_unix_time_from_system() * 1000.0)
+	return "g%010x%06x" % [t & 0xFFFFFFFFFF, ((_id_serial & 0xFFF) << 12) | (randi() & 0xFFF)]
 
 
 func rarity_name() -> String:
@@ -48,11 +61,14 @@ func to_dict() -> Dictionary:
 		"kind": "gear", "id": id, "display_name": display_name, "rarity": rarity, "item_power": item_power, "roll_quality": snappedf(roll_quality, 0.001),
 		"manufacturer": manufacturer, "manufacturer_color": manufacturer_color.to_html(), "flavor": flavor,
 		"slot": slot, "archetype": archetype, "stats": stats.duplicate(), "perks": Array(perks), "seen": seen,
+		"item_id": item_id,
 	}
 
 
 func apply_dict(d: Dictionary) -> void:
 	id = d.get("id", id)
+	if str(d.get("item_id", "")) != "":
+		item_id = str(d.item_id) # legacy dicts without one keep the fresh id from _init
 	display_name = d.get("display_name", display_name)
 	rarity = int(d.get("rarity", rarity))
 	# Legacy saves (before Item Power) have no item_power: they load as IP 100 (configurable).
