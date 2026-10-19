@@ -92,6 +92,7 @@ func _ready() -> void:
 		points_per_kill = prog.points_per_kill
 	_player_spawn = player.global_transform
 	_load_map()
+	_setup_ambience()
 	# Bake the navmesh from the level's static colliders at startup, so it always
 	# matches the level even after you move things around in the editor.
 	nav_region.bake_navigation_mesh(true)
@@ -503,10 +504,31 @@ func _on_area_unlocked(area: StringName) -> void:
 	GameEvents.emit_event(&"area_unlocked", {"player": player, "area": area})
 
 
+## Night ambience (Audi-0): per-map layer for map_id + 3D loops on every map node with meta ambience_key.
+## Returns the number of emitters attached.
+func _setup_ambience() -> int:
+	var a := _sfx()
+	if a == null:
+		return 0
+	if a.has_method("set_map_ambience"):
+		a.set_map_ambience(map_id)
+	var root: Node = map if map else get_node_or_null("NavigationRegion3D")
+	if root == null:
+		return 0
+	var n := 0
+	for node in root.find_children("*", "Node3D", true, false):
+		if node.has_meta("ambience_key") and a.attach_loop(str(node.get_meta("ambience_key")), node) != null:
+			n += 1
+	return n
+
+
 ## Map picker API (Gooey): select a map and restart the match on it. Returns false for unknown ids.
 func restart_with_map(id: String) -> bool:
 	if not MapRegistry.select(id):
 		return false
+	var a := _sfx() # switch the map ambience layer now; the reloaded scene re-attaches emitters
+	if a and a.has_method("set_map_ambience"):
+		a.set_map_ambience(id)
 	get_tree().paused = false
 	get_tree().reload_current_scene()
 	return true

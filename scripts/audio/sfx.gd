@@ -6,7 +6,8 @@ extends Node
 ##  - Buses: Master, Music, SFX, UI, Ambience (default_bus_layout.tres; created here if missing).
 ##  - 2D one-shots (play), positional one-shots (play_at), loops that follow a node (attach_loop),
 ##    a capped pool of zombie voices (zombie_voice), music with crossfades (set_music), an always-on
-##    ambience loop and the low-health heartbeat (set_low_health).
+##    night ambience bed + a per-map ambience layer (set_map_ambience), 3D ambience emitters
+##    (attach_loop with an ambience_emitter_* key) and the low-health heartbeat (set_low_health).
 ## Missing files are silently ignored, so the game never errors because of audio.
 
 const ROOT := "res://assets/audio/"
@@ -18,7 +19,21 @@ const MUSIC := {
 	"combat": "music_combat_loop", ## while a round is running
 }
 const MUSIC_DB := -4.0
-const AMBIENCE_DB := -10.0
+const AMBIENCE_DB := -10.0 ## old wind bed (fallback when the night bed is missing)
+## Night ambience (Audi-0): an always-on bed plus one layer per map id (data/maps.json).
+const NIGHT_BED := "ambience_night_bed_loop"
+const FALLBACK_BED := "ambience_wind_industrial_loop"
+const MAP_AMBIENCE := {
+	"arena": "ambience_map_arena_loop",
+	"rustwell_foundry": "ambience_map_rustwell_loop",
+	"lockout_substation": "ambience_map_lockout_loop",
+}
+## 3D ambience emitters placed in maps (node meta ambience_key): [unit_size, max_distance].
+const EMITTER_RANGE := {
+	"ambience_emitter_sodium_buzz_loop": [6.0, 18.0],
+	"ambience_emitter_sparking_box_loop": [6.0, 18.0],
+	"ambience_emitter_drip_pipe_loop": [6.0, 12.0],
+}
 const CROSSFADE := 1.6
 const MAX_ZOMBIE_VOICES := 4  # Audi-0 mix pass: was 6
 const POOL_2D := 12
@@ -44,6 +59,13 @@ const MIX := {
 	"menu_open": [-7.0, 0.02, "UI"], "menu_close": [-7.0, 0.02, "UI"], "ui_hover": [-15.0, 0.04, "UI"],
 	"ui_equip": [-6.0, 0.02, "UI"], "ui_scrap_dismantle": [-6.0, 0.02, "UI"], "ui_skill_unlock": [-4.0, 0.0, "UI"],
 	"points_tick": [-17.0, 0.06, "UI"], "loot_drop": [-6.0, 0.0, "UI"], "chest_open": [-4.0, 0.03, "UI"],
+	"ambience_night_bed_loop": [-2.0, 0.0, "Ambience"],
+	"ambience_map_arena_loop": [-4.0, 0.0, "Ambience"],
+	"ambience_map_rustwell_loop": [-3.0, 0.0, "Ambience"],
+	"ambience_map_lockout_loop": [-3.0, 0.0, "Ambience"],
+	"ambience_emitter_sodium_buzz_loop": [-6.0, 0.02, "Ambience"],
+	"ambience_emitter_sparking_box_loop": [-6.0, 0.02, "Ambience"],
+	"ambience_emitter_drip_pipe_loop": [-6.0, 0.02, "Ambience"],
 }
 ## Loot chime per rarity id (Rarity.IDS). loot_drop_epic.wav exists in the pack but has no rarity yet.
 const LOOT_CHIME := {"common": "loot_drop_common", "uncommon": "loot_drop_uncommon", "rare": "loot_drop_rare",
@@ -58,7 +80,9 @@ var _next3d: int = 0
 var _music: Array[AudioStreamPlayer] = []
 var _music_cur: int = 0
 var _music_tweens: Array = [null, null]
-var _ambience: AudioStreamPlayer
+var _ambience: AudioStreamPlayer ## night bed (or the old wind bed as a fallback)
+var _ambience_map: AudioStreamPlayer ## per-map layer
+var map_ambience_key: String = "" ## key playing on the map layer ("" = none)
 var _heartbeat: AudioStreamPlayer
 var _voices: Array = [] ## active zombie voice players: [player, priority]
 var _last_tick: int = 0
@@ -83,13 +107,7 @@ func _ready() -> void:
 		m.volume_db = -80.0
 		add_child(m)
 		_music.append(m)
-	_ambience = AudioStreamPlayer.new()
-	_ambience.bus = "Ambience"
-	_ambience.volume_db = AMBIENCE_DB
-	_ambience.stream = stream("ambience_wind_industrial_loop")
-	add_child(_ambience)
-	if _ambience.stream:
-		_ambience.play()
+	_ready_ambience()
 	_heartbeat = AudioStreamPlayer.new()
 	_heartbeat.bus = "SFX"
 	_heartbeat.stream = stream("heartbeat_low_health_loop")
@@ -98,6 +116,27 @@ func _ready() -> void:
 
 
 # ------------------------------------------------------------------ setup
+
+## Night bed (always on) + an idle per-map layer that set_map_ambience() fills in.
+func _ready_ambience() -> void:
+	_ambience = AudioStreamPlayer.new()
+	_ambience.name = "AmbienceBed"
+	_ambience.bus = "Ambience"
+	_ambience.stream = stream(NIGHT_BED)
+	if _ambience.stream:
+		_ambience.volume_db = float(mix(NIGHT_BED)[0])
+	else: # night bed missing: fall back to the old wind loop
+		_ambience.stream = stream(FALLBACK_BED)
+		_ambience.volume_db = AMBIENCE_DB
+	add_child(_ambience)
+	if _ambience.stream:
+		_ambience.play()
+	_ambience_map = AudioStreamPlayer.new()
+	_ambience_map.name = "AmbienceMap"
+	_ambience_map.bus = "Ambience"
+	_ambience_map.volume_db = -80.0
+	add_child(_ambience_map)
+
 
 ## Makes sure the five buses exist (the project ships default_bus_layout.tres; this is a fallback).
 func ensure_buses() -> void:
@@ -158,6 +197,40 @@ func _setup_3d(p: AudioStreamPlayer3D) -> void:
 	p.attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_DISTANCE
 	p.attenuation_filter_cutoff_hz = 6000.0
 	p.attenuation_filter_db = -12.0
+
+
+## Switches the per-map ambience layer to the loop for `id` (a data/maps.json id). Unknown ids or a
+## missing file stop the layer. Call after the map loads and whenever the map changes.
+func set_map_ambience(id: String) -> void:
+	if _ambience_map == null:
+		return
+	var key := str(MAP_AMBIENCE.get(id, ""))
+	var st: AudioStream = stream(key) if key != "" else null
+	if st == null:
+		_ambience_map.stop()
+		_ambience_map.stream = null
+		map_ambience_key = ""
+		return
+	if key == map_ambience_key and _ambience_map.playing:
+		return
+	_ambience_map.stream = st
+	_ambience_map.volume_db = float(mix(key)[0])
+	_ambience_map.play()
+	map_ambience_key = key
+
+
+## Attaches a looping 3D emitter to every Node3D under `root` with meta ambience_key. Returns the count.
+func attach_emitters(root: Node) -> int:
+	if root == null:
+		return 0
+	var n := 0
+	var nodes: Array = root.find_children("*", "Node3D", true, false)
+	if root is Node3D:
+		nodes.push_front(root)
+	for node in nodes:
+		if node.has_meta("ambience_key") and attach_loop(str(node.get_meta("ambience_key")), node) != null:
+			n += 1
+	return n
 
 
 # ------------------------------------------------------------------ lookups
@@ -228,7 +301,13 @@ func attach_loop(key: String, node: Node3D, volume_offset: float = 0.0) -> Audio
 	_setup_3d(p)
 	var m := mix(key)
 	p.stream = st
+	p.bus = m[2]
 	p.volume_db = float(m[0]) + volume_offset
+	if EMITTER_RANGE.has(key): # ambience emitters read locally without washing out the bed
+		p.name = "AmbienceEmitter"
+		p.unit_size = float(EMITTER_RANGE[key][0])
+		p.max_distance = float(EMITTER_RANGE[key][1])
+		p.pitch_scale = _pitch(float(m[1]))
 	node.add_child(p)
 	p.play()
 	return p
@@ -388,6 +467,7 @@ func _exit_tree() -> void:
 	all.append_array(_pool3d)
 	all.append_array(_music)
 	all.append(_ambience)
+	all.append(_ambience_map)
 	all.append(_heartbeat)
 	for p in all:
 		if is_instance_valid(p):
