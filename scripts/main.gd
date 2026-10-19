@@ -323,6 +323,7 @@ func _on_boss_request_echo(host: Node, count: int) -> void:
 		z.setup(ehp, stats.speed * float(echo.get("speed_mult", 1.1)),
 			maxi(int(round(stats.damage * float(echo.get("damage_mult", 0.7)))), 1))
 		z.set_meta("boss_echo", true)
+		BossCatalogScr.apply_echo_model(z) # Desi's echo_walker.glb at its real 1.526 m (Skillz art pass)
 		z.hit.connect(_on_zombie_hit)
 		z.died.connect(_on_zombie_died)
 		zombies_root.add_child(z)

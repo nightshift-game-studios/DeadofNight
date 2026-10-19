@@ -38,6 +38,9 @@ signal ads_changed(active: bool) ## Gooey sniper scope overlay listens when AdsP
 var ads_active: bool = false
 var _hip_fov: float = 75.0
 const ArmoryScr := preload("res://scripts/armory/armory.gd")
+const WeaponRigScr := preload("res://scripts/gear/weapon_rig.gd") ## Armory attachments on the view model (Skillz art pass)
+var _gun_model: Node3D ## current first-person gun model (re-fitted when the Armory loadout changes)
+var _gun_rig: Dictionary = {} ## last WeaponRig.apply() result: attached / hidden / missing / muzzle / sight / lamp
 ## Mine Lamp (Skillz §10 + Mapz): camera SpotLight3D, F to toggle, gated on Armory.has_mine_lamp(archetype).
 var _flashlight: SpotLight3D
 var _flashlight_on: bool = false
@@ -197,14 +200,13 @@ func _ready() -> void:
 	_flashlight = SpotLight3D.new()
 	_flashlight.name = "Flashlight"
 	camera.add_child(_flashlight)
-	_flashlight.spot_range = 22.0
-	_flashlight.spot_angle = 28.0
-	_flashlight.light_energy = 2.4
-	_flashlight.light_color = Color(0.92, 0.95, 1.0)
+	_apply_flashlight_cfg(ArmoryScr.flashlight_values(ArmoryScr.attachment("mine_lamp"))) # data: attachments.json mine_lamp light_*
 	_flashlight.shadow_enabled = false
-	_flashlight.spot_attenuation = 1.1
 	_flashlight.visible = false
 	_flashlight.position = Vector3(0.12, -0.05, -0.1)
+	var _pg := get_node_or_null("/root/Progress")
+	if _pg and _pg.has_signal("armory_changed") and not _pg.armory_changed.is_connected(_on_armory_changed):
+		_pg.armory_changed.connect(_on_armory_changed)
 	var _st := get_node_or_null("/root/Settings")
 	if _st and not _st.changed.is_connected(_on_settings_changed):
 		_st.changed.connect(_on_settings_changed)
@@ -719,7 +721,9 @@ func _build_view_model(w: WeaponItem) -> void:
 	model.position = -a.get_center() * s
 	ModelUtil.set_shadows(model, false)
 	var top: float = (a.end.y - a.get_center().y) * s
-	muzzle.position = Vector3(0, top * 0.55, -length * 0.5)
+	muzzle.position = Vector3(0, top * 0.55, -length * 0.5) # fallback for guns without a Muzzle socket
+	_gun_model = model
+	_fit_attachments(w)
 
 
 func _aim_point(max_dist: float) -> Vector3:
@@ -1345,6 +1349,8 @@ func _set_flashlight(on: bool) -> void:
 		return
 	var was := _flashlight_on
 	_flashlight_on = on and ArmoryScr.has_mine_lamp(_weapon_archetype())
+	if _flashlight_on:
+		_apply_flashlight_cfg(ArmoryScr.flashlight_config(_weapon_archetype()))
 	_flashlight.visible = _flashlight_on
 	if was != _flashlight_on:
 		var a := _sfx()
@@ -1356,3 +1362,32 @@ func _set_flashlight(on: bool) -> void:
 func _sync_flashlight() -> void:
 	if not ArmoryScr.has_mine_lamp(_weapon_archetype()):
 		_set_flashlight(false)
+
+
+## Armory attachments on the view model (Skillz WeaponRig, MAIN_HOOKS §12): attachment GLBs on the gun's sockets,
+## default parts they replace hidden, and the tracer/flash Muzzle moved to the effective bore exit
+## (suppressor front > barrel Muzzle > gun Muzzle socket). Guns without sockets (rocket launcher) are left as they are.
+func _fit_attachments(w: WeaponItem) -> void:
+	if w == null or _gun_model == null or not is_instance_valid(_gun_model):
+		return
+	_gun_rig = WeaponRigScr.apply(_gun_model, w.archetype)
+	var mz = _gun_rig.get("muzzle")
+	if mz is Node3D and (mz as Node3D).is_inside_tree():
+		muzzle.position = gun.to_local((mz as Node3D).global_position)
+
+
+func _on_armory_changed(_kind: String, _id: String) -> void:
+	_fit_attachments(current_weapon())
+	_sync_flashlight()
+
+
+## Mine Lamp beam values from data (attachments.json -> mine_lamp light_*; Armory.flashlight_config), MAIN_HOOKS §13.
+func _apply_flashlight_cfg(c: Dictionary) -> void:
+	if _flashlight == null or c.is_empty():
+		return
+	_flashlight.light_energy = float(c.get("light_energy", 7.0))
+	_flashlight.spot_range = float(c.get("light_range", 22.0))
+	_flashlight.spot_angle = float(c.get("light_angle", 28.0))
+	_flashlight.spot_attenuation = float(c.get("light_attenuation", 1.1))
+	if c.get("color") is Color:
+		_flashlight.light_color = c.color

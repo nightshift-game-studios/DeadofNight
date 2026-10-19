@@ -368,6 +368,98 @@ static func has_mine_lamp(arch: String) -> bool:
 
 
 ## SkillRunner: [{arch, id, def}] for every effect of every equipped attachment (gated to that archetype in hand).
+## Camera flashlight values for the part fitted on `arch` (Mine Lamp today), read by player.gd (MAIN_HOOKS §13).
+## Missing keys fall back to FLASHLIGHT_DEFAULTS (Mapz flashlight.patch numbers, energy raised in the art pass).
+## {} when no flashlight part is equipped on that archetype (or it's below the tier gate).
+const FLASHLIGHT_DEFAULTS := {"light_energy": 7.0, "light_range": 22.0, "light_angle": 28.0, "light_attenuation": 1.1,
+	"light_color": [0.92, 0.95, 1.0]}
+
+static func flashlight_config(arch: String) -> Dictionary:
+	if not has_mine_lamp(arch):
+		return {}
+	var a := attachment(str(loadout(arch).get("grip", "mine_lamp")))
+	if not bool(a.get("flags", {}).get("mine_lamp", false)):
+		a = attachment("mine_lamp")
+	return flashlight_values(a)
+
+
+## FLASHLIGHT_DEFAULTS overlaid with an attachment entry's light_* keys (also used by tests / the Armory card).
+static func flashlight_values(a: Dictionary) -> Dictionary:
+	var out := FLASHLIGHT_DEFAULTS.duplicate(true)
+	for k in FLASHLIGHT_DEFAULTS:
+		if a.has(k):
+			out[k] = a[k]
+	var c: Array = out.light_color
+	out["color"] = Color(float(c[0]), float(c[1]), float(c[2]))
+	return out
+
+
+## Item Power split for Gooey's Armory / item cards: {base_rolled, rework_bonus, total} plus context keys
+## archetype, item_id, tier, source ("item" | "best_owned" | "baseline").
+## weapon_id = a gear item_id (that item's rolled IP) or an archetype id (the highest-IP weapon of that archetype you
+## carry or have stashed; with none, the legacy baseline IP 100). rework_bonus = power_bonus(arch) from the upgrade tier.
+## total = base_rolled + rework_bonus = WeaponItem.effective_item_power() for that item.
+static func item_power_breakdown(weapon_id: String) -> Dictionary:
+	var arch := resolve_weapon(weapon_id)
+	var baseline := 100
+	var gdb = Engine.get_main_loop().root.get_node_or_null("GearDB") if Engine.get_main_loop() is SceneTree else null
+	if gdb and "loot" in gdb:
+		baseline = int(gdb.loot.get("roll_quality", {}).get("legacy_item_power", 100))
+	var base := baseline
+	var source := "baseline"
+	var item_id := ""
+	var items := _owned_weapon_dicts()
+	if not is_archetype(weapon_id):
+		for it in items:
+			if str(it.get("item_id", "")) == weapon_id:
+				base = int(it.get("item_power", baseline))
+				source = "item"
+				item_id = weapon_id
+				break
+	else:
+		var best := -1
+		for it in items:
+			if str(it.get("archetype", "")) == arch and int(it.get("item_power", baseline)) > best:
+				best = int(it.get("item_power", baseline))
+				item_id = str(it.get("item_id", ""))
+		if best >= 0:
+			base = best
+			source = "best_owned"
+	var bonus := power_bonus(arch) if arch != "" else 0
+	return {"base_rolled": base, "rework_bonus": bonus, "total": base + bonus, "archetype": arch, "item_id": item_id,
+		"tier": upgrade_tier(arch) if arch != "" else 0, "source": source}
+
+
+## Weapon item dicts from the live Inventory (equipped + backpack) and the saved stash, deduplicated by item_id.
+static func _owned_weapon_dicts() -> Array:
+	var out: Array = []
+	var seen := {}
+	var p = prog()
+	if p == null:
+		return out
+	var saves: Array = []
+	var inv = p.bound_inventory() if p.has_method("bound_inventory") else null
+	if inv and inv.has_method("to_save_dict"):
+		saves.append(inv.to_save_dict())
+	if "stash" in p and typeof(p.stash) == TYPE_DICTIONARY:
+		saves.append(p.stash)
+	for d in saves:
+		var items: Array = []
+		for s in d.get("equipped", {}):
+			items.append(d.equipped[s])
+		for s in d.get("backpack", {}):
+			items.append_array(d.backpack[s])
+		for it in items:
+			if typeof(it) != TYPE_DICTIONARY or str(it.get("class", "")) != "weapon":
+				continue
+			var iid := str(it.get("item_id", ""))
+			if iid != "" and seen.has(iid):
+				continue
+			seen[iid] = true
+			out.append(it)
+	return out
+
+
 static func effect_defs() -> Array:
 	var out := []
 	for w in weapons():

@@ -8,6 +8,8 @@ extends RefCounted
 ##   BossCatalog.kill_points(id, points_per_kill=50) / gravemark_reward(id)
 ##   BossCatalog.pick_roster(round, difficulty_id="") -> Array[String]
 ##   BossCatalog.script_path(id) / is_boss_id(id)
+##   Art (2026-10-19): model_path(id) / icon_path(id) / anims(id) / fx(id) / echo_model_path() / echo_model_height()
+##   BossCatalog.apply_echo_model(z) -> Echo Walker GLB + 1.526 m on a Choir Host add (call before add_child; MAIN_HOOKS §11)
 ## Until main.gd wires MAIN_HOOKS §7, nothing spawns bosses — this module is safe to load alone.
 
 const DATA_PATH := "res://data/bosses.json"
@@ -55,6 +57,44 @@ static func echo_cfg(id: String = "choir_host") -> Dictionary:
 
 static func script_path(id: String) -> String:
 	return str(get_boss(id).get("script", ""))
+
+
+## res:// path of the boss GLB (Desi), "" if none. Bosses fall back to the zombie scene's walker model when missing.
+static func model_path(id: String) -> String:
+	return str(get_boss(id).get("model", ""))
+
+
+static func icon_path(id: String) -> String:
+	return str(get_boss(id).get("icon", ""))
+
+
+## Clip names + timing (data/bosses.json -> bosses[id].anims).
+static func anims(id: String) -> Dictionary:
+	return get_boss(id).get("anims", {})
+
+
+## Socket / material / light presentation values (data/bosses.json -> bosses[id].fx).
+static func fx(id: String) -> Dictionary:
+	return get_boss(id).get("fx", {})
+
+
+static func echo_model_path(host_id: String = "choir_host") -> String:
+	return str(echo_cfg(host_id).get("model", ""))
+
+
+## Real height of echo_walker.glb. Without it enemy.gd's 1.795 default would scale the add back up to walker size.
+static func echo_model_height(host_id: String = "choir_host") -> float:
+	return float(echo_cfg(host_id).get("model_height", 1.526))
+
+
+## Gives a Choir Host echo add its own model. Call after setup() and before add_child. False if the GLB is missing
+## (the add then keeps the default walker model at walker height).
+static func apply_echo_model(enemy: Node, host_id: String = "choir_host") -> bool:
+	var ok: bool = load("res://scripts/enemies/boss_art.gd").set_model(enemy, echo_model_path(host_id), echo_model_height(host_id))
+	if ok:
+		enemy.set("variant_id", "boss_echo")
+		enemy.set_meta("boss_echo", true)
+	return ok
 
 
 static func display_name(id: String) -> String:

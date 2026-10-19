@@ -2,12 +2,15 @@ extends "res://scripts/enemy.gd"
 ## Bellwether — tank bruiser boss (Skillz).
 ## Wind-up bell slam (glowing ground circle) → AoE smash → brief stun.
 ## At 50% HP enrages: shorter slam cooldown + linear charge with a red telegraph line.
+## Art (Desi, bellwether.glb): SlamWindup → SlamImpact (damage lands anims.slam_hit_time = 0.17 s in) → Stun;
+## ChargeWindup → ChargeRun (looped in code). Enrage = no clip: clips x fx.enrage_speed_scale + bell crack emission boost.
 
 const Catalog := preload("res://scripts/enemies/boss_catalog.gd")
 const Common := preload("res://scripts/enemies/boss_common.gd")
 const Telegraph := preload("res://scripts/enemies/boss_telegraph.gd")
+const Art := preload("res://scripts/enemies/boss_art.gd")
 
-enum Phase { IDLE, SLAM_WINDUP, STUNNED, CHARGE_WINDUP, CHARGING }
+enum Phase { IDLE, SLAM_WINDUP, SLAM_IMPACT, STUNNED, CHARGE_WINDUP, CHARGING }
 
 var boss_id: String = "bellwether"
 var round_n: int = 1
@@ -18,15 +21,62 @@ var _enraged: bool = false
 var _charge_dir: Vector3 = Vector3.FORWARD
 var _slam_center: Vector3 = Vector3.ZERO
 var _tg: Dictionary = {}
+var _an: Dictionary = {}
+var _fx: Dictionary = {}
+var _stun_clip_t: float = -1.0 ## seconds until the Stun clip starts (after SlamImpact's follow-through), -1 = played
 
 
 func configure_boss(id: String, n: int, difficulty_id: String = "") -> void:
 	boss_id = id
 	round_n = n
 	_tg = Catalog.telegraph(id)
+	_an = Catalog.anims(id)
+	_fx = Catalog.fx(id)
 	Common.apply_identity(self, id, n, difficulty_id)
 	attack_range = maxf(attack_range, float(_tg.get("slam_radius", 3.5)) * 0.45)
 	_cd = 1.5
+
+
+func _ready() -> void:
+	super._ready()
+	if _an.is_empty():
+		_an = Catalog.anims(boss_id)
+		_fx = Catalog.fx(boss_id)
+	Art.setup_anims(self, _an)
+
+
+func is_enraged() -> bool:
+	return _enraged
+
+
+## Seconds into SlamImpact when the smash connects (hands bottom out, frame 4 of 24 fps).
+func slam_hit_time() -> float:
+	return float(_an.get("slam_hit_time", 0.17))
+
+
+func _clip_speed() -> float:
+	return float(_fx.get("enrage_speed_scale", 1.25)) if _enraged else 1.0
+
+
+## Plays `key` stretched to last exactly `duration` seconds (telegraphed clips stay in sync with data timing).
+func _play_fit(key: String, duration: float) -> void:
+	_attack_anim_t = maxf(_attack_anim_t, 0.1)
+	var clip_len := Art.clip_length(self, key, duration)
+	Art.play(self, key, float(_an.get("blend", 0.15)), clip_len / maxf(duration, 0.05) if clip_len > 0.0 else 1.0)
+
+
+func _set_enraged() -> void:
+	_enraged = true
+	Art.set_emission(self, str(_fx.get("bell_material", "Bellwether_Bell")), float(_fx.get("enrage_emission_mult", 4.0)))
+
+
+func _hold_still(delta: float) -> void:
+	_attack_anim_t = maxf(_attack_anim_t, 0.1) # no random HitReact over a telegraphed clip (enemy.take_damage)
+	velocity.x = 0.0
+	velocity.z = 0.0
+	if not is_on_floor():
+		velocity.y -= _gravity * delta
+	move_and_slide()
 
 
 func _physics_process(delta: float) -> void:
@@ -34,7 +84,7 @@ func _physics_process(delta: float) -> void:
 		super._physics_process(delta)
 		return
 	if not _enraged and health <= float(max_health) * float(_tg.get("enrage_hp_frac", 0.5)):
-		_enraged = true
+		_set_enraged()
 	match phase:
 		Phase.IDLE:
 			_cd = maxf(_cd - delta, 0.0)
@@ -42,36 +92,38 @@ func _physics_process(delta: float) -> void:
 			if _cd <= 0.0 and target != null and is_instance_valid(target):
 				_start_special()
 		Phase.SLAM_WINDUP:
-			velocity.x = 0.0
-			velocity.z = 0.0
-			if not is_on_floor():
-				velocity.y -= _gravity * delta
-			move_and_slide()
+			_hold_still(delta)
+			_phase_t -= delta
+			if _phase_t <= 0.0:
+				_start_impact()
+		Phase.SLAM_IMPACT:
+			_hold_still(delta)
 			_phase_t -= delta
 			if _phase_t <= 0.0:
 				_resolve_slam()
 		Phase.STUNNED:
-			velocity.x = 0.0
-			velocity.z = 0.0
-			if not is_on_floor():
-				velocity.y -= _gravity * delta
-			move_and_slide()
+			_hold_still(delta)
+			if _stun_clip_t >= 0.0:
+				_stun_clip_t -= delta
+				if _stun_clip_t <= 0.0:
+					_stun_clip_t = -1.0
+					_play_fit("stun", float(_tg.get("slam_stun", 1.0)))
 			_phase_t -= delta
 			if _phase_t <= 0.0:
 				phase = Phase.IDLE
 				_cd = float(_tg.get("enrage_slam_cooldown" if _enraged else "slam_cooldown", 5.0))
+				if _anim:
+					_anim.speed_scale = 1.0
 		Phase.CHARGE_WINDUP:
-			velocity.x = 0.0
-			velocity.z = 0.0
-			if not is_on_floor():
-				velocity.y -= _gravity * delta
-			move_and_slide()
+			_hold_still(delta)
 			_phase_t -= delta
 			if _phase_t <= 0.0:
 				phase = Phase.CHARGING
 				_phase_t = float(_tg.get("charge_duration", 0.85))
-				_play("run", 0.05)
+				if not Art.play(self, "charge_run", 0.05, _clip_speed()):
+					_play("run", 0.05)
 		Phase.CHARGING:
+			_attack_anim_t = maxf(_attack_anim_t, 0.1)
 			if not is_on_floor():
 				velocity.y -= _gravity * delta
 			var spd := speed * float(_tg.get("charge_speed_mult", 2.4))
@@ -101,9 +153,21 @@ func _start_slam() -> void:
 	_slam_center = global_position
 	if target:
 		_slam_center = Vector3(target.global_position.x, global_position.y, target.global_position.z)
-	Telegraph.spawn_circle(get_parent() if get_parent() else self, _slam_center, float(_tg.get("slam_radius", 3.5)), _phase_t)
-	_play("attack", 0.1)
+	# The circle stays up until the smash connects (windup + slam_hit_time into SlamImpact).
+	Telegraph.spawn_circle(get_parent() if get_parent() else self, _slam_center, float(_tg.get("slam_radius", 3.5)),
+		_phase_t + slam_hit_time() / _clip_speed())
+	if not Art.has_clip(self, "slam_windup"):
+		_play("attack", 0.1)
+	else:
+		_play_fit("slam_windup", _phase_t)
 	_say("zombie_aggro_scream", 2)
+
+
+func _start_impact() -> void:
+	phase = Phase.SLAM_IMPACT
+	_phase_t = slam_hit_time() / _clip_speed()
+	_attack_anim_t = maxf(_attack_anim_t, 0.1)
+	Art.play(self, "slam_impact", 0.05, _clip_speed())
 
 
 func _resolve_slam() -> void:
@@ -114,7 +178,12 @@ func _resolve_slam() -> void:
 		if flat.length() <= rad and absf(target.global_position.y - _slam_center.y) < 2.5:
 			target.call("take_damage", dmg, self)
 	phase = Phase.STUNNED
-	_phase_t = float(_tg.get("slam_stun", 1.0))
+	# SlamImpact plays out its follow-through (ends low), then Stun (slam_stun seconds) - the punish window.
+	var rest := 0.0
+	if Art.has_clip(self, "slam_impact"):
+		rest = maxf(Art.clip_length(self, "slam_impact") - slam_hit_time(), 0.0) / _clip_speed()
+	_stun_clip_t = rest if Art.has_clip(self, "stun") else -1.0
+	_phase_t = rest + float(_tg.get("slam_stun", 1.0))
 
 
 func _start_charge() -> void:
@@ -124,6 +193,7 @@ func _start_charge() -> void:
 	var look := atan2(-_charge_dir.x, -_charge_dir.z)
 	rotation.y = look
 	Telegraph.spawn_line(get_parent() if get_parent() else self, global_position, _charge_dir, 9.0, _phase_t, Color(1.0, 0.12, 0.08, 0.6))
+	_play_fit("charge_windup", _phase_t)
 	_say("zombie_aggro_scream", 2)
 
 

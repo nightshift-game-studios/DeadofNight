@@ -1,42 +1,56 @@
 {
 	"version": 1,
-	"_help": "Weapon attachments (Skillz). Bought once with Gravemark (account-wide unlock), then equipped per weapon archetype: every weapon of that archetype uses the archetype's loadout. classes[archetype].slots = slots it has (DESI_ATTACHMENTS.md §1); optic_cap limits optic size (micro<short<mid<long). attachment.classes = optional allow list (default: every class with that slot). tier 1/2/3: equipping needs the weapon's upgrade tier >= tier_requires[tier] (0/2/4). mods (WeaponItem, multiply unless *_add): damage_mult rpm_mult mag_mult reload_mult (time) spread_mult (all fire) hip_spread_mult (not ADS) recoil_mult range_mult (falloff start) swap_mult (time) pellets_add headshot_add reserve_mags_add. ads (AdsProfile): fov (ADS FOV override; the narrowest wins) move_mult spread_mult (multiply the ADS penalties). flags = presentation hooks for player.gd/HUD (tracer_hidden, flash_mult, scope_overlay, outline_elites, heartbeat_counter, bipod, flashlight, mine_lamp). effects = SkillEffect defs (same format as skill_tree.json) run by the player's SkillRunner only while a weapon of that archetype is in hand.",
+	"_help": "Weapon attachments (Skillz). Bought once with Gravemark (account-wide unlock), then equipped per weapon archetype: every weapon of that archetype uses the archetype's loadout. classes[archetype].slots = slots it has (DESI_ATTACHMENTS.md §1); optic_cap limits optic size (micro<short<mid<long). attachment.classes = optional allow list (default: every class with that slot). tier 1/2/3: equipping needs the weapon's upgrade tier >= tier_requires[tier] (0/2/4). mods (WeaponItem, multiply unless *_add): damage_mult rpm_mult mag_mult reload_mult (time) spread_mult (all fire) hip_spread_mult (not ADS) recoil_mult range_mult (falloff start) swap_mult (time) pellets_add headshot_add reserve_mags_add. ads (AdsProfile): fov (ADS FOV override; the narrowest wins) move_mult spread_mult (multiply the ADS penalties). flags = presentation hooks for player.gd/HUD (tracer_hidden, flash_mult, scope_overlay, outline_elites, heartbeat_counter, bipod, flashlight, mine_lamp). effects = SkillEffect defs (same format as skill_tree.json) run by the player's SkillRunner only while a weapon of that archetype is in hand. slots[].hides = default gun meshes (Desi split guns) a fitted part hides; an attachment \"hides\" overrides it ([] = hide nothing). Flashlight parts (mine_lamp) carry light_energy / light_range / light_angle / light_attenuation / light_color for the camera SpotLight3D (Armory.flashlight_config).",
 	"slots": [
 		{
 			"id": "optic",
 			"name": "Optic",
 			"socket": "Rail",
-			"hides": "IronSights"
+			"hides": [
+				"IronSights",
+				"DefaultOptic"
+			]
 		},
 		{
 			"id": "muzzle",
 			"name": "Muzzle",
 			"socket": "Muzzle",
-			"hides": "MuzzleDevice"
+			"hides": [
+				"DefaultMuzzle"
+			]
 		},
 		{
 			"id": "barrel",
 			"name": "Barrel",
 			"socket": "Barrel",
-			"hides": "DefaultBarrel"
+			"hides": [
+				"DefaultBarrel",
+				"DefaultMuzzle"
+			]
 		},
 		{
 			"id": "grip",
 			"name": "Grip",
 			"socket": "Underbarrel",
-			"hides": "DefaultGrip"
+			"hides": [
+				"DefaultGrip"
+			]
 		},
 		{
 			"id": "mag",
 			"name": "Magazine",
 			"socket": "MagWell",
-			"hides": "DefaultMag"
+			"hides": [
+				"DefaultMag"
+			]
 		},
 		{
 			"id": "stock",
 			"name": "Stock",
 			"socket": "Stock",
-			"hides": "DefaultStock"
+			"hides": [
+				"DefaultStock"
+			]
 		}
 	],
 	"optic_sizes": [
@@ -894,6 +908,7 @@
 			"drawback": "",
 			"icon": "att_mine_lamp",
 			"model": "res://assets/models/attachments/grip/mine_lamp.glb",
+			"hides": [],
 			"mods": {},
 			"ads": {},
 			"flags": {
@@ -908,6 +923,15 @@
 				"smg",
 				"shotgun",
 				"sniper_rifle"
+			],
+			"light_energy": 7.0,
+			"light_range": 22.0,
+			"light_angle": 28.0,
+			"light_attenuation": 1.1,
+			"light_color": [
+				0.92,
+				0.95,
+				1.0
 			]
 		},
 		{

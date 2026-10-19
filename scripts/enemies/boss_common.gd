@@ -4,6 +4,7 @@ extends RefCounted
 
 const CATALOG := preload("res://scripts/enemies/boss_catalog.gd")
 const TELEGRAPH := preload("res://scripts/enemies/boss_telegraph.gd")
+const ART := preload("res://scripts/enemies/boss_art.gd")
 
 
 ## Apply catalog mults after the wave spawner called setup(). Call before add_child.
@@ -26,6 +27,8 @@ static func apply_identity(enemy: Node, boss_id: String, round_n: int, difficult
 		enemy.set("model_height", float(b.get("model_height")))
 	if b.has("size_variety"):
 		enemy.set("size_variety", float(b.get("size_variety")))
+	# Desi's boss GLB (model_height already matches the rest AABB, so the auto-scale is 1.0).
+	ART.set_model(enemy, str(b.get("model", "")))
 
 
 static func kill_payout(enemy: Node, points_per_kill: int = 50) -> Dictionary:

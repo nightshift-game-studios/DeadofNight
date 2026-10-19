@@ -8,6 +8,8 @@
 			"name": "Bellwether",
 			"role": "tank_bruiser",
 			"script": "res://scripts/enemies/bellwether.gd",
+			"model": "res://assets/models/bosses/bellwether.glb",
+			"icon": "res://assets/icons/boss_bellwether.png",
 			"hp_mult": 8.0,
 			"speed_mult": 0.85,
 			"damage_mult": 1.6,
@@ -30,6 +32,26 @@
 				"charge_speed_mult": 2.4,
 				"charge_duration": 0.85,
 				"charge_cooldown": 4.5
+			},
+			"anims": {
+				"_help": "Desi clip names (CLIP_REMAP.txt). loop = clips the boss script sets LOOP_LINEAR on (glTF has no loop flag). slam_hit_time = seconds into SlamImpact when the damage/VFX lands (hands bottom out, frame 4).",
+				"loop": [
+					"ChargeRun"
+				],
+				"slam_windup": "SlamWindup",
+				"slam_impact": "SlamImpact",
+				"stun": "Stun",
+				"charge_windup": "ChargeWindup",
+				"charge_run": "ChargeRun",
+				"slam_hit_time": 0.17,
+				"blend": 0.15
+			},
+			"fx": {
+				"_help": "Enrage has no clip: same clips faster (enrage_speed_scale) + the bell crack emission (material bell_material on BellMesh) x enrage_emission_mult.",
+				"bell_material": "Bellwether_Bell",
+				"enrage_emission_mult": 4.0,
+				"enrage_speed_scale": 1.25,
+				"slam_socket": "SlamFx"
 			}
 		},
 		"choir_host": {
@@ -37,6 +59,8 @@
 			"name": "Choir Host",
 			"role": "summoner_support",
 			"script": "res://scripts/enemies/choir_host.gd",
+			"model": "res://assets/models/bosses/choir_host.glb",
+			"icon": "res://assets/icons/boss_choir_host.png",
 			"hp_mult": 5.0,
 			"speed_mult": 0.7,
 			"damage_mult": 0.9,
@@ -61,7 +85,28 @@
 				"damage_mult": 0.7,
 				"kill_points_mult": 1.0,
 				"gravemark_reward": 0,
-				"lifetime": 18.0
+				"lifetime": 18.0,
+				"model": "res://assets/models/bosses/echo_walker.glb",
+				"icon": "res://assets/icons/boss_echo_walker.png",
+				"model_height": 1.526
+			},
+			"anims": {
+				"_help": "Channel loops (4 s = channel_duration). ChannelHit plays when the shield breaks; blend out 0.15-0.2 s.",
+				"loop": [
+					"Channel"
+				],
+				"channel": "Channel",
+				"channel_hit": "ChannelHit",
+				"blend": 0.18
+			},
+			"fx": {
+				"_help": "Cavity glows while channeling and dims when the shield breaks (ChoirHost_Cavity emission x mult). ShieldProxy = shield VFX anchor (rig root, does not follow the pose).",
+				"cavity_material": "ChoirHost_Cavity",
+				"channel_emission_mult": 2.5,
+				"broken_emission_mult": 0.2,
+				"broken_dim_time": 2.5,
+				"shield_socket": "ShieldProxy",
+				"summon_socket": "SummonMouth"
 			}
 		},
 		"lantern_stalker": {
@@ -69,6 +114,8 @@
 			"name": "Lantern Stalker",
 			"role": "ambusher_ranged",
 			"script": "res://scripts/enemies/lantern_stalker.gd",
+			"model": "res://assets/models/bosses/lantern_stalker.glb",
+			"icon": "res://assets/icons/boss_lantern_stalker.png",
 			"hp_mult": 4.5,
 			"speed_mult": 1.15,
 			"damage_mult": 1.1,
@@ -88,6 +135,35 @@
 				"spit_speed": 14.0,
 				"sidestep_distance": 2.4,
 				"cycle_cooldown": 3.5
+			},
+			"anims": {
+				"_help": "DarkSneak loops through the dark phase (1.6 s = ~1.2 cycles). Sidesteps are IN PLACE: code moves the root sidestep_distance over sidestep_time. SidestepL = character LEFT (-X local). spit_recover = seconds the Spit thrust/recoil plays before the sidestep.",
+				"loop": [
+					"DarkSneak"
+				],
+				"dark": "DarkSneak",
+				"raise": "LanternRaise",
+				"spit": "Spit",
+				"sidestep_l": "SidestepL",
+				"sidestep_r": "SidestepR",
+				"sidestep_time": 0.5,
+				"blend": 0.15,
+				"spit_recover": 0.3
+			},
+			"fx": {
+				"_help": "OmniLight3D made in code on the Lantern socket (glb has no lights). Beam telegraph starts at BeamOrigin, blight spit at SpitMuzzle. Light dims to dark_energy while DarkSneak is active.",
+				"lantern_socket": "Lantern",
+				"beam_socket": "BeamOrigin",
+				"spit_socket": "SpitMuzzle",
+				"light_color": [
+					0.72,
+					0.95,
+					0.35
+				],
+				"light_energy": 1.6,
+				"light_range": 6.0,
+				"dark_energy": 0.15,
+				"beam_energy": 3.0
 			}
 		}
 	},
@@ -97,6 +173,9 @@
 		"second_slot": "choir_host",
 		"third_slot": "lantern_stalker",
 		"solo_alternate_from_cycle": 1,
-		"solo_alternate": ["choir_host", "lantern_stalker"]
+		"solo_alternate": [
+			"choir_host",
+			"lantern_stalker"
+		]
 	}
 }

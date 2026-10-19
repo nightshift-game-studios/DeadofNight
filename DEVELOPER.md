@@ -132,6 +132,7 @@ resources/items/*.tres         Consumables: Health Pack, Primary Ammo, Heavy Amm
 tests/smoke_test.gd            Automated headless test (see the end of this file)
 tests/skills_test.gd           Headless skills test: every effect script, node and card, offers, refund cap, time-scale flag
 tests/input_test.gd            Headless mouse-look / menu pause regression test (full checks under a display)
+tests/art_test.gd              Headless art-wiring test: boss GLBs/clips/sockets, echo height, guns per archetype, WeaponRig attachments, Mine Lamp light, IP breakdown
 tests/compile_check.gd         Loads every script under scripts/ and tests/ and reports parse errors
 tests/render_icons.gd          Re-renders assets/icons/*.png from the gun models
 ```

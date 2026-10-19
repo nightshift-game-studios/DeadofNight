@@ -7,7 +7,8 @@
 			"id": "sidearm",
 			"type": "Sidearm",
 			"slot": "primary",
-			"model": "res://assets/models/guns/sidearm.glb",
+			"model": "res://assets/models/weapons/weapon_pistol.glb",
+			"model_legacy": "res://assets/models/guns/sidearm.glb",
 			"view": {
 				"length": 0.26,
 				"offset": [
@@ -52,7 +53,8 @@
 			"id": "hand_cannon",
 			"type": "Hand Cannon",
 			"slot": "primary",
-			"model": "res://assets/models/guns/hand_cannon.glb",
+			"model": "res://assets/models/weapons/weapon_pistol.glb",
+			"model_legacy": "res://assets/models/guns/hand_cannon.glb",
 			"view": {
 				"length": 0.3,
 				"offset": [
@@ -97,7 +99,8 @@
 			"id": "auto_rifle",
 			"type": "Auto Rifle",
 			"slot": "primary",
-			"model": "res://assets/models/guns/auto_rifle.glb",
+			"model": "res://assets/models/weapons/weapon_assault_rifle.glb",
+			"model_legacy": "res://assets/models/guns/auto_rifle.glb",
 			"view": {
 				"length": 0.62,
 				"offset": [
@@ -142,7 +145,8 @@
 			"id": "scout_rifle",
 			"type": "Scout Rifle",
 			"slot": "primary",
-			"model": "res://assets/models/guns/scout_rifle.glb",
+			"model": "res://assets/models/weapons/weapon_scout_rifle.glb",
+			"model_legacy": "res://assets/models/guns/scout_rifle.glb",
 			"view": {
 				"length": 0.66,
 				"offset": [
@@ -187,7 +191,8 @@
 			"id": "smg",
 			"type": "Submachine Gun",
 			"slot": "secondary",
-			"model": "res://assets/models/guns/smg.glb",
+			"model": "res://assets/models/weapons/weapon_smg.glb",
+			"model_legacy": "res://assets/models/guns/smg.glb",
 			"view": {
 				"length": 0.42,
 				"offset": [
@@ -232,7 +237,8 @@
 			"id": "shotgun",
 			"type": "Shotgun",
 			"slot": "secondary",
-			"model": "res://assets/models/guns/shotgun.glb",
+			"model": "res://assets/models/weapons/weapon_shotgun.glb",
+			"model_legacy": "res://assets/models/guns/shotgun.glb",
 			"view": {
 				"length": 0.62,
 				"offset": [
@@ -277,7 +283,8 @@
 			"id": "pulse_rifle",
 			"type": "Pulse Rifle",
 			"slot": "secondary",
-			"model": "res://assets/models/guns/pulse_rifle.glb",
+			"model": "res://assets/models/weapons/weapon_lmg.glb",
+			"model_legacy": "res://assets/models/guns/pulse_rifle.glb",
 			"view": {
 				"length": 0.62,
 				"offset": [
@@ -324,7 +331,8 @@
 			"id": "sniper_rifle",
 			"type": "Sniper Rifle",
 			"slot": "heavy",
-			"model": "res://assets/models/guns/sniper_rifle.glb",
+			"model": "res://assets/models/weapons/weapon_sniper.glb",
+			"model_legacy": "res://assets/models/guns/sniper_rifle.glb",
 			"view": {
 				"length": 0.8,
 				"offset": [
