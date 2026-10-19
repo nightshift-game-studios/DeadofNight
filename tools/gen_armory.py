@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Generates fps-starter/data/attachments.json + data/armory.json (Skillz). Asserts the layout rules.
+"""Generates <repo>/data/attachments.json + data/armory.json (Skillz). Asserts the layout rules.
+Canonical copy: fps-starter/tools/gen_armory.py (run: python3 tools/gen_armory.py from anywhere).
 Names are the original DeadofNight names from /workspace/skillz/DESI_ATTACHMENTS.md."""
 import json, os
-ROOT = "/workspace/fps-starter/data"
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")  # repo-relative (canonical copy: <repo>/tools/gen_armory.py)
 
 SLOTS = [
     # hides = Desi's split-gun default meshes (weapons/NODE_INVENTORY.txt) a fitted part hides (WeaponRig).
@@ -116,7 +117,10 @@ att("sawn_stub", "Sawn Stub", "barrel", 1, 3, "Cut-down barrel for point-blank w
     # Art pass 2c (G4M3N approved): also hide the shotgun's under-barrel mag tube (DefaultMag, x 0.18-0.55, ran ~61 mm past
     # the stub). Kept even after Desi ships a short tube stub inside sawn_stub (that stub then shows instead).
     # hides_by_class[archetype] replaces hides/slot hides for that archetype only (WeaponRig.hides_for).
-    extra={"hides_by_class": {"shotgun": ["DefaultBarrel", "DefaultMuzzle", "IronSights", "DefaultMag"]}},
+    # Art pass 3 (Desi 12:54): sawn_stub.glb has a MagTubeStub child (short tube) for the shotgun only.
+    # inner_hides[archetype or "*"] = nodes INSIDE this attachment hidden on that host (WeaponRig.inner_hides_for).
+    extra={"hides_by_class": {"shotgun": ["DefaultBarrel", "DefaultMuzzle", "IronSights", "DefaultMag"]},
+           "inner_hides": {"*": ["MagTubeStub"], "shotgun": []}},
     # Art pass 2b (G4M3N): no Sawn Stub on the revolver (hand_cannon) or the LMG (pulse_rifle): every other barrel class.
     classes=[c for c, v in CLASSES.items() if "barrel" in v["slots"] and c not in ("hand_cannon", "pulse_rifle")])
 att("fluted_cooler", "Fluted Cooler", "barrel", 2, 5, "Heat-shrouded barrel that runs faster.",
@@ -210,6 +214,10 @@ att("stub_cap", "Stub Cap", "stock", 1, 2, "No stock at all: snap to targets.",
 EXCLUSIONS = [
     {"id": "smg_stub_bayonet", "classes": ["smg"], "parts": ["bonesaw_bayonet", "sawn_stub"],
      "reason": "The SMG's Sawn Stub is too short to carry the Bonesaw Bayonet's blade."},
+    # Art pass 3 (G4M3N): the Shell Saddle carries a full-length TubeMag (x 0.18-0.55) that runs ~70 mm past the (scaled) Sawn Stub
+    # and overlaps the stub's own MagTubeStub. Old saves keep the Sawn Stub and unequip the Shell Saddle (last listed).
+    {"id": "shotgun_stub_saddle", "classes": ["shotgun"], "parts": ["sawn_stub", "shell_saddle"],
+     "reason": "The Shell Saddle's full-length tube won't fit under a Sawn Stub."},
 ]
 
 TIER_REQ = {1: 0, 2: 2, 3: 4}  # weapon upgrade tier needed to EQUIP an attachment of this tier
@@ -254,7 +262,7 @@ att_doc = {
               "pellets_add headshot_add reserve_mags_add. ads (AdsProfile): fov (ADS FOV override; the narrowest wins) move_mult "
               "spread_mult (multiply the ADS penalties). flags = presentation hooks for player.gd/HUD (tracer_hidden, flash_mult, "
               "scope_overlay, outline_elites, heartbeat_counter, bipod, flashlight, mine_lamp). effects = SkillEffect defs (same format as "
-              "skill_tree.json) run by the player's SkillRunner only while a weapon of that archetype is in hand. slots[].hides = default gun meshes (Desi split guns) a fitted part hides; an attachment \"hides\" overrides it ([] = hide nothing); \"hides_by_class\" {archetype: [...]} overrides both for that archetype (Sawn Stub on the shotgun also hides IronSights + the DefaultMag tube). exclusions = per-archetype parts that can't be equipped together ({id, classes, parts, reason}; Armory.exclusion_reason); a save holding one unequips the last listed part on load (it stays owned). Flashlight parts (mine_lamp, lantern_rail; F toggles the beam) carry light_energy / light_range / light_angle / light_attenuation / light_color for the camera SpotLight3D (Armory.flashlight_config)."),
+              "skill_tree.json) run by the player's SkillRunner only while a weapon of that archetype is in hand. slots[].hides = default gun meshes (Desi split guns) a fitted part hides; an attachment \"hides\" overrides it ([] = hide nothing); \"hides_by_class\" {archetype: [...]} overrides both for that archetype (Sawn Stub on the shotgun also hides IronSights + the DefaultMag tube); \"inner_hides\" {archetype or \"*\": [node names]} hides nodes inside the part itself on that host (Sawn Stub's MagTubeStub shows on the shotgun only). exclusions = per-archetype parts that can't be equipped together ({id, classes, parts, reason}; Armory.exclusion_reason); a save holding one unequips the last listed part on load (it stays owned). Flashlight parts (mine_lamp, lantern_rail; F toggles the beam) carry light_energy / light_range / light_angle / light_attenuation / light_color for the camera SpotLight3D (Armory.flashlight_config)."),
     "slots": SLOTS, "optic_sizes": OPTIC_SIZES, "tier_requires": {str(k): v for k, v in TIER_REQ.items()},
     "classes": CLASSES, "exclusions": EXCLUSIONS, "attachments": A,
 }

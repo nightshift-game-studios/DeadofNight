@@ -1,5 +1,5 @@
 {
-	"_help": "Zombie variants (all share the UAL2 skeleton + clips). model_height = the model's real height in metres (auto-scale target, so nothing gets shrunk). health/speed/damage multipliers stack on top of main.gd's per-round stats. wave_mix: the entry with the highest from_round <= current round is used; weights are relative.",
+	"_help": "Zombie variants (all share the UAL2 skeleton + clips). model_height = the model's real height in metres (auto-scale target, so nothing gets shrunk). health/speed/damage multipliers stack on top of main.gd's per-round stats. wave_mix: the entry with the highest from_round <= current round is used; weights are relative. Special variants (\"special\": true: bloated / crawler / riot) carry a behaviour \"script\" (extends enemy.gd, swapped in by ZombieVariants.apply_script, MAIN_HOOKS §15a) and \"behavior\" knobs; they are not in wave_mix: data/difficulty.json profiles[].variants.specials adds them per round (Difficulty.variant_weights). \"runner\": false = never gets main.gd's 25% runner speed bonus.",
 	"variants": {
 		"city": {
 			"display_name": "Walker",
@@ -24,12 +24,123 @@
 			"health_mult": 1.2,
 			"speed_mult": 0.95,
 			"damage_mult": 1.1
+		},
+		"bloated": {
+			"display_name": "Bloater",
+			"model": "res://assets/models/zombies/zombie_bloated.glb",
+			"model_height": 1.8,
+			"health_mult": 1.6,
+			"speed_mult": 0.7,
+			"damage_mult": 1.0,
+			"runner": false,
+			"script": "res://scripts/enemies/variants/bloated.gd",
+			"special": true,
+			"behavior": {
+				"_help": "Death burst from BurstPoint. windup s (Zombie_BurstWindup) unless melee-killed or killed within instant_range m of the player. burst_radius m; player takes contact_damage x player_damage_mult (capped per burst at difficulty.json variants.bloater_burst_player_cap, else player_damage_cap), zombies take max_health x zombie_damage_frac (both fall off to 30% at the edge, like Explosion). Puddle: puddle_radius m, puddle_time s, puddle_slow = player speed -45%. Pustules: pustule_hits bullet hits within pustule_hit_radius m of BurstPoint hide them; the burst (radius, damage) then x popped_mult and the puddle x0.75.",
+				"windup": 0.6,
+				"windup_clip": "Zombie_BurstWindup",
+				"instant_range": 2.0,
+				"burst_radius": 3.5,
+				"player_damage_mult": 2.0,
+				"player_damage_cap": 40,
+				"zombie_damage_frac": 0.8,
+				"knockback": 5.0,
+				"puddle_radius": 2.2,
+				"puddle_time": 4.0,
+				"puddle_slow": 0.45,
+				"pustule_hits": 4,
+				"pustule_hit_radius": 0.45,
+				"popped_mult": 0.6
+			}
+		},
+		"crawler": {
+			"display_name": "Crawler",
+			"model": "res://assets/models/zombies/zombie_crawler.glb",
+			"model_height": 1.62,
+			"health_mult": 0.6,
+			"speed_mult": 1.25,
+			"damage_mult": 0.8,
+			"runner": true,
+			"script": "res://scripts/enemies/variants/crawler.gd",
+			"special": true,
+			"behavior": {
+				"_help": "Own body: collision capsule (radius/height/center_y m) and bar_height m for the health bar. Ankle grab: lunge (Zombie_AnkleGrab) when the player is within grab_range m; after grip_delay s it holds if still within grip_range m: player rooted, drain_per_sec HP for up to grab_time s. Jump / melee swing / kill frees; grab_cooldown s between grabs.",
+				"collision": {
+					"radius": 0.3,
+					"height": 0.7,
+					"center_y": 0.35,
+					"nav_radius": 0.35
+				},
+				"bar_height": 0.95,
+				"attack_max_dy": 1.2,
+				"grab_range": 1.2,
+				"grip_delay": 0.36,
+				"grip_range": 1.6,
+				"grab_time": 2.0,
+				"drain_per_sec": 6.0,
+				"grab_cooldown": 6.0,
+				"grab_clip": "Zombie_AnkleGrab"
+			}
+		},
+		"riot": {
+			"display_name": "Riot",
+			"model": "res://assets/models/zombies/zombie_riot.glb",
+			"model_height": 1.821,
+			"health_mult": 1.3,
+			"speed_mult": 0.9,
+			"damage_mult": 1.15,
+			"runner": true,
+			"script": "res://scripts/enemies/variants/riot.gd",
+			"special": true,
+			"behavior": {
+				"_help": "Frontal cone_deg cone: hits lose reduction (0.8 = 80%) of their damage, headshots included, until the armour (armor_frac x max_health HP, worn down by what it absorbs) breaks (Zombie_ArmorBreak, armor_nodes hidden). Back / side hits: full damage. Explosives ignore pierce_explosive and burn ticks pierce_burn of the reduction (burn: any side). Hits below leg_height m wear leg_frac of the armour HP off the legs and hide ArmorLegs (cosmetic). Attacker mod_stat armor_pierce (0..1) subtracts from the reduction.",
+				"cone_deg": 100.0,
+				"reduction": 0.8,
+				"armor_frac": 0.75,
+				"pierce_explosive": 0.5,
+				"pierce_burn": 0.5,
+				"leg_height": 0.6,
+				"leg_frac": 0.25,
+				"armor_nodes": [
+					"ArmorVest",
+					"Helmet",
+					"Visor"
+				],
+				"break_clip": "Zombie_ArmorBreak"
+			}
 		}
 	},
 	"wave_mix": [
-		{"from_round": 1, "weights": {"city": 0.85, "worker": 0.15}},
-		{"from_round": 3, "weights": {"city": 0.65, "worker": 0.25, "soldier": 0.10}},
-		{"from_round": 6, "weights": {"city": 0.50, "worker": 0.30, "soldier": 0.20}},
-		{"from_round": 10, "weights": {"city": 0.40, "worker": 0.30, "soldier": 0.30}}
+		{
+			"from_round": 1,
+			"weights": {
+				"city": 0.85,
+				"worker": 0.15
+			}
+		},
+		{
+			"from_round": 3,
+			"weights": {
+				"city": 0.65,
+				"worker": 0.25,
+				"soldier": 0.1
+			}
+		},
+		{
+			"from_round": 6,
+			"weights": {
+				"city": 0.5,
+				"worker": 0.3,
+				"soldier": 0.2
+			}
+		},
+		{
+			"from_round": 10,
+			"weights": {
+				"city": 0.4,
+				"worker": 0.3,
+				"soldier": 0.3
+			}
+		}
 	]
 }

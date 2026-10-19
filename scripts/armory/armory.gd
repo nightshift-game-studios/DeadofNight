@@ -574,11 +574,88 @@ static func nearby_zombie_count(tree: SceneTree, pos: Vector3, radius: float = 1
 
 # ================================================================== mutations (static; the instance API wraps these)
 
-static func buy_attachment(att_id: String) -> bool:
+static var _last_refusal: String = "" ## why the last purchase / equip attempt was refused ("" = it went through)
+
+
+## Why the last purchase()/equip()/buy_*() call was refused, "" if it succeeded (Gooey: toast text).
+static func last_refusal_reason() -> String:
+	return _last_refusal
+
+
+static func _check(ok: bool, reason: String = "") -> Dictionary:
+	return {"ok": ok, "reason": "" if ok else reason}
+
+
+static func _slot_name(slot: String) -> String:
+	for s in slots():
+		if str(s.get("id", "")) == slot:
+			return str(s.get("name", slot))
+	return slot.capitalize()
+
+
+## Can `id` be bought right now? id = attachment id or "upg_<arch>". {ok, reason}; reason is UI text when !ok.
+## Single source of truth for buy_attachment / buy_upgrade / purchase().
+static func purchase_check(id: String) -> Dictionary:
 	var p = prog()
-	if p == null or not can_afford_id(att_id) or owned(att_id):
+	if p == null:
+		return _check(false, "Save data isn't loaded")
+	if id.begins_with(UPGRADE_PREFIX):
+		var arch := id.substr(UPGRADE_PREFIX.length())
+		if not is_archetype(arch):
+			return _check(false, "Unknown weapon")
+		if upgrade_tier(arch) >= max_tier():
+			return _check(false, "%s is fully reworked" % weapon_type(arch))
+		var c := next_upgrade_cost(arch)
+		if int(p.gravemarks) < c:
+			return _check(false, "Need %d %s (you have %d)" % [c, _currency_word(c), int(p.gravemarks)])
+		return _check(true)
+	if not is_attachment(id):
+		return _check(false, "Unknown attachment")
+	if owned(id):
+		return _check(false, "Already owned")
+	var preq := purchase_requirements(id)
+	if not preq.is_empty():
+		return _check(false, "Needs " + str(preq[0]))
+	var cst := cost_of(id)
+	if int(p.gravemarks) < cst:
+		return _check(false, "Need %d %s (you have %d)" % [cst, _currency_word(cst), int(p.gravemarks)])
+	return _check(true)
+
+
+static func _currency_word(n: int) -> String:
+	var c: Dictionary = cfg().get("currency", {})
+	return str(c.get("name", "Gravemark")) if n == 1 else str(c.get("plural", "Gravemarks"))
+
+
+## Can part `id` go on `weapon_id` (archetype id or a gear item_id) in `slot` ("" = the part's own slot)? {ok, reason}.
+## Single source of truth for equip() / equip_attachment(): ownership, slot, fit, Rework tier and exclusions.
+static func equip_check(weapon_id: String, slot: String, id: String) -> Dictionary:
+	if prog() == null:
+		return _check(false, "Save data isn't loaded")
+	var arch := resolve_weapon(weapon_id)
+	if arch == "":
+		return _check(false, "Unknown weapon")
+	if not is_attachment(id):
+		return _check(false, "Unknown attachment")
+	var aslot := str(attachment(id).slot)
+	if slot != "" and slot != aslot:
+		return _check(false, "%s goes in the %s slot" % [str(attachment(id).name), _slot_name(aslot)])
+	if not owned(id):
+		return _check(false, "Not owned yet")
+	var req := equip_requirements(id, arch)
+	if not req.is_empty():
+		return _check(false, str(req[0]))
+	return _check(true)
+
+
+static func buy_attachment(att_id: String) -> bool:
+	var c := purchase_check(att_id) if not att_id.begins_with(UPGRADE_PREFIX) else _check(false, "Not an attachment")
+	_last_refusal = str(c.reason)
+	if not c.ok:
 		return false
+	var p = prog()
 	if not p.spend_gravemark(int(attachment(att_id).cost)):
+		_last_refusal = "Purchase failed"
 		return false
 	p.armory.owned.append(att_id)
 	p.notify_armory("purchase", att_id)
@@ -586,21 +663,26 @@ static func buy_attachment(att_id: String) -> bool:
 
 
 static func buy_upgrade(arch: String) -> bool:
-	var p = prog()
-	if p == null or not is_archetype(arch) or upgrade_tier(arch) >= max_tier():
+	var c := purchase_check(UPGRADE_PREFIX + arch)
+	_last_refusal = str(c.reason)
+	if not c.ok:
 		return false
+	var p = prog()
 	if not p.spend_gravemark(next_upgrade_cost(arch)):
+		_last_refusal = "Purchase failed"
 		return false
 	p.armory.upgrades[arch] = upgrade_tier(arch) + 1
 	p.notify_armory("upgrade", UPGRADE_PREFIX + arch)
 	return true
 
 
-## Puts an owned, compatible, tier-unlocked part in its slot (replacing whatever was there).
+## Puts an owned, compatible, tier-unlocked part in its slot (replacing whatever was there). See equip_check().
 static func equip(arch: String, att_id: String) -> bool:
-	var p = prog()
-	if p == null or not owned(att_id) or not equip_requirements(att_id, arch).is_empty():
+	var c := equip_check(arch, "", att_id)
+	_last_refusal = str(c.reason)
+	if not c.ok:
 		return false
+	var p = prog()
 	var slot := str(attachment(att_id).slot)
 	if not p.armory.equipped.has(arch):
 		p.armory.equipped[arch] = {}
@@ -921,6 +1003,10 @@ func is_owned(id: String) -> bool:
 
 ## Buys an attachment (one-time unlock) or the next tier of "upg_<arch>". Saves at once. False if not affordable.
 func purchase(id: String) -> bool:
+	var c := purchase_check(id)
+	_last_refusal = str(c.reason)
+	if not c.ok:
+		return false
 	if id.begins_with(UPGRADE_PREFIX):
 		return buy_upgrade(id.substr(UPGRADE_PREFIX.length()))
 	return buy_attachment(id)
@@ -928,7 +1014,9 @@ func purchase(id: String) -> bool:
 
 ## Gooey's placeholder signature. `slot` must match the part's slot ("" = take it from the part).
 func equip_attachment(weapon_id: String, slot: String, id: String) -> bool:
-	if slot != "" and str(attachment(id).get("slot", "")) != slot:
+	var c := equip_check(weapon_id, slot, id)
+	_last_refusal = str(c.reason)
+	if not c.ok:
 		return false
 	return equip(resolve_weapon(weapon_id), id)
 

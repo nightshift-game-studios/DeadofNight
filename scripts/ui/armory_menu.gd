@@ -469,37 +469,22 @@ func _disable_reason(id: String, is_upgrade: bool) -> String:
 	return refusal_reason(id, "buy")
 
 
-## Why a buy ("buy") or equip ("equip") is refused, in Armory's words where Armory has them (§2b):
-## equip -> Armory.equip_requirements (fit, Rework tier, exclusion text); buy -> purchase_requirements / balance.
-## Armory's purchase()/equip() only return bool, so the reason is derived from the same checks they run.
+## Why a buy ("buy") or equip ("equip") would be refused, from Armory's own rule set (art pass 3):
+## Armory.purchase_check(id) / equip_check(weapon_id, slot, id) -> {ok, reason}. "" when it would go through.
 func refusal_reason(id: String, kind: String) -> String:
 	if api == null:
 		return "Armory unavailable"
-	var bal := int(api.currency_balance())
-	if id.begins_with("upg_"):
-		var arch := id.substr(4)
-		if int(ArmoryScr.upgrade_tier(arch)) >= int(ArmoryScr.max_tier()):
-			return "%s Rework is maxed" % ArmoryScr.weapon_type(arch)
-		var c := int(api.cost(id))
-		if bal < c:
-			return "Need %d Gravemarks (you have %d)" % [c, bal]
-		return "Can't buy this right now"
-	if kind == "equip":
-		if not api.is_owned(id):
-			return "Buy it first"
-		var reqs: Array = ArmoryScr.equip_requirements(id, ArmoryScr.resolve_weapon(_weapon_id))
-		if not reqs.is_empty():
-			return "; ".join(reqs)
-		return "Can't equip this right now"
-	if api.is_owned(id):
-		return "Already owned"
-	var preq: Array = ArmoryScr.purchase_requirements(id)
-	if not preq.is_empty():
-		return "Need: " + ", ".join(preq)
-	var cost := int(api.cost(id))
-	if bal < cost:
-		return "Need %d Gravemarks (you have %d)" % [cost, bal]
-	return "Can't buy this right now"
+	var chk: Dictionary = ArmoryScr.equip_check(_weapon_id, "", id) if kind == "equip" else ArmoryScr.purchase_check(id)
+	if bool(chk.get("ok", false)):
+		return ""
+	var r := str(chk.get("reason", ""))
+	return r if r != "" else ("Can't equip this right now" if kind == "equip" else "Can't buy this right now")
+
+
+## After a failed purchase()/equip(): Armory.last_refusal_reason(), falling back to the check.
+func _last_refusal(id: String, kind: String) -> String:
+	var r := str(ArmoryScr.last_refusal_reason())
+	return r if r != "" else refusal_reason(id, kind)
 
 
 ## Show a refused buy / equip: inline on its row + footer toast + error cue.
@@ -588,8 +573,9 @@ func _execute_pending() -> void:
 	var pid := _pending_id
 	var why := ""
 	if _pending_kind == "buy":
-		why = refusal_reason(pid, "buy") if not bool(api.can_afford(pid)) else ""
 		ok = bool(api.purchase(pid))
+		if not ok:
+			why = _last_refusal(pid, "buy")
 	_show_confirm(false)
 	_pending_id = ""
 	if ok:
@@ -603,13 +589,12 @@ func _execute_pending() -> void:
 func _do_equip(id: String, slot: String) -> void:
 	if api == null:
 		return
-	var why := refusal_reason(id, "equip")
 	if api.equip_attachment(_weapon_id, slot, id):
 		_refusal = {}
 		_ui_snd("ui_equip")
 		refresh()
 	else:
-		_refuse(id, "equip", why)
+		_refuse(id, "equip", _last_refusal(id, "equip"))
 
 
 func _do_unequip(slot: String) -> void:

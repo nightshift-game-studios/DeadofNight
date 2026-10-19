@@ -72,6 +72,15 @@ static func hides_for(att_id: String, slot: String = "", arch: String = "") -> A
 	return Array(h)
 
 
+## Nodes inside the attachment itself hidden on this host: inner_hides[arch] if present, else inner_hides["*"]
+## (art pass 3: Sawn Stub's MagTubeStub shows on the shotgun only).
+static func inner_hides_for(att_id: String, arch: String = "") -> Array:
+	var ih = ARMORY.attachment(att_id).get("inner_hides", {})
+	if not (ih is Dictionary):
+		return []
+	return Array((ih as Dictionary).get(arch, (ih as Dictionary).get("*", [])))
+
+
 static func model_path(att_id: String) -> String:
 	return str(ARMORY.attachment(att_id).get("model", ""))
 
@@ -168,6 +177,10 @@ static func apply(model: Node3D, arch: String, loadout = null, shadows: bool = f
 			for gi in inst.find_children("*", "GeometryInstance3D", true, false):
 				(gi as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		out.attached[slot] = inst
+		for ih in inner_hides_for(str(e.id), arch):
+			var hn := find_node(inst, str(ih))
+			if hn:
+				hn.visible = false
 		var a: Dictionary = ARMORY.attachment(str(e.id))
 		var fl: Dictionary = a.get("flags", {})
 		if slot == "barrel":
@@ -292,7 +305,7 @@ static func sight_line(rig: Dictionary) -> Vector3:
 	if rig.get("attached", {}).has("optic") and (rig.attached.optic as Node3D).is_ancestor_of(sp):
 		return p
 	# Built-in scope (sniper DefaultOptic): an OpticSightPoint node on the scope axis wins while DefaultOptic shows
-	# (Desi's NOTES 2026-10-19 proposal; not in the GLB yet, so this is inert until it lands).
+	# (Desi notch pass 12:57: weapon_sniper.glb DefaultOptic/OpticSightPoint at y 0.140; SightPoint = backup irons).
 	var osp := find_node(model, "OpticSightPoint")
 	var dopt := find_node(model, "DefaultOptic")
 	if osp and dopt and dopt.visible and not _inside_attachment(osp, model):

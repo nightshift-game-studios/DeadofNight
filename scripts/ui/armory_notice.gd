@@ -1,17 +1,18 @@
 extends CanvasLayer
-## One-time "parts moved back to your Armory" notice (ARMORY_HANDOFF art pass 2b).
+## One-time "parts moved back to your Armory" notice (ARMORY_HANDOFF art pass 2b / 3).
 ## Progress.armory_unequipped_on_load = [{arch, slot, id, why: "fit" | rule id}] lists attachments that the last
 ## load unequipped (wrong class/slot, or a blocked pair). They stay owned. Shown by the home menu first, or by the
 ## Armory if the home menu never came up.
-## Skillz has no ack/clear API for that list, so the dismissed state is kept here: a session-wide static keyed by the
-## list's content. Dismissing it means the same list is not shown again for that load (the clean state is written on
-## the next save, so the next load's list is empty anyway).
+## Dismissal uses Skillz's API: Progress.ack_armory_unequipped() clears the list, and
+## Progress.armory_unequipped_load_id (bumped by every load that unequips something) is remembered so the same load
+## never shows twice. Older Progress without that API falls back to a session flag keyed by the list's content.
 
 signal dismissed
 
 const ArmoryScr := preload("res://scripts/armory/armory.gd")
 
-static var _acked_sig: String = "" ## signature of the list the player dismissed
+static var _shown_load_id: int = -1 ## Progress.armory_unequipped_load_id last dismissed
+static var _acked_sig: String = "" ## fallback only (no load-id API): signature of the list the player dismissed
 static var _live: WeakRef = null ## the notice currently on screen (only one at a time)
 
 var entries: Array = [] ## [{arch, slot, id, why}] shown
@@ -45,21 +46,39 @@ static func pending_entries() -> Array:
 	var list = p.armory_unequipped_on_load
 	if typeof(list) != TYPE_ARRAY or (list as Array).is_empty():
 		return []
-	if signature(list) == _acked_sig:
+	if has_ack_api(p):
+		if int(p.armory_unequipped_load_id) == _shown_load_id:
+			return []
+	elif signature(list) == _acked_sig:
 		return []
 	return list
+
+
+## True when Progress has Skillz's ack_armory_unequipped() + armory_unequipped_load_id (art pass 3).
+static func has_ack_api(p: Node = null) -> bool:
+	if p == null:
+		p = _prog()
+	return p != null and p.has_method("ack_armory_unequipped") and ("armory_unequipped_load_id" in p)
 
 
 static func is_pending() -> bool:
 	return not pending_entries().is_empty()
 
 
+## Dismissed for this load: Progress.ack_armory_unequipped() (clears the list) + remember the load id.
+## Without that API, remember the list's content instead.
 static func acknowledge(list: Array) -> void:
-	_acked_sig = signature(list)
+	var p := _prog()
+	if has_ack_api(p):
+		_shown_load_id = int(p.armory_unequipped_load_id)
+		p.ack_armory_unequipped()
+	else:
+		_acked_sig = signature(list)
 
 
 ## Tests only: forget the dismissal.
 static func reset_ack() -> void:
+	_shown_load_id = -1
 	_acked_sig = ""
 	_live = null
 

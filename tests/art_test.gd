@@ -272,6 +272,7 @@ func _run() -> void:
 
 	await _art_pass2(A, Rig, prog, world, holder, by_arch)
 	await _art_pass2b(A, Rig, world, holder, by_arch)
+	_art_pass3(A, Rig, holder)
 
 	world.queue_free()
 	DirAccess.remove_absolute(prog.save_path)
@@ -669,6 +670,25 @@ func _front_post_top(Rig, model: Node3D) -> Vector3:
 	return best
 
 
+## Built-in scope axis in gun space: centre (y, z) of the DefaultOptic vertices in the eyepiece ring (within 1 cm of
+## OpticSightPoint's x), so the mount below the tube doesn't drag it down.
+func _scope_axis(Rig, model: Node3D, dopt: Node3D) -> Vector3:
+	var osp: Vector3 = Rig.gun_point(model, Rig.find_node(model, "OpticSightPoint"))
+	var lo := Vector3(INF, INF, INF)
+	var hi := -lo
+	for mi in ([dopt] if dopt is MeshInstance3D else []) + dopt.find_children("*", "MeshInstance3D", true, false):
+		var xf: Transform3D = Rig.gun_xform(model, mi)
+		for si in (mi as MeshInstance3D).mesh.get_surface_count():
+			for vtx in (mi as MeshInstance3D).mesh.surface_get_arrays(si)[Mesh.ARRAY_VERTEX]:
+				var gp: Vector3 = xf * vtx
+				if absf(gp.x - osp.x) <= 0.01:
+					lo = lo.min(gp)
+					hi = hi.max(gp)
+	if lo.x == INF:
+		return osp
+	return Vector3(osp.x, (lo.y + hi.y) * 0.5, (lo.z + hi.z) * 0.5)
+
+
 func _art_pass2b(A, Rig, world: Node3D, holder: Node3D, by_arch: Dictionary) -> void:
 	var Ads = load("res://scripts/combat/ads_profile.gd")
 	var gdb = root.get_node("GearDB")
@@ -860,3 +880,49 @@ func _art_pass2b(A, Rig, world: Node3D, holder: Node3D, by_arch: Dictionary) -> 
 	if f:
 		f.store_string("\n".join(_pending) + "\n")
 
+
+
+# ================================================================== art pass 3 (sawn_stub MagTubeStub, Shell Saddle clash)
+
+func _mesh_box(Rig, model: Node3D, n: Node3D) -> AABB:
+	var box := AABB()
+	var first := true
+	for mi in ([n] if n is MeshInstance3D else []) + n.find_children("*", "MeshInstance3D", true, false):
+		var bb: AABB = Rig.gun_xform(model, mi) * (mi as MeshInstance3D).get_aabb()
+		box = bb if first else box.merge(bb)
+		first = false
+	return box
+
+
+func _art_pass3(A, Rig, holder: Node3D) -> void:
+	# Sawn Stub's MagTubeStub (Desi 12:54): shown on the shotgun only, hidden on every other host
+	var hosts := {"weapon_shotgun": "shotgun", "weapon_smg": "smg", "weapon_assault_rifle": "auto_rifle",
+		"weapon_scout_rifle": "scout_rifle", "weapon_sniper": "sniper_rifle"}
+	check(A.is_compatible("sawn_stub", "shotgun") and Rig.inner_hides_for("sawn_stub", "shotgun").is_empty()
+		and Rig.inner_hides_for("sawn_stub", "smg") == ["MagTubeStub"], "inner_hides: MagTubeStub hidden everywhere but the shotgun")
+	for g in hosts:
+		var arch: String = hosts[g]
+		var m := _gun(holder, g)
+		var r: Dictionary = Rig.apply(m, arch, {"barrel": "sawn_stub"})
+		var stub: Node3D = r.attached.get("barrel")
+		var mts: Node3D = Rig.find_node(stub, "MagTubeStub") if stub else null
+		if arch == "shotgun":
+			var mb := _mesh_box(Rig, m, mts) if mts else AABB()
+			var stub_end: float = _mesh_box(Rig, m, Rig.find_node(stub, "Mesh")).end.x
+			var dm := Rig.find_node(m, "DefaultMag") as Node3D
+			check(mts != null and mts.is_visible_in_tree() and dm != null and not dm.visible and r.hidden.has("DefaultMag"),
+				"shotgun + Sawn Stub: MagTubeStub shows, DefaultMag still hidden")
+			check(mts != null and mb.end.x <= stub_end + 0.003, "shotgun MagTubeStub ends at x %.3f, inside the stub (end %.3f)" % [mb.end.x, stub_end])
+			# Shell Saddle on top: its TubeMag runs past the stub and overlaps MagTubeStub -> the exclusion rule
+			var r2: Dictionary = Rig.apply(m, arch, {"barrel": "sawn_stub", "mag": "shell_saddle"})
+			var sad: Node3D = r2.attached.get("mag")
+			var tube: Node3D = Rig.find_node(sad, "TubeMag") if sad else null
+			var tb := _mesh_box(Rig, m, tube) if tube else AABB()
+			var mts2: Node3D = Rig.find_node(r2.attached.barrel, "MagTubeStub")
+			var mb2 := _mesh_box(Rig, m, mts2)
+			check(tube != null and tb.end.x > stub_end + 0.03 and tb.intersects(mb2),
+				"clash proof: Shell Saddle TubeMag reaches x %.3f (%.0f mm past the stub) and overlaps MagTubeStub" % [tb.end.x, (tb.end.x - stub_end) * 1000.0])
+			check(not A.exclusion_reason("shell_saddle", "shotgun", {"barrel": "sawn_stub"}).is_empty(), "...so the pair is an Armory exclusion")
+		else:
+			check(stub != null and mts != null and not mts.visible, "%s + Sawn Stub: MagTubeStub hidden" % arch)
+		m.queue_free()

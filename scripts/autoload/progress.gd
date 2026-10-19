@@ -67,6 +67,9 @@ var armory: Dictionary = {"upgrades": {}, "owned": [], "equipped": {}}
 ## Parts the last load unequipped because the current data blocks them ([{arch, slot, id, why}], Armory.sanitize_armory).
 ## They stay owned. For a one-time UI notice ("moved back to your Armory"); empty on a clean save.
 var armory_unequipped_on_load: Array = []
+## Bumped every time a load produces a non-empty armory_unequipped_on_load, so a UI can show its notice once per load
+## (compare against the id it last showed). Not saved.
+var armory_unequipped_load_id: int = 0
 var armory_rev: int = 0 ## bumped on every armory change (WeaponItem / AdsProfile caches key on it)
 
 ## Point economy (data/economy.json). Defaults = halved playtest values.
@@ -118,10 +121,17 @@ func load_data() -> void:
 	armory = migrate_armory(cfg.get_value("armory", "data") if cfg.has_section_key("armory", "data") else null)
 	# Art pass 2b: blocked fits / pairs from older data are unequipped (still owned); written on the next save.
 	armory_unequipped_on_load = load(ARMORY_SCRIPT).sanitize_armory(armory)
+	if not armory_unequipped_on_load.is_empty():
+		armory_unequipped_load_id += 1
 	armory_rev += 1
 	_recompute_spent()
 	currency_changed.emit(gravemarks)
 	armory_changed.emit("load", "")
+
+
+## Gooey: the "parts moved back to your Armory" notice was shown -> clear the list (the load id stays).
+func ack_armory_unequipped() -> void:
+	armory_unequipped_on_load = []
 
 
 ## v2 and older saves have no stash -> {} (starter loadout). Anything that isn't a {equipped, backpack} dict is dropped.

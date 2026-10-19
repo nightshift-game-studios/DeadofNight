@@ -4,6 +4,9 @@ extends RefCounted
 ##   ZombieVariants.pick(round)      -> variant id ("city" / "worker" / "soldier"), weighted by wave_mix
 ##   ZombieVariants.get_variant(id)  -> {model, model_height, health_mult, speed_mult, damage_mult, ...}
 ##   ZombieVariants.scene(id)        -> cached PackedScene of the model
+##   ZombieVariants.apply_script(z, id) -> swaps in the variant's behaviour script (Bloater / Crawler / Riot extend
+##                                       enemy.gd; zombies.json "script") before setup(); MAIN_HOOKS §15a
+##   ZombieVariants.behavior(id) / allows_runner(id)
 
 const DATA_PATH := "res://data/zombies.json"
 static var _data: Dictionary = {}
@@ -61,3 +64,35 @@ static func pick(n: int, rng_value: float = -1.0) -> String:
 		if r <= 0.0:
 			return k
 	return w.keys().back()
+
+
+## Behaviour script (extends res://scripts/enemy.gd) for a variant, "" = plain walker.
+static func script_path(id: String) -> String:
+	return str(get_variant(id).get("script", ""))
+
+
+## Behaviour knobs for the variant's script (zombies.json variants[id].behavior).
+static func behavior(id: String) -> Dictionary:
+	return get_variant(id).get("behavior", {})
+
+
+## main.gd's 25% "runner" speed bonus applies to this variant (Bloaters stay slow).
+static func allows_runner(id: String) -> bool:
+	return bool(get_variant(id).get("runner", true))
+
+
+## Call right after ZOMBIE_SCENE.instantiate(), before setup() / set_variant(): swaps the node's script for the
+## variant's behaviour script. Returns true if it did. Unknown id / no script / missing file -> untouched.
+static func apply_script(z: Node, id: String) -> bool:
+	var p := script_path(id)
+	if z == null or p == "" or not ResourceLoader.exists(p):
+		return false
+	var keep_models = z.get("models")
+	var keep_h = z.get("model_height")
+	z.set_script(load(p))
+	if keep_models != null:
+		z.set("models", keep_models)
+	if keep_h != null:
+		z.set("model_height", keep_h)
+	z.set_meta("variant_script", p)
+	return true

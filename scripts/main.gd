@@ -267,11 +267,13 @@ func _spawn_zombie() -> void:
 	var spawn: Node3D = candidates.pick_random()
 	var stats := _zombie_stats(current_round)
 	var z = ZOMBIE_SCENE.instantiate()
-	# Every few zombies is a faster "runner".
-	var spd: float = stats.speed * (1.35 if randf() < 0.25 else 1.0)
+	# MAIN_HOOKS §15a: pick first (specials included), then give Bloater / Crawler / Riot their behaviour script.
+	var vid := Difficulty.pick_spawn_variant(current_round) if use_zombie_variants else ""
+	ZombieVariants.apply_script(z, vid)
+	# Every few zombies is a faster "runner" (never a Bloater).
+	var spd: float = stats.speed * (1.35 if ZombieVariants.allows_runner(vid) and randf() < 0.25 else 1.0)
 	z.setup(stats.health, spd, stats.damage)
-	if use_zombie_variants:
-		var vid := Difficulty.pick_variant(current_round) # profile-weighted mix (more Soldiers, sooner, on Hard)
+	if vid != "":
 		var sc := ZombieVariants.scene(vid)
 		if sc:
 			z.set_variant(vid, ZombieVariants.get_variant(vid), sc)

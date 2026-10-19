@@ -311,7 +311,7 @@ func _run() -> void:
 	await wait(30)
 
 	# ---------------------------------------------------------------- zombie variants
-	check(ZombieVariants.ids().size() == 3, "3 zombie variants in zombies.json")
+	check(ZombieVariants.ids().size() == 6, "6 zombie variants in zombies.json (3 regular + bloated / crawler / riot)")
 	var heights := {"city": 1.795, "worker": 1.821, "soldier": 1.821}
 	for id in ["city", "worker", "soldier"]:
 		var v := ZombieVariants.get_variant(id)

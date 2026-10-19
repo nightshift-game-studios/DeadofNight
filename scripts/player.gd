@@ -34,6 +34,7 @@ enum Move { NORMAL, CROUCH, SLIDE }
 
 # ADS (Skillz MAIN_HOOKS §8): AdsProfile tables, Settings.ads_mode hold|toggle, RMB action "ads".
 const AdsProfileScr := preload("res://scripts/combat/ads_profile.gd")
+const PlayerStatusScr := preload("res://scripts/combat/player_status.gd") ## MAIN_HOOKS §15b: Crawler root, Bloater bile slow
 signal ads_changed(active: bool) ## Gooey sniper scope overlay listens when AdsProfile.wants_scope_overlay(archetype)
 var ads_active: bool = false
 var _hip_fov: float = 75.0
@@ -495,6 +496,7 @@ func _physics_process(delta: float) -> void:
 			speed = sprint_speed
 		speed *= speed_multiplier
 		speed *= AdsProfileScr.move_speed_mult(ads_active) # ~0.7 while aiming
+		speed *= PlayerStatusScr.move_mult(self) # §15b: 0 while a Crawler holds you, -45% in Bloater bile
 		var wish := wish_dir * speed
 		if on_floor:
 			velocity.x = lerp(velocity.x, wish.x, clamp(acceleration * delta, 0.0, 1.0))
@@ -510,6 +512,7 @@ func _physics_process(delta: float) -> void:
 			velocity.x = hvel.x
 			velocity.z = hvel.z
 
+	PlayerStatusScr.pin(self) # §15b: rooted = no horizontal velocity (slides / momentum too); jumping still works
 	move_and_slide()
 	if _prev_move_state == Move.SLIDE and move_state != Move.SLIDE:
 		_since_slide = 0.0

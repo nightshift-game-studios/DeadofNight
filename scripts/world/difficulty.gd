@@ -139,6 +139,93 @@ static func variant_share(vid: String, n: int, id: String = "") -> float:
 	return float(w.get(vid, 0.0)) / total if total > 0.0 else 0.0
 
 
+## A per-profile variant knob from difficulty.json profiles[].variants (e.g. "bloater_burst_player_cap"), or `fallback`.
+static func variant_knob(key: String, fallback, id: String = ""):
+	return profile(id).get("variants", {}).get(key, fallback)
+
+
+## Share (0..1) of all spawns that special variant `vid` takes in round n (difficulty.json variants.specials):
+## 0 before from_round, then weight + per_round x (n - from_round), capped at max.
+static func special_share(vid: String, n: int, id: String = "") -> float:
+	var sp: Dictionary = profile(id).get("variants", {}).get("specials", {})
+	if not sp.has(vid) or ZombieVariants.get_variant(vid).is_empty():
+		return 0.0
+	var e: Dictionary = sp[vid]
+	var from := int(e.get("from_round", 1))
+	if n < from:
+		return 0.0
+	var w := float(e.get("weight", 0.0)) + float(e.get("per_round", 0.0)) * float(n - from)
+	return clampf(minf(w, float(e.get("max", w))), 0.0, 1.0)
+
+
+## Every variant's spawn weight in round n, specials included: the specials' shares, and the regular
+## variant_weights() mix scaled to fill the rest. Sums to 1 (when there is a regular mix).
+static func spawn_weights(n: int, id: String = "") -> Dictionary:
+	var reg := variant_weights(n, id)
+	var sp: Dictionary = profile(id).get("variants", {}).get("specials", {})
+	var out := {}
+	var special_total := 0.0
+	for k in sp:
+		var s := special_share(str(k), n, id)
+		if s > 0.0:
+			out[str(k)] = s
+			special_total += s
+	special_total = minf(special_total, 0.95)
+	var reg_total := 0.0
+	for k in reg:
+		reg_total += maxf(float(reg[k]), 0.0)
+	for k in reg:
+		out[k] = (maxf(float(reg[k]), 0.0) / reg_total * (1.0 - special_total)) if reg_total > 0.0 else 0.0
+	_apply_floors(out, profile(id).get("variants", {}).get("share_floor", {}))
+	return out
+
+
+## share_floor {vid: {share, from: [vids]}}: lifts vid to `share` (only if it's below), taking the gap from the `from`
+## variants in proportion to their shares. Totals stay 1.
+static func _apply_floors(w: Dictionary, floors: Dictionary) -> void:
+	for vid in floors:
+		var f: Dictionary = floors[vid]
+		if not w.has(vid):
+			continue
+		var gap := float(f.get("share", 0.0)) - float(w[vid])
+		if gap <= 0.0:
+			continue
+		var pool := 0.0
+		for k in f.get("from", []):
+			pool += float(w.get(k, 0.0))
+		if pool <= 0.0:
+			continue
+		gap = minf(gap, pool)
+		for k in f.get("from", []):
+			if w.has(k):
+				w[k] = float(w[k]) * (1.0 - gap / pool)
+		w[vid] = float(w[vid]) + gap
+
+
+## Like spawn_weights()[vid], 0 if absent.
+static func spawn_share(vid: String, n: int, id: String = "") -> float:
+	return float(spawn_weights(n, id).get(vid, 0.0))
+
+
+## Spawner pick including the special variants (MAIN_HOOKS §15a). pick_variant() stays regular-only, so the
+## live main.gd (no §15a) never spawns a Bloater / Crawler / Riot without its behaviour script.
+static func pick_spawn_variant(n: int, rng_value: float = -1.0, id: String = "") -> String:
+	var w := spawn_weights(n, id)
+	var total := 0.0
+	for k in w:
+		total += maxf(float(w[k]), 0.0)
+	if total <= 0.0:
+		return pick_variant(n, rng_value, id)
+	var r := (rng_value if rng_value >= 0.0 else randf()) * total
+	var keys := w.keys()
+	keys.sort() # deterministic order for a given rng_value
+	for k in keys:
+		r -= maxf(float(w[k]), 0.0)
+		if r <= 0.0:
+			return k
+	return pick_variant(n, rng_value, id)
+
+
 # ------------------------------------------------------------------ bosses (cadence for data/bosses.json)
 
 static func boss_cfg(id: String = "") -> Dictionary:

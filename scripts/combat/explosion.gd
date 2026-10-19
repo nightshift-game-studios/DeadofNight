@@ -1,6 +1,10 @@
 class_name Explosion
 ## Area damage with falloff + knockback + VFX. Used by grenades, rockets and perks.
 
+## The hit ctx of the blast whose take_damage() call is running right now ({} otherwise), so a target can tell an
+## explosive hit from a bullet without a new take_damage() argument (Riot armor: explosives ignore half of it).
+static var current: Dictionary = {}
+
 
 ## Damages every zombie within `radius` of `pos`. Damage falls off to 30% at the edge.
 ## `player` (optional) gets kill credit; `weapon` (optional) gets perk on-kill procs.
@@ -35,7 +39,10 @@ static func explode(scene: Node, pos: Vector3, radius: float, damage: float, kno
 			ctx = player.hit_ctx(ctx)
 			ctx["target"] = e
 			dmg = player.mod_stat("damage_out", dmg, ctx)
+		var prev_ctx := current
+		current = ctx
 		var killed: bool = e.take_damage(dmg, center, false, player)
+		current = prev_ctx
 		if skilled:
 			player.register_hit(e, dmg, false, killed, ctx)
 		elif player and player.has_method("register_hit"):

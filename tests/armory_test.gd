@@ -391,6 +391,7 @@ func _run() -> void:
 	check(A.attachment_ids().size() == 38, "38 attachments including Mine Lamp")
 
 	await _art_pass2b(prog, A)
+	await _art_pass3(prog, A)
 
 	# ------------------------------------------------------------ cleanup
 	_reset(prog)
@@ -412,7 +413,7 @@ func _art_pass2b(prog: Node, A) -> void:
 		check(A.is_compatible("sawn_stub", arch), "Sawn Stub still fits %s" % arch)
 	var ex: Array = A.exclusions("smg")
 	check(ex.size() == 1 and ex[0].parts == ["bonesaw_bayonet", "sawn_stub"] and A.exclusions("auto_rifle").is_empty()
-		and A.exclusions().size() == 1, "exclusions: one SMG rule (bonesaw_bayonet, sawn_stub)")
+		and A.exclusions().size() == 2, "exclusions: one SMG rule (bonesaw_bayonet, sawn_stub) + the shotgun saddle rule")
 	prog.armory.owned.append_array(["sawn_stub", "bonesaw_bayonet", "fluted_cooler", "ember_window_mag"])
 	prog.armory.upgrades["smg"] = 2
 	prog.armory.upgrades["auto_rifle"] = 2
@@ -476,6 +477,114 @@ func _art_pass2b(prog: Node, A) -> void:
 	var raw := {"equipped": {"smg": {"grip": "bonesaw_bayonet", "barrel": "sawn_stub"}}}
 	check(A.sanitize_armory(raw).size() == 1 and raw.equipped.smg == {"grip": "bonesaw_bayonet"}
 		and A.sanitize_armory({}).is_empty() and A.sanitize_armory({"equipped": 3}).is_empty(), "sanitize_armory is junk-safe")
+	_reset(prog)
+	if api is Node:
+		api.free()
+
+
+## Art pass 3: Gooey's asks (purchase_check / equip_check / last_refusal_reason, Progress.ack_armory_unequipped +
+## armory_unequipped_load_id) and G4M3N's shotgun Shell Saddle x Sawn Stub exclusion.
+func _art_pass3(prog: Node, A) -> void:
+	_reset(prog)
+	var api = A.new()
+	# ---- purchase_check
+	var c: Dictionary = A.purchase_check("definitely_not_a_part")
+	check(c.ok == false and c.reason == "Unknown attachment" and c.keys().size() == 2, "purchase_check: unknown id -> {ok false, reason}")
+	check(A.purchase_check("upg_not_a_gun").reason == "Unknown weapon", "purchase_check: unknown upgrade weapon")
+	c = A.purchase_check("pinhole")
+	check(not c.ok and c.reason == "Need %d Gravemarks (you have 0)" % A.cost_of("pinhole"), "purchase_check: short on Gravemarks -> \"%s\"" % c.reason)
+	check(not A.buy_attachment("pinhole") and A.last_refusal_reason() == c.reason, "buy_attachment refuses with the same reason")
+	prog.gravemarks = 1
+	check(A.purchase_check("flare_cage").reason == "Need 2 Gravemarks (you have 1)", "...wording has the balance")
+	c = A.purchase_check("crows_eye_3x")
+	prog.gravemarks = 50
+	c = A.purchase_check("crows_eye_3x")
+	check(not c.ok and c.reason.begins_with("Needs ") and c.reason.contains(str(A.purchase_requirements("crows_eye_3x")[0])),
+		"purchase_check: Rework-tier gate -> \"%s\"" % c.reason)
+	c = A.purchase_check("pinhole")
+	check(c.ok and c.reason == "", "purchase_check: affordable + buyable -> {ok true, reason \"\"}")
+	check(A.buy_attachment("pinhole") and A.last_refusal_reason() == "" and A.owned("pinhole"), "buy_attachment goes through; last_refusal_reason() \"\"")
+	check(A.purchase_check("pinhole").reason == "Already owned" and not api.purchase("pinhole")
+		and api.last_refusal_reason() == "Already owned", "owned -> \"Already owned\" (instance purchase() too)")
+	check(A.purchase_check("upg_smg").ok and api.purchase("upg_smg") and A.upgrade_tier("smg") == 1, "upgrade purchase_check ok -> purchase() buys it")
+	prog.armory.upgrades["smg"] = A.max_tier()
+	c = A.purchase_check("upg_smg")
+	check(not c.ok and c.reason.contains("fully reworked") and not A.buy_upgrade("smg") and A.last_refusal_reason() == c.reason,
+		"maxed upgrade -> \"%s\"" % c.reason)
+	# purchase_check agrees with can_afford_id for every id at a few balances (one rule set, no drift)
+	var agree := true
+	for bal in [0, 3, 9]:
+		prog.gravemarks = bal
+		for a in A.data().get("attachments", []):
+			agree = agree and A.purchase_check(str(a.id)).ok == A.can_afford_id(str(a.id))
+		for arch in ["smg", "shotgun", "sidearm"]:
+			agree = agree and A.purchase_check("upg_" + arch).ok == A.can_afford_id("upg_" + arch)
+	check(agree, "purchase_check().ok == can_afford_id() for all 38 parts + upgrades at 0 / 3 / 9 Gravemarks")
+	# ---- equip_check
+	_reset(prog)
+	for arch in ["shotgun", "smg", "hand_cannon", "sniper_rifle"]:
+		prog.armory.upgrades[arch] = A.max_tier()
+	prog.notify_armory("load", "", false)
+	c = A.equip_check("shotgun", "barrel", "sawn_stub")
+	check(not c.ok and c.reason == "Not owned yet", "equip_check: not owned")
+	prog.armory.owned.append_array(["sawn_stub", "shell_saddle", "tightjaw_choke", "flare_cage", "pinhole"])
+	check(A.equip_check("shotgun", "barrel", "sawn_stub").ok, "equip_check: owned + fits -> ok")
+	c = A.equip_check("shotgun", "mag", "sawn_stub")
+	check(not c.ok and c.reason.contains("Barrel") and c.reason.contains("slot"), "equip_check: slot mismatch -> \"%s\"" % c.reason)
+	check(not api.equip_attachment("shotgun", "mag", "sawn_stub") and api.last_refusal_reason() == c.reason, "equip_attachment refuses with it")
+	c = A.equip_check("hand_cannon", "", "sawn_stub")
+	check(not c.ok and c.reason.contains("Does not fit"), "equip_check: no fit -> \"%s\"" % c.reason)
+	check(not A.equip("hand_cannon", "sawn_stub") and A.last_refusal_reason() == c.reason, "equip() refuses with the same reason")
+	check(A.equip_check("not_a_gun", "", "sawn_stub").reason == "Unknown weapon" and A.equip_check("shotgun", "", "nope").reason == "Unknown attachment",
+		"equip_check: unknown weapon / part")
+	check(A.equip("shotgun", "sawn_stub") and A.last_refusal_reason() == "", "equip() goes through; reason cleared")
+	# ---- Shell Saddle x Sawn Stub (shotgun): the saddle's full-length TubeMag runs past the stub (tests/art_test.gd)
+	var rule: Array = A.exclusions("shotgun")
+	check(rule.size() == 1 and rule[0].id == "shotgun_stub_saddle" and rule[0].parts == ["sawn_stub", "shell_saddle"]
+		and str(rule[0].reason).contains("Shell Saddle"), "exclusions: shotgun rule (sawn_stub, shell_saddle) with a reason")
+	c = A.equip_check("shotgun", "mag", "shell_saddle")
+	check(not c.ok and c.reason == A.exclusion_reason("shell_saddle", "shotgun") and c.reason.contains("Sawn Stub")
+		and c.reason.contains(str(rule[0].reason)), "equip_check: Shell Saddle under a Sawn Stub -> \"%s\"" % c.reason)
+	check(not api.equip_attachment("shotgun", "mag", "shell_saddle") and api.last_refusal_reason() == c.reason
+		and A.loadout("shotgun") == {"barrel": "sawn_stub"}, "...equip refuses it, loadout unchanged")
+	var entry: Dictionary = api.list_attachments("shotgun", "mag").filter(func(e): return e.id == "shell_saddle")[0]
+	check(entry.state == "locked" and entry.conflict.get("rule") == "shotgun_stub_saddle", "list_attachments shows the saddle locked by the rule")
+	A.unequip_slot("shotgun", "barrel")
+	check(A.equip("shotgun", "shell_saddle") and not A.equip_check("shotgun", "barrel", "sawn_stub").ok, "blocked both ways (saddle on -> stub refused)")
+	check(A.equip("smg", "sawn_stub") and A.equip("sniper_rifle", "sawn_stub"), "the rule is shotgun-only")
+	# equip_check().ok agrees with equip() for every part on four guns (fresh slots each time)
+	var same := true
+	prog.armory.owned = A.data().get("attachments", []).map(func(a): return str(a.id))
+	for arch in ["shotgun", "smg", "hand_cannon", "sniper_rifle"]:
+		for a in A.data().get("attachments", []):
+			prog.armory.equipped[arch] = {"barrel": "sawn_stub"} if arch == "shotgun" else {}
+			prog.notify_armory("load", "", false)
+			var ok: bool = A.equip_check(arch, "", str(a.id)).ok
+			same = same and ok == A.equip(arch, str(a.id)) and (ok or A.last_refusal_reason() != "")
+	check(same, "equip_check().ok == equip() for all 38 parts on shotgun (with Sawn Stub) / smg / hand_cannon / sniper")
+	# ---- save migration: an old save with both on the shotgun keeps the Sawn Stub, unequips the Shell Saddle
+	_reset(prog)
+	var id0: int = prog.armory_unequipped_load_id
+	var cfg := ConfigFile.new()
+	cfg.set_value("meta", "save_version", 4)
+	cfg.set_value("armory", "gravemarks", 2)
+	cfg.set_value("armory", "data", {"upgrades": {"shotgun": 3}, "owned": ["sawn_stub", "shell_saddle", "tightjaw_choke"],
+		"equipped": {"shotgun": {"barrel": "sawn_stub", "mag": "shell_saddle", "muzzle": "tightjaw_choke"}}})
+	cfg.save(prog.save_path)
+	prog.load_data()
+	var moved: Array = prog.armory_unequipped_on_load.map(func(m): return "%s/%s/%s/%s" % [m.arch, m.slot, m.id, m.why])
+	check(moved == ["shotgun/mag/shell_saddle/shotgun_stub_saddle"] and prog.armory.equipped.shotgun == {"barrel": "sawn_stub", "muzzle": "tightjaw_choke"}
+		and A.owned("shell_saddle"), "load: Shell Saddle unequipped (still owned), Sawn Stub + choke stay %s" % [moved])
+	check(prog.armory_unequipped_load_id == id0 + 1, "armory_unequipped_load_id +1 on a load with a non-empty list (%d)" % prog.armory_unequipped_load_id)
+	prog.ack_armory_unequipped()
+	check(prog.armory_unequipped_on_load.is_empty() and prog.armory_unequipped_load_id == id0 + 1, "ack_armory_unequipped() clears the list, keeps the id")
+	prog.save_data()
+	prog.load_data()
+	check(prog.armory_unequipped_on_load.is_empty() and prog.armory_unequipped_load_id == id0 + 1, "a clean load leaves the id alone")
+	cfg.save(prog.save_path)
+	prog.load_data()
+	check(prog.armory_unequipped_load_id == id0 + 2 and prog.armory_unequipped_on_load.size() == 1, "the next dirty load bumps it again")
+	prog.ack_armory_unequipped()
 	_reset(prog)
 	if api is Node:
 		api.free()

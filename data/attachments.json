@@ -1,6 +1,6 @@
 {
 	"version": 1,
-	"_help": "Weapon attachments (Skillz). Bought once with Gravemark (account-wide unlock), then equipped per weapon archetype: every weapon of that archetype uses the archetype's loadout. classes[archetype].slots = slots it has (DESI_ATTACHMENTS.md §1); optic_cap limits optic size (micro<short<mid<long). attachment.classes = optional allow list (default: every class with that slot). tier 1/2/3: equipping needs the weapon's upgrade tier >= tier_requires[tier] (0/2/4). mods (WeaponItem, multiply unless *_add): damage_mult rpm_mult mag_mult reload_mult (time) spread_mult (all fire) hip_spread_mult (not ADS) recoil_mult range_mult (falloff start) swap_mult (time) pellets_add headshot_add reserve_mags_add. ads (AdsProfile): fov (ADS FOV override; the narrowest wins) move_mult spread_mult (multiply the ADS penalties). flags = presentation hooks for player.gd/HUD (tracer_hidden, flash_mult, scope_overlay, outline_elites, heartbeat_counter, bipod, flashlight, mine_lamp). effects = SkillEffect defs (same format as skill_tree.json) run by the player's SkillRunner only while a weapon of that archetype is in hand. slots[].hides = default gun meshes (Desi split guns) a fitted part hides; an attachment \"hides\" overrides it ([] = hide nothing); \"hides_by_class\" {archetype: [...]} overrides both for that archetype (Sawn Stub on the shotgun also hides IronSights + the DefaultMag tube). exclusions = per-archetype parts that can't be equipped together ({id, classes, parts, reason}; Armory.exclusion_reason); a save holding one unequips the last listed part on load (it stays owned). Flashlight parts (mine_lamp, lantern_rail; F toggles the beam) carry light_energy / light_range / light_angle / light_attenuation / light_color for the camera SpotLight3D (Armory.flashlight_config).",
+	"_help": "Weapon attachments (Skillz). Bought once with Gravemark (account-wide unlock), then equipped per weapon archetype: every weapon of that archetype uses the archetype's loadout. classes[archetype].slots = slots it has (DESI_ATTACHMENTS.md §1); optic_cap limits optic size (micro<short<mid<long). attachment.classes = optional allow list (default: every class with that slot). tier 1/2/3: equipping needs the weapon's upgrade tier >= tier_requires[tier] (0/2/4). mods (WeaponItem, multiply unless *_add): damage_mult rpm_mult mag_mult reload_mult (time) spread_mult (all fire) hip_spread_mult (not ADS) recoil_mult range_mult (falloff start) swap_mult (time) pellets_add headshot_add reserve_mags_add. ads (AdsProfile): fov (ADS FOV override; the narrowest wins) move_mult spread_mult (multiply the ADS penalties). flags = presentation hooks for player.gd/HUD (tracer_hidden, flash_mult, scope_overlay, outline_elites, heartbeat_counter, bipod, flashlight, mine_lamp). effects = SkillEffect defs (same format as skill_tree.json) run by the player's SkillRunner only while a weapon of that archetype is in hand. slots[].hides = default gun meshes (Desi split guns) a fitted part hides; an attachment \"hides\" overrides it ([] = hide nothing); \"hides_by_class\" {archetype: [...]} overrides both for that archetype (Sawn Stub on the shotgun also hides IronSights + the DefaultMag tube); \"inner_hides\" {archetype or \"*\": [node names]} hides nodes inside the part itself on that host (Sawn Stub's MagTubeStub shows on the shotgun only). exclusions = per-archetype parts that can't be equipped together ({id, classes, parts, reason}; Armory.exclusion_reason); a save holding one unequips the last listed part on load (it stays owned). Flashlight parts (mine_lamp, lantern_rail; F toggles the beam) carry light_energy / light_range / light_angle / light_attenuation / light_color for the camera SpotLight3D (Armory.flashlight_config).",
 	"slots": [
 		{
 			"id": "optic",
@@ -168,6 +168,17 @@
 				"sawn_stub"
 			],
 			"reason": "The SMG's Sawn Stub is too short to carry the Bonesaw Bayonet's blade."
+		},
+		{
+			"id": "shotgun_stub_saddle",
+			"classes": [
+				"shotgun"
+			],
+			"parts": [
+				"sawn_stub",
+				"shell_saddle"
+			],
+			"reason": "The Shell Saddle's full-length tube won't fit under a Sawn Stub."
 		}
 	],
 	"attachments": [
@@ -659,6 +670,12 @@
 					"IronSights",
 					"DefaultMag"
 				]
+			},
+			"inner_hides": {
+				"*": [
+					"MagTubeStub"
+				],
+				"shotgun": []
 			}
 		},
 		{

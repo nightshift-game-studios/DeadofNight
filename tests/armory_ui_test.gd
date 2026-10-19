@@ -196,7 +196,7 @@ func _go() -> void:
 				glyph_rows += 1
 	check(lamp_row != null and lamp_row.find_child("AttIcon", true, false) != null, "Mine Lamp row shows att_mine_lamp.png")
 	check(lamp_row != null and lamp_row.find_child("AttGlyph", true, false) == null, "Mine Lamp row has no glyph fallback")
-	check(glyph_rows > 0, "parts without art keep the glyph fallback (%d rows)" % glyph_rows)
+	check(glyph_rows == 0, "every part row shows its icon, no glyph fallback (%d glyph rows)" % glyph_rows)
 
 	# ---- Refresh on armory_changed: buying the next SMG Rework bumps the header IP
 	prog.gravemarks = 500
@@ -381,15 +381,35 @@ func _go() -> void:
 		await process_frame
 		await process_frame
 	check(m2.find_child("ArmoryUnequipNotice", true, false) == null and not NoticeScr.is_pending(), "OK dismisses notice")
+	check(NoticeScr.has_ack_api() and prog.armory_unequipped_on_load.is_empty(),
+		"dismiss calls Progress.ack_armory_unequipped() (list cleared)")
+	var lid1: int = int(prog.armory_unequipped_load_id)
 	m2.close()
 	m2.open()
 	await process_frame
 	check(m2.find_child("ArmoryUnequipNotice", true, false) == null, "notice does not show again after dismissal")
-	prog.load_data() # same save, same list (not written yet): stays dismissed
+	# A new load that unequips again bumps armory_unequipped_load_id -> it's a different load, so it shows once more
+	prog.load_data() # same save, not written yet
+	check(int(prog.armory_unequipped_load_id) == lid1 + 1, "new sanitizing load bumps armory_unequipped_load_id")
 	m2.close()
 	m2.open()
 	await process_frame
-	check(m2.find_child("ArmoryUnequipNotice", true, false) == null, "same unequipped list stays dismissed for that load")
+	var nt2 = m2.find_child("ArmoryUnequipNotice", true, false)
+	check(nt2 != null, "new load id shows the notice again")
+	if nt2:
+		nt2.dismiss()
+		await process_frame
+	# Same load id with the list put back (e.g. another reader) stays dismissed
+	prog.armory_unequipped_on_load = ul.duplicate(true)
+	check(not NoticeScr.is_pending(), "same armory_unequipped_load_id stays dismissed")
+	prog.armory_unequipped_on_load = []
+	# Clean load (after a save) leaves the load id alone and shows nothing
+	prog.save_data()
+	prog.load_data()
+	check(int(prog.armory_unequipped_load_id) == lid1 + 1 and not NoticeScr.is_pending(), "clean load: no notice, load id unchanged")
+	var no_api := Node.new()
+	check(not NoticeScr.has_ack_api(no_api), "fallback path detects a Progress without the ack API")
+	no_api.free()
 	# Ember on hand cannon: row isn't listed (doesn't fit), no error
 	m2._select_weapon("hand_cannon")
 	await process_frame
@@ -451,6 +471,44 @@ func _go() -> void:
 	m2._do_equip("sawn_stub", "barrel")
 	await process_frame
 	check(str(ArmoryScr.loadout("smg").get("barrel", "")) == "sawn_stub", "Sawn Stub equips once Bonesaw is gone")
+	# Reasons come straight from Armory's checks (art pass 3)
+	check(m2.refusal_reason("sawn_stub", "buy") == str(ArmoryScr.purchase_check("sawn_stub").reason), "buy reason = Armory.purchase_check")
+	check(m2.refusal_reason(buy2_id, "buy") == str(ArmoryScr.purchase_check(buy2_id).reason), "broke reason = purchase_check (%s)" % m2.refusal_reason(buy2_id, "buy"))
+	check(m2.refusal_reason("lantern_rail", "equip") == "", "ok equip -> no reason")
+
+	# Shotgun: Shell Saddle x Sawn Stub works through the checks
+	prog.gravemarks = 50
+	prog.armory.upgrades["shotgun"] = 1
+	if not ("shell_saddle" in prog.armory.owned):
+		prog.armory.owned.append("shell_saddle")
+	ArmoryScr.unequip_slot("shotgun", "mag")
+	check(ArmoryScr.equip("shotgun", "sawn_stub"), "Sawn Stub on the shotgun")
+	m2._select_weapon("shotgun")
+	await process_frame
+	var sg_why: String = ArmoryScr.exclusion_reason("shell_saddle", "shotgun")
+	var ec: Dictionary = ArmoryScr.equip_check("shotgun", "", "shell_saddle")
+	check(not ec.ok and ec.reason == sg_why and "Shell Saddle" in sg_why, "equip_check refuses Shell Saddle under a Sawn Stub (%s)" % ec.reason)
+	var sad_row: Node = null
+	for row in m2._right.find_children("*", "PanelContainer", true, false):
+		if row.has_meta("att_id") and str(row.get_meta("att_id")) == "shell_saddle":
+			sad_row = row
+	var sad_conf = sad_row.find_child("ConflictReason", true, false) if sad_row else null
+	check(sad_conf != null and sad_conf.text == sg_why, "Shell Saddle row shows the conflict ahead of time")
+	m2._do_equip("shell_saddle", "mag")
+	await process_frame
+	check(not ArmoryScr.loadout("shotgun").has("mag") and str(ArmoryScr.last_refusal_reason()) == sg_why,
+		"refused; last_refusal_reason = exclusion text")
+	check(str(m2._refusal.get("text", "")) == sg_why and m2._toast.text == "Can't equip Shell Saddle: " + sg_why,
+		"inline + toast use Armory's reason (%s)" % m2._toast.text)
+	# old save with both -> load unequips the Shell Saddle (why = rule id)
+	prog.armory.equipped["shotgun"] = {"barrel": "sawn_stub", "mag": "shell_saddle"}
+	prog.save_data()
+	prog.load_data()
+	var sg_ul: Array = prog.armory_unequipped_on_load.filter(func(e): return str(e.arch) == "shotgun")
+	check(sg_ul.size() == 1 and str(sg_ul[0].id) == "shell_saddle" and str(sg_ul[0].why) == "shotgun_stub_saddle",
+		"load unequips Shell Saddle on the shotgun (%s)" % str(sg_ul))
+	check(NoticeScr.line_for(sg_ul[0]).reason == sg_why, "notice reason for the shotgun = Armory exclusion text")
+	prog.ack_armory_unequipped()
 	m2.close()
 	m2.queue_free()
 	await process_frame
@@ -464,7 +522,10 @@ func _go() -> void:
 			var ic = UIStyle.attachment_icon(str(a.id), 32, str(a.slot))
 			glyph_ok = glyph_ok and ic.name == "AttGlyph"
 			ic.free()
-	check(no_art == 37 and glyph_ok, "37 parts without art use the letter-box fallback (%d)" % no_art)
+	check(no_art == 0 and glyph_ok, "all 38 parts have att_<id>.png art, no letter-box fallback (%d without)" % no_art)
+	var gl = UIStyle.attachment_icon("definitely_not_a_part", 32, "barrel")
+	check(gl.name == "AttGlyph", "a part without art still gets the letter box")
+	gl.free()
 	prog.armory_unequipped_on_load = []
 
 	# ---- G4M3N fix: ads rebind + aim migration
