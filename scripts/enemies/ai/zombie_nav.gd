@@ -258,16 +258,24 @@ static func _flat(v: Vector3) -> Vector3:
 ## a thin NavigationObstacle3D carve strip (navmesh only, no physics) along both sides of every 6-point wedge collider
 ## from the height `from_height` up, so ramps are entered from the foot. Call before the first bake (MAIN_HOOKS §17d);
 ## door rebakes keep them (they live under the region). Returns the number of strips added. Idempotent.
-static func prepare_nav_region(region: NavigationRegion3D) -> int:
-	if region == null or region.has_node("ZombieNavRampCarves"):
+## A ramp body carrying the meta `nav_side_carves` (Mapz map contract: the map ships its own side carves) is skipped, so
+## only untagged wedges get strips. last_carve_stats = {enabled, wedges, tagged, added} of the last call (for tests / logs).
+## dry_run: count only (ignores ramp_carve.enabled and adds nothing; "added" = the strips it would add).
+static var last_carve_stats: Dictionary = {}
+
+static func prepare_nav_region(region: NavigationRegion3D, dry_run: bool = false) -> int:
+	if region == null or (not dry_run and region.has_node("ZombieNavRampCarves")):
 		return 0
 	var rc: Dictionary = (DEFAULTS.ramp_carve as Dictionary).duplicate()
 	rc.merge(data().get("ramp_carve", {}), true)
-	if not bool(rc.enabled):
+	last_carve_stats = {"enabled": bool(rc.enabled), "wedges": 0, "tagged": 0, "added": 0, "dry_run": dry_run}
+	if not bool(rc.enabled) and not dry_run:
 		return 0
-	var holder := Node3D.new()
-	holder.name = "ZombieNavRampCarves"
-	region.add_child(holder)
+	var holder: Node3D = null
+	if not dry_run:
+		holder = Node3D.new()
+		holder.name = "ZombieNavRampCarves"
+		region.add_child(holder)
 	var n := 0
 	for cs in region.find_children("*", "CollisionShape3D", true, false):
 		var body := (cs as Node).get_parent() as CollisionObject3D
@@ -278,6 +286,10 @@ static func prepare_nav_region(region: NavigationRegion3D) -> int:
 		var r := ramp_frame(cs as CollisionShape3D)
 		if r.is_empty():
 			continue
+		last_carve_stats.wedges += 1
+		if body.has_meta("nav_side_carves"):
+			last_carve_stats.tagged += 1
+			continue
 		for side in [-1.0, 1.0]:
 			var a0: float = float(r.length) * clampf(float(rc.from_height) / float(r.height), 0.0, 1.0)
 			var a1: float = float(r.length)
@@ -285,6 +297,9 @@ static func prepare_nav_region(region: NavigationRegion3D) -> int:
 				continue
 			var w0: float = float(r.half_width) * side
 			var w1: float = w0 + float(rc.width) * side
+			if dry_run:
+				n += 1
+				continue
 			var o := NavigationObstacle3D.new()
 			o.name = "%s_%s" % [body.name, "L" if side < 0.0 else "R"]
 			o.avoidance_enabled = false
@@ -298,6 +313,7 @@ static func prepare_nav_region(region: NavigationRegion3D) -> int:
 			var px: Vector3 = r.perp
 			o.vertices = PackedVector3Array([ax * a0 + px * w0, ax * a1 + px * w0, ax * a1 + px * w1, ax * a0 + px * w1])
 			n += 1
+	last_carve_stats.added = n
 	return n
 
 
@@ -622,6 +638,17 @@ func _try_hop(h: Vector3) -> bool:
 	return true
 
 
+## Last slide touched a zombie / boss that is holding still without nav (its avoidance is suspended).
+func _blocked_by_held_body() -> bool:
+	for i in enemy.get_slide_collision_count():
+		var c = enemy.get_slide_collision(i).get_collider()
+		if c is CharacterBody3D and c != enemy:
+			var other = c.get("nav")
+			if other != null and bool(other.suspended):
+				return true
+	return false
+
+
 ## True when something lower than hop_max blocks the way ahead (stuck level 2 picks a hop over a side-step then).
 func _low_blocker_ahead() -> bool:
 	var fwd := _flat(_desired_dir if _desired_dir.length() > 0.1 else -enemy.global_basis.z).normalized() * 0.3
@@ -718,6 +745,13 @@ func _unstick() -> void:
 				enemy.velocity.y = sqrt(2.0 * g * float(body_cfg.hop_height))
 				_hop_cd = float(body_cfg.hop_cooldown)
 				hops += 1
+			elif _blocked_by_held_body():
+				# pinned against a boss / zombie holding still off-nav (telegraph, channel): a 0.5 m nudge can't clear a
+				# body, walk a detour point round it instead
+				last_action = "detour_body"
+				stuck_level = 3
+				if not _begin_detour():
+					_begin_sidestep()
 			else:
 				last_action = "sidestep"
 				_begin_sidestep()
@@ -767,14 +801,18 @@ func _begin_detour() -> bool:
 	var angles := [70.0, -70.0, 110.0, -110.0, 160.0, -160.0]
 	if randf() < 0.5:
 		angles = [-70.0, 70.0, -110.0, 110.0, -160.0, 160.0]
-	for a in angles:
-		var dir := fwd.rotated(Vector3.UP, deg_to_rad(a))
-		var cand := pos + dir * float(stuck_cfg.detour_dist)
-		var p := NavigationServer3D.map_get_closest_point(m, cand)
-		if _flat(p - cand).length() < 1.0 and _flat(p - pos).length() > 1.5 and absf(p.y - pos.y) < 1.0:
-			_detour = p
-			_detour_t = float(stuck_cfg.detour_time)
-			return true
+	for pass_i in 2:
+		for a in angles:
+			var dir := fwd.rotated(Vector3.UP, deg_to_rad(a))
+			# first pass: only directions the capsule can actually start moving in (no zombie / boss / wall in the way)
+			if pass_i == 0 and enemy.test_move(enemy.global_transform, dir * 0.8):
+				continue
+			var cand := pos + dir * float(stuck_cfg.detour_dist)
+			var p := NavigationServer3D.map_get_closest_point(m, cand)
+			if _flat(p - cand).length() < 1.0 and _flat(p - pos).length() > 1.5 and absf(p.y - pos.y) < 1.0:
+				_detour = p
+				_detour_t = float(stuck_cfg.detour_time)
+				return true
 	return false
 
 

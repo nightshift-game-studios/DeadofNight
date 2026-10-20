@@ -60,12 +60,18 @@ const COURSES := {
 			"goal": Vector3(-14.5, 0.1, -23.5), "starts": [Vector3(-8.4, 0.1, -12.0), Vector3(-8.4, 0.1, -14.0)]},
 		{"name": "cp_rack_mouth_pad_e", "spot": "R1/R2 aisle mouth (-8.4, 0, -22) + R2 pad (-6.8, 0, -22)", "vias": [Vector3(-8.4, 0, -22.0), Vector3(-6.8, 0, -22.0)], "via_tol": 1.5,
 			"goal": Vector3(-4.0, 0.1, -23.6), "starts": [Vector3(-8.4, 0.1, -12.0), Vector3(-8.4, 0.1, -14.0)]},
+		# Mapz 2026-10-20 reach table (their maps, no carve): worst stall on the map, the c2 roof ramp echo at (-10.9, 0, 23.1),
+		# 1.8 s - south of RampC2Roof's foot (-12, 0, 27.65); route from the yard past the spot, up the ramp onto ContainerC2.
+		{"name": "cp_c2roof_ramp_echo", "spot": "c2 roof ramp approach, Mapz worst echo stall (-10.9, 0, 23.1)", "vias": [Vector3(-10.9, 0, 23.1)], "via_tol": 2.0,
+			"goal": Vector3(2.0, 2.7, 26.6), "starts": [Vector3(-10.9, 0.1, 18.5), Vector3(-8.5, 0.1, 19.0)]},
 		{"name": "cp_hoppercar_nw", "spot": "HopperCar NW corner (-32, 0, 24)", "vias": [Vector3(-32.4, 0, 24.4)], "via_tol": 1.5,
 			"goal": Vector3(-27.0, 0.1, 27.5), "starts": [Vector3(-34.5, 0.1, 16.0), Vector3(-34.5, 0.1, 18.0)]},
 	],
 	"lockout_substation": [
-		{"name": "deck_stairs", "goal": Vector3(-2.0, 3.1, 6.5), "starts": [Vector3(0, 0.1, 16), Vector3(-13, 0.1, 18), Vector3(12.5, 0.1, 11.2), Vector3(-16.5, 0.1, 3.5)], "boss": "bellwether"},
-		{"name": "control_ledge_stairs", "goal": Vector3(12.5, 4.1, 18.0), "starts": [Vector3(-2.5, 0.1, 17.2), Vector3(0, 0.1, 16.5)]},
+		# starts use the spawn markers: Spawn7 (4.5, 0.1, -3.5) and Spawn10 (16, 0.1, 5) since Mapz's 2026-10-20 move
+		# (were (0, 0.1, 16) / (-2.5, 0.1, 17.2)); the others are plain ground spots.
+		{"name": "deck_stairs", "goal": Vector3(-2.0, 3.1, 6.5), "starts": [Vector3(4.5, 0.1, -3.5), Vector3(-13, 0.1, 18), Vector3(12.5, 0.1, 11.2), Vector3(-16.5, 0.1, 3.5)], "boss": "bellwether"},
+		{"name": "control_ledge_stairs", "goal": Vector3(12.5, 4.1, 18.0), "starts": [Vector3(16.0, 0.1, 5.0), Vector3(4.5, 0.1, -3.5)]},
 		{"name": "gantry_stairs", "goal": Vector3(-9.25, 5.1, -7.75), "starts": [Vector3(-9.5, 0.1, 3.0), Vector3(-16.5, 0.1, 3.5)]},
 		{"name": "vault_ducts", "goal": Vector3(0.0, 0.1, -15.0), "starts": [Vector3(12.5, 0.1, 11.2), Vector3(-16.5, 0.1, 3.5)], "boss": "lantern_stalker"},
 		{"name": "cp_hatch_cableductn", "spot": "hatch D1 corridor by CableDuctN (0, 0, -8)", "vias": [Vector3(0.0, 0, -8.1)], "via_tol": 2.0,
@@ -264,10 +270,21 @@ func _run_course(main: Node, map_id: String, c: Dictionary) -> void:
 				# The player "kills" a zombie 0.5 s after it arrives, so the goal never jams with a crowd.
 				if t - r.reached_t > 0.5:
 					r.end = z.global_position
+					var zn = z.get("nav")
+					if zn:
+						r.nav_stats = {"susp": zn.suspends, "res": zn.resumes, "unstick": zn.unstick_count, "last": zn.last_action, "hops": zn.hops, "sweep": zn.sweep_blocks, "q": zn.path_queries}
 					z.queue_free()
 				continue
 			all_done = false
 			var p: Vector3 = z.global_position
+			if _arg("trace-kind") == r.kind and int(t / STEP) % 15 == 0:
+				var zn = z.get("nav")
+				var near := ""
+				for o in zs:
+					if o != r and is_instance_valid(o.z) and o.z.global_position.distance_to(p) < 2.5:
+						var on = o.z.get("nav")
+						near += " %s d%.1f susp=%s ph=%s" % [o.kind, o.z.global_position.distance_to(p), on.suspended if on else "-", o.z.get("phase")]
+				print("  TRACE t%.2f %s pos %s v %s lvl %d act %s wall %s cur %d/%d%s" % [t, r.kind, p.snapped(Vector3.ONE * 0.01), Vector3(z.velocity.x, 0, z.velocity.z).snapped(Vector3.ONE * 0.01), zn.stuck_level, zn.last_action, z.is_on_wall(), zn.cursor, zn.path.size(), near])
 			for vi in r.vd.size():
 				var v: Vector3 = c.vias[vi]
 				if absf(p.y - v.y) < 1.5:
@@ -308,6 +325,8 @@ func _run_course(main: Node, map_id: String, c: Dictionary) -> void:
 		var endp: Vector3 = z.global_position if is_instance_valid(z) else r.get("end", Vector3.INF)
 		var line := "%s/%s %-15s start %s  %s  still max %.1fs  end %s" % [map_id, c.name, r.kind, r.start,
 			("reached %.1fs" % r.reached_t) if ok else "NOT REACHED", r.worst, endp.snapped(Vector3.ONE * 0.1)]
+		if _arg("verbose") != "" and r.has("nav_stats"):
+			line += "  " + str(r.nav_stats)
 		_records.append(line)
 		print("  " + line)
 		check(ok and r.worst <= STILL_MAX, "%s/%s: %s reaches the player (%s, still %.1fs)" % [map_id, c.name, r.kind,
@@ -561,6 +580,24 @@ func ZombieNavScr() -> Script:
 	return load(NAV_SCRIPT)
 
 
+## Ramp-side carve fallback vs the maps' own carves (Mapz map contract: a ramp body with meta nav_side_carves ships its
+## own side carves and must be skipped). Dry-run count on the loaded map, plus the strips the real call left behind.
+func _carve_checks(main: Node, map_id: String, strips: int) -> void:
+	var nav = load(NAV_SCRIPT)
+	nav.prepare_nav_region(main.nav_region, true)
+	var st: Dictionary = nav.last_carve_stats
+	var wedges := int(st.wedges)
+	var tagged := int(st.tagged)
+	var would := int(st.added)
+	var enabled := bool(nav.data().get("ramp_carve", {}).get("enabled", true))
+	print("  %s: wedges %d, tagged nav_side_carves %d, fallback would add %d strips (carve %s)" % [map_id, wedges, tagged, would, "on" if enabled else "off"])
+	check(strips == (would if enabled else 0), "%s: carve fallback added %d strips (expected %d: 2 per untagged wedge, 0 with carve off)" % [map_id, strips, would if enabled else 0])
+	if tagged > 0 or wedges == 0:
+		check(tagged == wedges and would == 0, "%s: every wedge ramp carries its own side carves (%d/%d tagged), fallback adds 0 strips" % [map_id, tagged, wedges])
+	else:
+		print("INFO  %s: no ramp carries nav_side_carves (map predates Mapz's carve tags); fallback strips on all %d wedges" % [map_id, wedges])
+
+
 func _run() -> void:
 	baseline = _arg("baseline") != ""
 	var maps_arg := _arg("maps", "ai_course,arena,rustwell_foundry,lockout_substation")
@@ -569,6 +606,11 @@ func _run() -> void:
 		d["ramp_carve"] = {"enabled": false}
 		load(NAV_SCRIPT).reload_data(d)
 		print("ramp-side carve fallback OFF")
+	elif _arg("carve") != "" and ResourceLoader.exists(NAV_SCRIPT):
+		var d3: Dictionary = load(NAV_SCRIPT).data().duplicate(true)
+		d3["ramp_carve"]["enabled"] = true
+		load(NAV_SCRIPT).reload_data(d3)
+		print("ramp-side carve fallback ON (forced)")
 	if _arg("no-suspend") != "" and ResourceLoader.exists(NAV_SCRIPT):
 		var d2: Dictionary = load(NAV_SCRIPT).data().duplicate(true)
 		d2["avoidance"]["suspend_off_nav"] = false
@@ -594,6 +636,7 @@ func _run() -> void:
 		check(main.nav_region.navigation_mesh.get_polygon_count() > 0, "%s: navmesh baked (%d polygons)" % [map_id, main.nav_region.navigation_mesh.get_polygon_count()])
 		var carves: Node = main.nav_region.get_node_or_null("ZombieNavRampCarves")
 		print("  %s: ramp-side carve strips %d" % [map_id, carves.get_child_count() if carves else 0])
+		_carve_checks(main, map_id, carves.get_child_count() if carves else 0)
 		Engine.time_scale = 4.0 if _arg("realtime") == "" else 1.0 # RunState.clear() resets it
 		if not did_components and not baseline and (map_id == "ai_course" or not maps_arg.contains("ai_course")):
 			did_components = true
