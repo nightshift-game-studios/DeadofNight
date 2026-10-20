@@ -40,6 +40,7 @@ const CoopHudScript := preload("res://scripts/ui/coop_hud.gd")
 const CalloutBannerScript := preload("res://scripts/ui/callout_banner.gd")
 var _cross_parts: Array[CanvasItem] = [] ## crosshair ticks + dot (dimmed by set_scoped; the hit marker is not in here)
 var scoped: bool = false ## scope overlay up (crosshair dimmed)
+var ads_hidden: bool = false ## playtest #5: aiming down sights (any optic, irons too) hides the crosshair ticks + dot
 const SCOPED_CROSS_ALPHA := 0.12
 var _last_hit: Dictionary = {} ## last hit_registered payload (tests / debugging)
 var _last_health: int = -1
@@ -415,6 +416,9 @@ func _bind_player() -> void:
 	if p.has_signal("ability_charges_changed"):
 		p.ability_charges_changed.connect(set_ability_charges)
 		set_ability_charges(int(p.get("ability_charges")), int(p.get("ability_charges_max")))
+	if p.has_signal("ads_changed"):
+		p.ads_changed.connect(set_ads)
+		set_ads(bool(p.get("ads_active")))
 	_bind_seen(p)
 	_bind_gravemark()
 	refresh_cards()
@@ -702,6 +706,15 @@ func set_scoped(on: bool) -> void:
 	for c in _cross_parts:
 		if is_instance_valid(c):
 			c.modulate.a = SCOPED_CROSS_ALPHA if on else 1.0
+
+
+## Player ads_changed (playtest #5): no crosshair while aiming down sights. The hit marker (same centre
+## container, not in _cross_parts) still shows.
+func set_ads(on: bool) -> void:
+	ads_hidden = on
+	for c in _cross_parts:
+		if is_instance_valid(c):
+			c.visible = not on
 
 
 ## Co-op (DESIGN §6.5): party entries [{peer_id, name, hp, state, tint?}]; the local peer is skipped.

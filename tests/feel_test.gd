@@ -52,6 +52,25 @@ func _run() -> void:
 	check(fl.light_energy <= 1.5 and fl.omni_range <= 3.0, "#1 flash light dimmer / shorter (energy %.1f range %.1f, was 3 / 4)" % [fl.light_energy, fl.omni_range])
 	check(fl.get_parent() == player.flash and fq.get_parent() == player.flash, "#1 one flash node shared by every gun")
 
+	# ---------------------------------------------------------------- #5 no crosshair while ADS
+	var hud = main.hud
+	check(hud.has_method("set_ads") and player.is_connected("ads_changed", hud.set_ads), "#5 hud listens to player.ads_changed")
+	var all_vis := func(v: bool) -> bool:
+		return hud._cross_parts.all(func(c): return c.visible == v)
+	check(not hud.ads_hidden and all_vis.call(true), "#5 hip: crosshair visible")
+	Input.action_press(load("res://scripts/combat/ads_profile.gd").input_action())
+	await wait(6)
+	check(player.ads_active and hud.ads_hidden and all_vis.call(false), "#5 ADS (irons): crosshair ticks + dot hidden")
+	check(hud._hit_marker.visible, "#5 ADS: the hit marker still draws")
+	Input.action_release(load("res://scripts/combat/ads_profile.gd").input_action())
+	await wait(6)
+	check(not player.ads_active and all_vis.call(true), "#5 leaving ADS brings the crosshair back")
+	hud.set_scoped(true)
+	hud.set_ads(true)
+	check(all_vis.call(false), "#5 scoped optics: hidden too")
+	hud.set_ads(false)
+	hud.set_scoped(false)
+
 	#SECTIONS
 
 	print("feel_test: %d passed, %d failed" % [_passes, _fails])
