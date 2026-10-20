@@ -34,6 +34,12 @@ func kick(_peer_id: int, _now: bool = false) -> void:
 	pass
 
 
+## While a match scene loads the main thread can block for many seconds (map + nav bake): keep `peer_id`'s
+## connection (0 = every peer) alive with data/net.json loading_timeout_ms; on = false restores the normal timeouts.
+func set_loading(_peer_id: int, _on: bool) -> void:
+	pass
+
+
 ## Whether this transport wants UPnP / port forwarding (Steam relays don't).
 func needs_port_forward() -> bool:
 	return false

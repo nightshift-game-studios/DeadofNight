@@ -47,6 +47,19 @@ func tune_peer(peer_id: int) -> void:
 		pp.set_timeout(32, NetConfig.get_int("peer_timeout_min_ms"), NetConfig.get_int("peer_timeout_max_ms"))
 
 
+func set_loading(peer_id: int, on: bool) -> void:
+	if _peer == null or _peer.host == null:
+		return
+	var mx := NetConfig.get_int("loading_timeout_ms") if on else NetConfig.get_int("peer_timeout_max_ms")
+	var mn := mx if on else NetConfig.get_int("peer_timeout_min_ms")
+	var only: ENetPacketPeer = _peer.get_peer(peer_id) if peer_id != 0 else null
+	if peer_id != 0 and only == null:
+		return
+	for pp in _peer.host.get_peers():
+		if only == null or pp == only:
+			pp.set_timeout(32, mn, mx)
+
+
 func peer() -> MultiplayerPeer:
 	return _peer
 

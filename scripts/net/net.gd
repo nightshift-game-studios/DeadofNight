@@ -506,6 +506,7 @@ func _on_peer_disconnected(id: int) -> void:
 	_leave_reason.erase(id)
 	_party.erase(id)
 	_loaded.erase(id)
+	_late.erase(id)
 	_callouts.remove_peer(id)
 	peer_left.emit(id, n, reason)
 	_rpc_peer_left.rpc(id, n, reason) # clients get the real reason before the party update drops the entry
@@ -575,7 +576,7 @@ func _rpc_hello(proto: int, version: String, player_name: String, class_id: Stri
 		reason = "version_mismatch"
 	elif _party.size() >= max_players():
 		reason = "party_full"
-	elif state == State.IN_MATCH and not bool(NetConfig.get_value("lobby.allow_late_join", false)):
+	elif state == State.IN_MATCH and (_match_over or not bool(NetConfig.get_value("lobby.allow_late_join", true))):
 		reason = "in_progress"
 	if reason != "":
 		peer_rejected.emit(id, player_name, reason)
@@ -586,7 +587,16 @@ func _rpc_hello(proto: int, version: String, player_name: String, class_id: Stri
 		n = "Player %d" % (_party.size() + 1)
 	n = _unique_name(n, id)
 	_party[id] = _entry(id, n, class_id, _free_slot())
+	var late := state == State.IN_MATCH
+	if late: # phase 3a late join: welcome, then this peer alone starts the running match (same map / difficulty / seed)
+		_party[id].state = "loading"
+		_party[id].late_join = true
+		_late[id] = true
 	_rpc_welcome.rpc_id(id, get_party(), _lobby_dict())
+	if late:
+		if _transport:
+			_transport.set_loading(id, true) # it blocks while loading; don't time it out
+		_rpc_start_match.rpc_id(id, lobby_map_id, lobby_difficulty_id, match_seed)
 	peer_joined.emit(id, n)
 	_broadcast_party()
 
@@ -855,6 +865,8 @@ func _rpc_start_match(map_id: String, difficulty_id: String, seed_value: int) ->
 	_reset_match_state()
 	for id in _party:
 		_party[id].state = "loading"
+	if _transport:
+		_transport.set_loading(0, true) # until match_go: map load + nav bake can block for longer than the peer timeout
 	_set_state(State.IN_MATCH)
 	MapRegistry.select(map_id)
 	match_starting.emit(map_id, difficulty_id)
@@ -884,7 +896,13 @@ func _mark_loaded(id: int) -> void:
 		return
 	_loaded[id] = true
 	_party[id].state = "in_match"
+	if _transport and _match_go:
+		_transport.set_loading(id, false)
 	world.send_doors_to(id) # M13: doors opened before this peer's map was up (late join: same path)
+	if _match_go and _late.has(id):
+		_late_join(id)
+		return
+	_late.erase(id) # joined while the others were still loading: an ordinary start
 	_check_all_loaded()
 
 
@@ -906,7 +924,66 @@ func _go() -> void:
 @rpc("authority", "call_local", "reliable")
 func _rpc_match_go() -> void:
 	_match_go = true
+	if _transport:
+		_transport.set_loading(0, false)
 	match_started.emit()
+
+# ================================================================== late join (phase 3a)
+var _late: Dictionary = {} ## host: peers that joined while a match was running, until their scene is ready
+signal late_join_synced(spectating: bool) ## joiner: the host's full world snapshot has been applied (then match_started)
+
+
+## Host: the joiner's match scene is up. Full world for it alone (round, points, zombies, drops; doors went just
+## before), its avatar + every life, then match_go. During a round it spectates until the next break.
+func _late_join(id: int) -> void:
+	_late.erase(id)
+	var spectating := round_phase == "combat"
+	_offers_closed[id] = true # never block a Field Card round it wasn't part of
+	_rpc_round_sync.rpc_id(id, current_round, round_phase, world.enemies_left())
+	_rpc_points_sync.rpc_id(id, _points.duplicate())
+	world.send_snapshot_to(id)
+	match_players.host_late_join(id, str(_party[id].name), int(_party[id].slot), spectating)
+	_rpc_late_synced.rpc_id(id, spectating)
+	_rpc_match_go.rpc_id(id)
+	broadcast_event(NetPlayers.EV_JOINED_LATE, id, {"spectating": spectating, "round": current_round})
+	_broadcast_party()
+
+
+@rpc("authority", "call_remote", "reliable")
+func _rpc_round_sync(n: int, phase: String, enemies: int) -> void:
+	current_round = n
+	round_phase = phase
+	world.client_round_sync(n, enemies) # HUD + main.current_round, no round_started / cleared events
+	round_state_changed.emit(n, phase, enemies)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _rpc_points_sync(totals: Dictionary) -> void:
+	for k in totals:
+		var id := int(k)
+		if id == local_peer_id():
+			continue # own wallet: the host's "late_join" points message sets it
+		_points[id] = int(totals[k])
+		points_changed.emit(id, _points[id])
+
+
+@rpc("authority", "call_remote", "reliable")
+func _rpc_late_synced(spectating: bool) -> void:
+	late_join_synced.emit(spectating)
+
+
+## Every peer: a player's life into its party entry. life = alive | downed | dead; state = in_match | downed |
+## spectating (dead = bled out or a late joiner waiting for the break). late_join is dropped once they're in.
+func _set_life_entry(id: int, life_state: String, emit: bool) -> void:
+	if not _party.has(id):
+		return
+	var e: Dictionary = _party[id]
+	e.life = life_state
+	e.state = {"downed": "downed", "dead": "spectating"}.get(life_state, "in_match")
+	if life_state == "alive":
+		e.erase("late_join")
+	if emit:
+		party_changed.emit(get_party())
 
 
 func is_match_running() -> bool:
@@ -1037,7 +1114,13 @@ func attach_match(main: Node) -> void:
 func _rpc_wallet(points: int) -> void:
 	var id := multiplayer.get_remote_sender_id()
 	if is_host() and _party.has(id) and not _points.has(id):
-		_points[id] = clampi(points, 0, 1000000)
+		var w := clampi(points, 0, 1000000)
+		if _late.has(id) and _match_go: # late joiner: points.late_join_start instead of its own match-start wallet
+			var start := int(NetConfig.get_value("points.late_join_start", 500))
+			_points[id] = start
+			_rpc_points.rpc(id, start - w, start, "late_join")
+			return
+		_points[id] = w
 		_rpc_points.rpc(id, 0, _points[id], "wallet")
 
 
@@ -1174,7 +1257,7 @@ func _apply_points(peer_id: int, amount: int, total: int, reason: String) -> voi
 		var p := get_tree().get_first_node_in_group("player")
 		if p and amount < 0 and p.has_method("spend_points"):
 			p.spend_points(-amount)
-		elif p and amount > 0 and reason == "refund": # M13: give back a charge; not "earned", no points_gained
+		elif p and amount > 0 and reason in ["refund", "late_join"]: # M13 refund / 3a late-join wallet: not "earned", no points_gained
 			p.points += amount
 			p.points_changed.emit(p.points)
 		elif p and amount > 0 and p.has_method("add_points"):
@@ -1247,6 +1330,7 @@ func on_round_cleared(n: int) -> void:
 	_offers_since = Time.get_ticks_msec()
 	_offers_open = _match != null and is_instance_valid(_match) and bool(_match.get("field_cards_enabled")) and n >= 1
 	_rpc_round_state.rpc(n, "break", 0)
+	match_players.on_round_cleared() # late joiners come in at the break
 
 
 @rpc("authority", "call_local", "reliable")
@@ -1324,6 +1408,7 @@ func _reset_match_state() -> void:
 	_match_over = false
 	current_round = 0
 	round_phase = "pre"
+	_late.clear()
 
 # ------------------------------------------------------------------ zombie seam (enemy.gd hooks E1-E5, patches/enemy_hooks_E1-E5.patch)
 

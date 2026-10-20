@@ -8,6 +8,8 @@
 	"connect_timeout_s": 8.0,
 	"peer_timeout_min_ms": 5000,
 	"peer_timeout_max_ms": 15000,
+	"_help_loading_timeout": "loading_timeout_ms: peer timeout while a match scene loads (a big map + nav bake can block the main thread far longer than peer_timeout_max_ms; without this the host dropped every client on rustwell_foundry).",
+	"loading_timeout_ms": 120000,
 	"compression": "range_coder",
 	"upnp": {
 		"enabled": true,
@@ -28,7 +30,8 @@
 		"leader_picks_map": true,
 		"leader_picks_difficulty": true,
 		"start_requires_all_ready": true,
-		"allow_late_join": false,
+		"_help_late_join": "allow_late_join: a player can join a running match (phase 3a). They get the full world (zombies, doors, drops, round, points, lives, avatars) and spectate until the next round break; joining in a break or before round 1 puts them straight in. Wallet: points.late_join_start.",
+		"allow_late_join": true,
 		"scene_ready_timeout_s": 20.0,
 		"party_refresh_s": 2.0
 	},
@@ -73,6 +76,15 @@
 		"_help": "M13: co-op door buys and paid Field Card rerolls are charged by the host. timeout_s = how long a client waits for the host's answer before the reroll counts as refused (a late yes is refunded); door_retry_s = min gap between door requests per door.",
 		"timeout_s": 3.0,
 		"door_retry_s": 1.0
+	},
+	"spectate": {
+		"_help": "Phase 3a: local spectate camera while you're dead (bled out, or a late joiner waiting for the next round break) and, with when_downed, while downed. Follows an alive teammate from behind the shoulder; next_action / prev_action cycle through them.",
+		"enabled": true,
+		"when_downed": true,
+		"distance_m": 2.6,
+		"height_m": 0.45,
+		"next_action": "shoot",
+		"prev_action": "ads"
 	},
 	"avatar": {
 		"_help": "Remote players' third-person body (scripts/net/avatar). body = \"desi\" (assets/models/player/player.glb via NetDesiBody) or \"capsule\" (placeholder). Walk/run playback is scaled by speed / clip foot speed (Desi: Walk 1.16, CrouchWalk 0.77, Run ~6.2, Sprint ~9.5 m/s).",

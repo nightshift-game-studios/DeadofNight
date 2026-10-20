@@ -7,11 +7,14 @@ extends Node
 ##   * spending: request to the host's wallet ledger (Net._points); the result comes back to the requester
 ##   * client round state: HUD round / enemies, GameEvents round_started / round_cleared, own Gravemark
 ##     milestones and own Field Card offer
+##   * late join (phase 3a): the host's full world for one joiner (live zombies from their specs + hp, untaken
+##     drops; doors go through send_doors_to) and the round without round events
 
 signal spend_result(ok: bool, amount: int, reason: String)
 signal drop_spawned(drop_id: String)
 signal drop_removed(drop_id: String, taker_peer: int)
 signal door_opened(key: String, opener_peer: int) ## M13, every peer, after the door's own open() ran here
+signal snapshot_applied(zombies: int, drops: int) ## late joiner: the host's world snapshot is in
 signal door_refused(door_id: String, reason: String) ## M13, requester only: "points" / "already_open" / "unknown_door" / "wrong_map" / "no_id"
 
 const ItemScr := preload("res://scripts/items/item.gd")
@@ -20,10 +23,11 @@ const NetPickupScr := preload("res://scripts/net/net_pickup.gd")
 
 var net: Node
 var drops: Dictionary = {} ## every peer: drop_id -> NetPickup (or null in node-less tests)
-var _host_drops: Dictionary = {} ## host: drop_id -> {item: dict, taker: 0}
+var _host_drops: Dictionary = {} ## host: drop_id -> {item: dict, taker: 0, pos}
+var _host_specs: Dictionary = {} ## host: zombie name -> its spawn spec (late-join snapshots rebuild from it)
 var _drop_counter := 0
 var _snap_t := 0.0
-var stats := {"snaps_tx": 0, "snaps_rx": 0, "spawns_rx": 0, "gone_rx": 0, "doors_rx": 0, "refunds": 0}
+var stats := {"snaps_tx": 0, "snaps_rx": 0, "spawns_rx": 0, "gone_rx": 0, "doors_rx": 0, "refunds": 0, "world_snaps_rx": 0}
 ## M13 doors, every peer: "<map_id>/<door_id>" -> opener peer. Applied to the map on attach (late joiners) and kept
 ## for the match; never keyed on node paths.
 var doors_open: Dictionary = {}
@@ -45,6 +49,7 @@ func _ready() -> void:
 func clear() -> void:
 	drops.clear()
 	_host_drops.clear()
+	_host_specs.clear()
 	_drop_counter = 0
 	doors_open.clear()
 	_door_req_t.clear()
@@ -83,15 +88,24 @@ func host_spawned(z: Node3D, spec: Dictionary) -> void:
 		return
 	_rpc_spawn_zombie.rpc(spec, z.global_position, z.rotation.y)
 	var zn := str(z.name)
-	z.tree_exiting.connect(func(): if net.is_networked() and net.is_host(): _rpc_zombie_gone.rpc(zn))
+	_host_specs[zn] = spec
+	z.tree_exiting.connect(func():
+		_host_specs.erase(zn)
+		if net.is_networked() and net.is_host():
+			_rpc_zombie_gone.rpc(zn))
 
 
 @rpc("authority", "call_remote", "reliable")
 func _rpc_spawn_zombie(spec: Dictionary, pos: Vector3, yaw: float) -> void:
+	_spawn_puppet(spec, pos, yaw)
+
+
+## Client: build the host's zombie from its spec as a puppet (null if the match isn't up or it already exists).
+func _spawn_puppet(spec: Dictionary, pos: Vector3, yaw: float) -> Node3D:
 	var m := _main()
 	var root := _zroot()
 	if m == null or root == null or root.has_node(NodePath(str(spec.get("name", "")))):
-		return
+		return null
 	stats.spawns_rx += 1
 	var z: Node3D = m.make_zombie(spec)
 	z.set_meta("net_puppet", true)
@@ -103,6 +117,7 @@ func _rpc_spawn_zombie(spec: Dictionary, pos: Vector3, yaw: float) -> void:
 	z.rotation.y = yaw
 	if not patched:
 		z.set_physics_process(false) # unpatched enemy.gd: no local AI; we drive the puppet (see _physics_process)
+	return z
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -198,17 +213,23 @@ func host_drop(item: Item, pos: Vector3, chime: bool) -> bool:
 	_drop_counter += 1
 	var id := "D%d" % _drop_counter
 	var d: Dictionary = item.to_dict()
-	_host_drops[id] = {"item": d, "taker": 0}
+	_host_drops[id] = {"item": d, "taker": 0, "pos": pos}
 	_rpc_drop.rpc(id, d, pos, chime)
 	return true
 
 
 @rpc("authority", "call_local", "reliable")
 func _rpc_drop(id: String, d: Dictionary, pos: Vector3, chime: bool) -> void:
+	_make_drop(id, d, pos, chime)
+
+
+func _make_drop(id: String, d: Dictionary, pos: Vector3, chime: bool) -> void:
 	var item: Item = ItemScr.from_dict(d)
 	var m := _main()
 	if item == null:
 		return
+	if drops.get(id) != null and is_instance_valid(drops[id]):
+		return # already here (late-join snapshot after the live message)
 	var p: Node = null
 	if m and m.get("pickups_root"):
 		if chime and m.has_method("_sfx") and m._sfx():
@@ -346,6 +367,69 @@ func host_spend(peer_id: int, amount: int, reason: String) -> bool:
 func _rpc_spend_result(ok: bool, amount: int, reason: String) -> void:
 	spend_result.emit(ok, amount, reason)
 
+
+# ------------------------------------------------------------------ late join (phase 3a)
+## Host: zombies still to come + alive (the HUD's enemies-left).
+func enemies_left() -> int:
+	var m := _main()
+	return int(m.get("_to_spawn")) + int(m.get("_alive")) if m and "_alive" in m else 0
+
+
+## Host -> one joiner (its match scene is ready): every live zombie (spec + pose + hp) and every untaken drop.
+## Doors go separately (send_doors_to, M13 keys). Returns [zombies, drops] sent.
+func send_snapshot_to(peer_id: int) -> Array:
+	var zs: Array = []
+	var root := _zroot()
+	if root:
+		for z in root.get_children():
+			var zn := str(z.name)
+			if z is Node3D and _host_specs.has(zn) and not bool(z.get("_dead")):
+				zs.append([_host_specs[zn], z.global_position, z.rotation.y, float(z.get("health"))])
+	var ds: Array = []
+	for id in _host_drops:
+		var hd: Dictionary = _host_drops[id]
+		if int(hd.taker) == 0:
+			ds.append([str(id), hd.item, hd.get("pos", Vector3.ZERO)])
+	if net.is_host() and peer_id != net.local_peer_id():
+		_rpc_world_snapshot.rpc_id(peer_id, zs, ds)
+	return [zs.size(), ds.size()]
+
+
+@rpc("authority", "call_remote", "reliable")
+func _rpc_world_snapshot(zs: Array, ds: Array) -> void:
+	apply_world_snapshot(zs, ds)
+
+
+func apply_world_snapshot(zs: Array, ds: Array) -> void:
+	stats.world_snaps_rx += 1
+	var nz := 0
+	for e in zs:
+		if not (e is Array) or e.size() < 4 or not (e[0] is Dictionary):
+			continue
+		var z := _spawn_puppet(e[0], e[1], float(e[2]))
+		var root := _zroot()
+		if z == null and root:
+			z = root.get_node_or_null(NodePath(str(e[0].get("name", ""))))
+		if z:
+			z.set("health", float(e[3]))
+			nz += 1
+	var nd := 0
+	for e in ds:
+		if e is Array and e.size() >= 3 and e[1] is Dictionary:
+			_make_drop(str(e[0]), e[1], e[2], false)
+			nd += 1
+	snapshot_applied.emit(nz, nd)
+
+
+## Joiner: the round as it is right now (no round_started / round_cleared events: those were before it came).
+func client_round_sync(n: int, enemies: int) -> void:
+	var m := _main()
+	if m == null or net.is_host():
+		return
+	m.set("current_round", n)
+	if m.get("hud"):
+		m.hud.set_round(n)
+		m.hud.set_enemies(enemies)
 
 # ------------------------------------------------------------------ client round state (from Net._rpc_round_state)
 func client_round_state(n: int, phase: String, enemies: int) -> void:

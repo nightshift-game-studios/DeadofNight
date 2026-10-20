@@ -72,7 +72,7 @@ func _run() -> void:
 	var prog = root.get_node("Progress")
 	check(NC.points("per_hit") == int(prog.points_per_hit) and NC.points("kill_bonus") == int(prog.points_per_kill) and NC.points("revive") == 100,
 		"co-op point values: per-hit / kill bonus = solo economy (%d / %d), revive 100" % [prog.points_per_hit, prog.points_per_kill])
-	check(NC.get_value("no.such.key", 42) == 42 and NC.get_value("lobby.allow_late_join") == false, "missing keys fall back (arg, then DEFAULTS)")
+	check(NC.get_value("no.such.key", 42) == 42 and NC.get_value("lobby.allow_late_join") == true and NC.get_value("spectate.next_action") == "shoot", "missing keys fall back (arg, then DEFAULTS)")
 	NC.override({"downed.bleed_out_s": 5.0})
 	check(NC.get_float("downed.bleed_out_s") == 5.0, "override() for tests")
 	NC.reload()

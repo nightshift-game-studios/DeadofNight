@@ -12,6 +12,7 @@ const DEFAULTS := {
 	"connect_timeout_s": 8.0,
 	"peer_timeout_min_ms": 5000,
 	"peer_timeout_max_ms": 15000,
+	"loading_timeout_ms": 120000,
 	"compression": "range_coder",
 	"upnp": {"enabled": true, "discover_ms": 2000, "discover_ttl": 2, "description": "Gravecrew"},
 	"join_code": {"prefix": "GC"},
@@ -23,7 +24,7 @@ const DEFAULTS := {
 		"throw_release_s": 0.33, "throw_clip_len_s": 1.333, "ads_xfade_s": 0.12, "name_tag_offset_m": 0.0, "snap_teleport_m": 6.0},
 	"profile": {"path": "user://net_profile.cfg", "max_name_length": 16, "default_name": "Survivor"},
 	"lobby": {"leader_is_host": true, "leader_picks_map": true, "leader_picks_difficulty": true,
-		"start_requires_all_ready": true, "allow_late_join": false, "scene_ready_timeout_s": 20.0, "party_refresh_s": 2.0},
+		"start_requires_all_ready": true, "allow_late_join": true, "scene_ready_timeout_s": 20.0, "party_refresh_s": 2.0},
 	"downed": {"enabled": true, "bleed_out_s": 30.0, "revive_time_s": 3.0, "revive_range_m": 2.0, "revive_health_frac": 0.5,
 		"respawn_next_round": true, "game_over_when_all_down": true},
 	"points": {"host_authoritative": true, "per_hit": "economy", "kill_bonus": "economy", "revive": 100, "late_join_start": 500},
@@ -32,6 +33,7 @@ const DEFAULTS := {
 	"tick": {"player_state_hz": 30, "zombie_sync_hz": 20, "interp_delay_ms": 100, "teammate_hp_hz": 5.0},
 	"offers": {"wait_for_all_s": 30.0},
 	"spend": {"timeout_s": 3.0, "door_retry_s": 1.0},
+	"spectate": {"enabled": true, "when_downed": true, "distance_m": 2.6, "height_m": 0.45, "next_action": "shoot", "prev_action": "ads"},
 	"validation": {"range_slack": 1.1, "max_damage_mult": 2.0, "max_player_speed": 20.0, "max_hit_damage": 5000.0},
 }
 ## Fallbacks for "economy" point values (match data/economy.json today).

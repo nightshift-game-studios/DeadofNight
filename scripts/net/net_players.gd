@@ -7,15 +7,27 @@ extends Node
 ##     (shot_fired / reload_started / grenade_thrown / jumped) - only state + triggers go over the wire
 ##   * zombie hits on avatars (host) -> the owner's own Player.take_damage; owner damage -> host callout driver
 ##   * downed / revive / bleed-out / game over (host-authoritative, data/net.json downed.*)
+##   * late join (phase 3a): the joiner spectates (life "dead", party state "spectating") until the next round break
+##   * spectate camera (NetSpectate) while the local player is downed / dead; game_event ids for Gooey's HUD:
+##     player_downed, player_revived, revive_progress, player_bled_out, player_respawned, player_joined_late
 
 signal life_changed(peer_id: int, state: String) ## alive | downed | dead
 signal revive_changed(target_peer: int, reviver_peer: int, active: bool) ## UI: progress bar over revive_time_s
 signal all_down() ## every player is downed or dead -> game over on every machine
+signal spectate_changed(target_peer: int, target_name: String) ## local: the spectate camera now follows target_peer (0 / "" = off)
 
 const LIFE_ALIVE := "alive"
 const LIFE_DOWNED := "downed"
 const LIFE_DEAD := "dead"
 const EVENT_KINDS := ["fire", "reload", "throw", "jump", "hit"]
+## Net.game_event ids (host-broadcast, every peer; peer_id = the player it's about). Gooey: LobbyAPI.EV_*.
+const EV_DOWNED := &"player_downed" ## {bleed_out_s}
+const EV_REVIVED := &"player_revived" ## {reviver}
+const EV_REVIVE_PROGRESS := &"revive_progress" ## {reviver, active, progress 0..1, time_s}: at start / stop and every 0.5 s
+const EV_BLED_OUT := &"player_bled_out" ## {} (downed.enabled false: straight to dead, {instant: true})
+const EV_RESPAWNED := &"player_respawned" ## {late_join}
+const EV_JOINED_LATE := &"player_joined_late" ## {spectating, round}
+const NetSpectateScr := preload("res://scripts/net/net_spectate.gd")
 
 var net: Node
 var avatars: Dictionary = {} ## peer_id -> NetRemoteAvatar
@@ -29,6 +41,9 @@ var _send_t := 0.0
 var _seq := 0
 var _last_weapon := "?"
 var _hold_target := 0 ## local: the downed peer we're holding interact on
+var late_spectators: Dictionary = {} ## host: late joiners spectating until the next round break (peer -> true)
+var spectate: Node ## NetSpectate under the match (local camera while downed / dead)
+var _progress_t := 0.0
 
 
 func _ready() -> void:
@@ -50,8 +65,13 @@ func begin_match(main: Node) -> void:
 	_root.name = "NetAvatars"
 	main.add_child(_root)
 	var base: Transform3D = main.get("_player_spawn") if "_player_spawn" in main else Transform3D()
+	spectate = NetSpectateScr.new()
+	spectate.name = "NetSpectate"
+	spectate.players = self
+	main.add_child(spectate)
 	for e in net.get_party():
 		life[int(e.peer_id)] = LIFE_ALIVE
+		net._set_life_entry(int(e.peer_id), LIFE_ALIVE, false)
 		if int(e.peer_id) != net.local_peer_id():
 			spawn_avatar(int(e.peer_id), int(e.slot), str(e.name), net.spawn_slot_transform(base, int(e.peer_id)).origin)
 
@@ -64,6 +84,7 @@ func spawn_avatar(peer_id: int, slot: int, display_name: String, at: Vector3 = V
 	(_root if _root and is_instance_valid(_root) else self).add_child(a)
 	a.global_position = at
 	avatars[peer_id] = a
+	resend_weapon() # the new peer's machine hasn't seen my weapon / slot yet (late join)
 	return a
 
 
@@ -89,7 +110,11 @@ func clear() -> void:
 	avatars.clear()
 	life.clear()
 	downed.clear()
+	late_spectators.clear()
 	_hold_target = 0
+	if spectate and is_instance_valid(spectate):
+		spectate.queue_free()
+	spectate = null
 	_seq = 0
 	_last_weapon = "?"
 	if _root and is_instance_valid(_root):
@@ -105,6 +130,7 @@ func _drop_peer(id: int) -> void:
 			avatars[id].queue_free()
 		avatars.erase(id)
 	life.erase(id)
+	late_spectators.erase(id)
 	if downed.has(id):
 		downed.erase(id)
 	for t in downed: # a reviver who left stops reviving
@@ -156,9 +182,11 @@ func send_state() -> void:
 	_rpc_state.rpc(sample_state(_player))
 	var w = _player.call("current_weapon") if _player.has_method("current_weapon") else null
 	var wid: String = str(w.archetype) if w and "archetype" in w else ""
-	if wid != _last_weapon:
-		_last_weapon = wid
-		_rpc_weapon.rpc(wid)
+	var inv = _player.get("inventory")
+	var slot: String = str(inv.get("active_weapon_slot")) if inv and inv.get("active_weapon_slot") != null else ""
+	if wid + "|" + slot != _last_weapon:
+		_last_weapon = wid + "|" + slot
+		_rpc_weapon_slot.rpc(wid, slot)
 
 
 @rpc("any_peer", "call_remote", "unreliable_ordered")
@@ -179,11 +207,28 @@ func receive_state(sender: int, st: Array) -> void:
 		a.push_state(st)
 
 
+## Old archetype-only form, still accepted (slot unknown).
 @rpc("any_peer", "call_remote", "reliable")
 func _rpc_weapon(arch_id: String) -> void:
-	var a := avatar(multiplayer.get_remote_sender_id())
-	if a and arch_id.length() < 48:
-		a.set_weapon(arch_id)
+	receive_weapon(multiplayer.get_remote_sender_id(), arch_id, "")
+
+
+## The owner's held weapon: archetype + Inventory.active_weapon_slot ("primary" / "secondary" / "heavy" / future slots).
+## Net never applies slot rules; the avatar just keeps the slot for its pose.
+@rpc("any_peer", "call_remote", "reliable")
+func _rpc_weapon_slot(arch_id: String, slot: String) -> void:
+	receive_weapon(multiplayer.get_remote_sender_id(), arch_id, slot)
+
+
+func receive_weapon(sender: int, arch_id: String, slot: String) -> void:
+	var a := avatar(sender)
+	if a and arch_id.length() < 48 and slot.length() < 24:
+		a.set_weapon(arch_id, slot)
+
+
+## Re-announce the held weapon (a late joiner's new avatars need it).
+func resend_weapon() -> void:
+	_last_weapon = "?"
 
 
 # ------------------------------------------------------------------ one-shot events (from the owner's GameEvents)
@@ -267,9 +312,11 @@ func host_down(peer_id: int) -> void:
 		return
 	if not NetConfig.get_bool("downed.enabled"):
 		_rpc_life.rpc(peer_id, LIFE_DEAD)
+		net.broadcast_event(EV_BLED_OUT, peer_id, {"instant": true})
 	else:
 		downed[peer_id] = {"bleed": NetConfig.get_float("downed.bleed_out_s"), "reviver": 0, "progress": 0.0, "active": false}
 		_rpc_life.rpc(peer_id, LIFE_DOWNED)
+		net.broadcast_event(EV_DOWNED, peer_id, {"bleed_out_s": NetConfig.get_float("downed.bleed_out_s")})
 	_check_all_down()
 
 
@@ -281,9 +328,21 @@ func _rpc_life(peer_id: int, state: String) -> void:
 	if a:
 		a.dead = state == LIFE_DEAD
 		a.set_downed(state == LIFE_DOWNED)
-	if peer_id == net.local_peer_id() and _player and is_instance_valid(_player) and state == LIFE_ALIVE and prev != LIFE_ALIVE:
-		_restore_local(prev == LIFE_DEAD)
+	if peer_id == net.local_peer_id() and _player and is_instance_valid(_player):
+		if state == LIFE_ALIVE and prev != LIFE_ALIVE:
+			_restore_local(prev == LIFE_DEAD)
+		elif state == LIFE_DEAD and not bool(_player.get("dead")):
+			_park_local() # late joiner: spectating, never hit 0 HP itself
+	net._set_life_entry(peer_id, state, true)
 	life_changed.emit(peer_id, state)
+
+
+## Late join while a round is on: the local player waits out of play (no input, zombies ignore dead players).
+func _park_local() -> void:
+	_player.set("dead", true)
+	_player.set("input_enabled", false)
+	if "velocity" in _player:
+		_player.set("velocity", Vector3.ZERO)
 
 
 ## Revived (prev downed): revive_health_frac of max HP where you lie. Respawn (prev dead): full HP at your spawn slot.
@@ -331,6 +390,7 @@ func _stop_revive(target_peer: int, d: Dictionary) -> void:
 	var r := int(d.reviver)
 	if bool(d.get("active", false)):
 		_rpc_reviving.rpc(target_peer, r, false)
+		_revive_event(target_peer, r, false, 0.0)
 	d.reviver = 0
 	d.progress = 0.0
 	d.active = false
@@ -366,28 +426,44 @@ func host_tick(delta: float) -> void:
 			_stop_revive(t, d)
 			r = 0
 		if r != 0 and _in_revive_range(r, t):
+			var rt := NetConfig.get_float("downed.revive_time_s")
 			if not bool(d.get("active", false)):
 				d.active = true
 				d.progress = 0.0
+				d.ev_t = 0.0
 				_rpc_reviving.rpc(t, r, true)
+				_revive_event(t, r, true, 0.0)
 			d.progress = float(d.progress) + delta # bleed-out pauses while a teammate is actually reviving
-			if float(d.progress) >= NetConfig.get_float("downed.revive_time_s"):
+			d.ev_t = float(d.get("ev_t", 0.0)) + delta
+			if float(d.progress) >= rt:
 				downed.erase(t)
 				_rpc_reviving.rpc(t, r, false)
+				_revive_event(t, r, false, 1.0)
 				_rpc_life.rpc(t, LIFE_ALIVE)
+				net.broadcast_event(EV_REVIVED, t, {"reviver": r})
 				net.award_points(r, int(NetConfig.points("revive")), "revive")
+			elif float(d.ev_t) >= 0.5:
+				d.ev_t = 0.0
+				_revive_event(t, r, true, float(d.progress) / maxf(rt, 0.01))
 			continue
 		if bool(d.get("active", false)): # walked out of range: progress lost, still holding
 			d.active = false
 			d.progress = 0.0
 			_rpc_reviving.rpc(t, r, false)
+			_revive_event(t, r, false, 0.0)
 		d.bleed = float(d.bleed) - delta
 		if float(d.bleed) <= 0.0:
 			downed.erase(t)
 			if r != 0:
 				_rpc_reviving.rpc(t, r, false)
 			_rpc_life.rpc(t, LIFE_DEAD)
+			net.broadcast_event(EV_BLED_OUT, t, {})
 			_check_all_down()
+
+
+func _revive_event(target: int, reviver: int, active: bool, progress: float) -> void:
+	net.broadcast_event(EV_REVIVE_PROGRESS, target, {"reviver": reviver, "active": active, "progress": clampf(progress, 0.0, 1.0),
+		"time_s": NetConfig.get_float("downed.revive_time_s")})
 
 
 func _check_all_down() -> void:
@@ -417,7 +493,71 @@ func on_round_started() -> void:
 		return
 	for id in life.keys():
 		if life_of(id) == LIFE_DEAD:
+			late_spectators.erase(id)
 			_rpc_life.rpc(id, LIFE_ALIVE)
+			net.broadcast_event(EV_RESPAWNED, id, {"late_join": false})
+
+
+## Host, M7 round cleared (break): late joiners who were spectating come in now.
+func on_round_cleared() -> void:
+	if not net.is_host():
+		return
+	for id in late_spectators.keys():
+		late_spectators.erase(id)
+		if life_of(id) == LIFE_DEAD and net._party.has(id):
+			_rpc_life.rpc(id, LIFE_ALIVE)
+			net.broadcast_event(EV_RESPAWNED, id, {"late_join": true})
+
+
+# ------------------------------------------------------------------ late join (phase 3a)
+## Host, once the joiner's match scene is ready: its avatar on every other peer, every player's life (+ downed bleed)
+## on the joiner, then the joiner's own life: spectating (dead) during a round, alive in a break / before round 1.
+func host_late_join(peer_id: int, display_name: String, slot: int, spectating: bool) -> void:
+	if not net.is_host():
+		return
+	var at := _player.global_position if _player and is_instance_valid(_player) else Vector3.ZERO
+	spawn_avatar(peer_id, slot, display_name, at)
+	life[peer_id] = LIFE_ALIVE
+	_rpc_add_avatar.rpc(peer_id, slot, display_name, at)
+	var bleed := {}
+	for t in downed:
+		bleed[t] = float(downed[t].bleed)
+	_rpc_life_sync.rpc_id(peer_id, life.duplicate(), bleed)
+	if spectating:
+		late_spectators[peer_id] = true
+		_rpc_life.rpc(peer_id, LIFE_DEAD)
+	else:
+		_rpc_life.rpc(peer_id, LIFE_ALIVE)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _rpc_add_avatar(peer_id: int, slot: int, display_name: String, at: Vector3) -> void:
+	if peer_id != net.local_peer_id() and _root and is_instance_valid(_root):
+		spawn_avatar(peer_id, slot, display_name, at)
+		life[peer_id] = LIFE_ALIVE
+
+
+## Joiner: everyone's life as the host has it (downed avatars lie down; dead ones are hidden by their state stream).
+@rpc("authority", "call_remote", "reliable")
+func _rpc_life_sync(lives: Dictionary, bleed: Dictionary) -> void:
+	for k in lives:
+		var id := int(k)
+		var st := str(lives[k])
+		if id == net.local_peer_id() or st not in [LIFE_ALIVE, LIFE_DOWNED, LIFE_DEAD]:
+			continue
+		life[id] = st
+		var a := avatar(id)
+		if a:
+			a.dead = st == LIFE_DEAD
+			a.set_downed(st == LIFE_DOWNED)
+		net._set_life_entry(id, st, false)
+		if st != LIFE_ALIVE:
+			life_changed.emit(id, st)
+	sync_bleed = bleed.duplicate()
+	net.party_changed.emit(net.get_party())
+
+
+var sync_bleed: Dictionary = {} ## joiner: downed peers' bleed-out seconds left at the moment it joined (UI countdown)
 
 
 ## Local input: holding interact near a downed teammate (prompt / bar are Gooey's; this is the minimal hook).
