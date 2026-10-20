@@ -22,6 +22,8 @@ const PAUSE_MENU_PATH := "res://scripts/ui/pause_menu.gd"
 const SETTINGS_MENU_PATH := "res://scripts/ui/settings_menu.gd"
 const SCOPE_OVERLAY_PATH := "res://scripts/ui/scope_overlay.gd"
 var scope_overlay: Node ## Gooey's sniper scope overlay (hidden on pause / death / swap / home)
+const CalloutDriverScr := preload("res://scripts/audio/callout_driver.gd")
+var callout_driver: Node ## Audi-0's kill callouts (rapid kills / streaks / boss kills -> Callouts autoload)
 var pause_menu: Node
 var settings_menu: Node
 const RUN_PICK_MENU_PATH := "res://scripts/ui/run_pick_menu.gd" ## Gooey's chooser (listens to RunState.offer_ready)
@@ -122,6 +124,10 @@ func _ready() -> void:
 	add_child(hit_sfx)
 	player.hit_registered.connect(hit_sfx.on_hit)
 	player.died.connect(_on_player_died)
+	callout_driver = CalloutDriverScr.new()
+	callout_driver.name = "CalloutDriver"
+	add_child(callout_driver)
+	callout_driver.bind_local_player(player)
 	if ResourceLoader.exists(SCOPE_OVERLAY_PATH):
 		scope_overlay = load(SCOPE_OVERLAY_PATH).new()
 		scope_overlay.name = "ScopeOverlay"

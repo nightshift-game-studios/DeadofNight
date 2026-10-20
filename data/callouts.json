@@ -1,0 +1,128 @@
+{
+  "_doc": "Announcer callouts. Read by scripts/audio/callout_player.gd (autoload 'Callouts') and scripts/audio/kill_tracker.gd. kind=rapid: fires when >= count kills fall inside the last window_s seconds, once per burst (re-arms when that tier's window has emptied). kind=streak: kills since last damage taken, fires when the count reaches threshold. kind=boss: every boss kill. Higher priority interrupts lower; events blocked by a cooldown are dropped, never queued. Teammate events play teammate_clips at teammate_duck_db.",
+  "version": 2,
+  "clip_dir": "res://data/audio/callouts/",
+  "bus": "Announcer",
+  "fallback_bus": "UI",
+  "global_cooldown_s": 20.0,
+  "teammate_duck_db": -4.0,
+  "queue_max": 2,
+  "queue_max_wait_s": 3.0,
+  "streak_resets_on_damage": true,
+  "events": {
+    "massacre": {
+      "kind": "rapid",
+      "line": "MASSACRE!",
+      "priority": 10,
+      "cooldown_s": 30.0,
+      "bypass_global_cooldown": false,
+      "clips": [
+        "massacre_01.ogg",
+        "massacre_02.ogg"
+      ],
+      "teammate_clips": [
+        "massacre_tm_01.ogg",
+        "massacre_tm_02.ogg"
+      ],
+      "count": 10,
+      "window_s": 6.0
+    },
+    "slaughterhouse": {
+      "kind": "rapid",
+      "line": "SLAUGHTERHOUSE!",
+      "priority": 20,
+      "cooldown_s": 45.0,
+      "bypass_global_cooldown": false,
+      "clips": [
+        "slaughterhouse_01.ogg",
+        "slaughterhouse_02.ogg"
+      ],
+      "teammate_clips": [
+        "slaughterhouse_tm_01.ogg",
+        "slaughterhouse_tm_02.ogg"
+      ],
+      "count": 20,
+      "window_s": 12.0
+    },
+    "annihilation": {
+      "kind": "rapid",
+      "line": "ANNIHILATION!",
+      "priority": 30,
+      "cooldown_s": 60.0,
+      "bypass_global_cooldown": true,
+      "clips": [
+        "annihilation_01.ogg",
+        "annihilation_02.ogg"
+      ],
+      "teammate_clips": [
+        "annihilation_tm_01.ogg",
+        "annihilation_tm_02.ogg"
+      ],
+      "count": 35,
+      "window_s": 18.0
+    },
+    "boss_kill": {
+      "kind": "boss",
+      "line": "Big one down.",
+      "priority": 35,
+      "cooldown_s": 5.0,
+      "bypass_global_cooldown": true,
+      "clips": [
+        "boss_kill_01.ogg",
+        "boss_kill_02.ogg"
+      ],
+      "teammate_clips": [
+        "boss_kill_tm_01.ogg",
+        "boss_kill_tm_02.ogg"
+      ]
+    },
+    "streak_100": {
+      "kind": "streak",
+      "line": "Night Shift.",
+      "priority": 40,
+      "cooldown_s": 0.0,
+      "bypass_global_cooldown": false,
+      "clips": [
+        "streak_100_01.ogg",
+        "streak_100_02.ogg"
+      ],
+      "teammate_clips": [
+        "streak_100_tm_01.ogg",
+        "streak_100_tm_02.ogg"
+      ],
+      "threshold": 100
+    },
+    "streak_250": {
+      "kind": "streak",
+      "line": "Graveyard Shift.",
+      "priority": 50,
+      "cooldown_s": 0.0,
+      "bypass_global_cooldown": false,
+      "clips": [
+        "streak_250_01.ogg",
+        "streak_250_02.ogg"
+      ],
+      "teammate_clips": [
+        "streak_250_tm_01.ogg",
+        "streak_250_tm_02.ogg"
+      ],
+      "threshold": 250
+    },
+    "streak_500": {
+      "kind": "streak",
+      "line": "Dead of Night!",
+      "priority": 60,
+      "cooldown_s": 0.0,
+      "bypass_global_cooldown": true,
+      "clips": [
+        "streak_500_01.ogg",
+        "streak_500_02.ogg"
+      ],
+      "teammate_clips": [
+        "streak_500_tm_01.ogg",
+        "streak_500_tm_02.ogg"
+      ],
+      "threshold": 500
+    }
+  }
+}

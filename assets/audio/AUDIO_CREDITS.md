@@ -25,3 +25,16 @@ Treyarch/Call of Duty audio or music.
 Shared code: `tools/dsp.py`, `tools/synth.py`. Regenerate everything with `tools/build_all.sh`.
 The seeds are fixed, so the decoded audio is bit-identical on every run (OGG container serial
 numbers differ between runs).
+
+## Announcer callouts (callouts/*.ogg, game copy: fps-starter/data/audio/callouts/)
+Generator: `tools/gen_callouts.py`. The voice is offline TTS, run through heavy processing (pitch and
+formant down, low-end weight, saturation, PA band-pass, compression, slap reverb). Stings are synthesized.
+- TTS engine: **Festival 2.5** (CSTR, University of Edinburgh). Free, MIT-style licence: "use and
+  distribute this software ... without restriction".
+- Voices: **kal_diphone** (Debian package festvox-kallpc16k, (c) 1998 CSTR/OGI) for the _01 variants and
+  **ked_diphone** (festvox-kdlpc16k, (c) 1997 CSTR/OGI) for the _02 variants. Both use the same
+  MIT-style "without restriction" licence (see /usr/share/doc/festvox-kallpc16k/copyright and
+  /usr/share/doc/festvox-kdlpc16k/copyright). Festival's own copyright file states: "the US voices, kal
+  and ked are free".
+- Not used: no MBROLA, no OALD lexicon (non-commercial), no Piper or other neural models.
+- The rendered callout audio contains no third-party recordings and is dedicated under **CC0 1.0**.
