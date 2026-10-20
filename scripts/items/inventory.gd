@@ -11,8 +11,8 @@ extends Node
 ## -> stash.cap), on top of the per-slot `backpack_size` grid limit. Equipped gear doesn't count. Scrap
 ## (dismantle) frees space. Consumables in `bag` are per-match supplies and are not persisted.
 ##
-## Seen flags ('!' badge): GearItem.seen persists. New pickups land unseen; auto-equipped and equip()'d items are
-## marked seen. UI calls mark_seen(item) when the player views an item.
+## Seen flags ('!' badge): GearItem.seen persists. New pickups land unseen only if badge_worthy (Rare+ or an
+## upgrade, playtest #18); auto-equipped and equip()'d items are marked seen. UI calls mark_seen(item) when the player views an item.
 
 signal changed
 signal weapon_equipped(weapon: WeaponItem)
@@ -111,6 +111,8 @@ func add_item(item: Item) -> bool:
 		if stash_full():
 			last_reject = "stash_full"
 			return false
+		if not badge_worthy(gear):
+			gear.seen = true # playtest #18: no '!' for routine loot
 		backpack[s].append(gear)
 		changed.emit()
 		if not gear.seen:
@@ -154,6 +156,22 @@ func equip_refusal(gear: GearItem) -> String:
 	if gdb and gdb.has_method("slot_refusal"):
 		return str(gdb.slot_refusal(gear, self))
 	return ""
+
+
+## Playtest #18: a new backpack piece gets the '!' badge only if it is Rare or better, or an upgrade over
+## what's equipped in its slot.
+func badge_worthy(gear: GearItem) -> bool:
+	return gear != null and (gear.rarity >= Rarity.RARE or is_upgrade(gear))
+
+
+## Skillz's GearDB.is_upgrade(item, player) when it exists; until then: higher rarity than the equipped piece
+## in that slot (an empty slot counts as an upgrade).
+func is_upgrade(gear: GearItem) -> bool:
+	var gdb := get_node_or_null("/root/GearDB")
+	if gdb and gdb.has_method("is_upgrade"):
+		return bool(gdb.is_upgrade(gear, get_parent()))
+	var cur: GearItem = equipped.get(gear.slot)
+	return cur == null or gear.rarity > cur.rarity
 
 
 ## Hold-E (playtest #3): take a ground item and equip it at once. The old piece goes to the backpack (seen);

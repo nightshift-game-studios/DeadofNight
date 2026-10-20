@@ -202,6 +202,32 @@ func _run() -> void:
 	pri = inv.equipped.primary
 	sec = inv.equipped.secondary
 
+	# ---------------------------------------------------------------- #18 '!' only for Rare+ or upgrades
+	var Inv = load("res://scripts/items/inventory.gd")
+	var iv = Inv.new()
+	root.add_child(iv)
+	iv.stash_cap = -1
+	var base = gdb.roll_weapon("sidearm", 1, 1) # Uncommon equipped primary
+	iv.add_item(base)
+	var c0 = gdb.roll_weapon("hand_cannon", 0, 1)
+	var u0 = gdb.roll_weapon("auto_rifle", 1, 1)
+	var r0 = gdb.roll_weapon("scout_rifle", 2, 1)
+	var l0 = gdb.roll_weapon("hand_cannon", 3, 1)
+	for it in [c0, u0, r0, l0]:
+		iv.add_item(it)
+	check(c0.seen and u0.seen, "#18 Common / same-rarity Uncommon below Rare: no '!'")
+	check(not r0.seen and not l0.seen, "#18 Rare and Legendary: '!'")
+	check(iv.unseen_count("primary") == 2, "#18 unseen_count counts only those (%d)" % iv.unseen_count("primary"))
+	var hb = gdb.roll_armor("helmet", 0, 1)
+	iv.add_item(hb) # Common helmet equipped
+	var hu = gdb.roll_armor("helmet", 1, 1)
+	iv.add_item(hu)
+	check(not hu.seen and iv.is_upgrade(hu), "#18 Uncommon over an equipped Common: upgrade -> '!'")
+	var hc = gdb.roll_armor("helmet", 0, 2)
+	iv.add_item(hc)
+	check(hc.seen and not iv.is_upgrade(hc), "#18 Common next to a Common: no '!'")
+	iv.queue_free()
+
 	#SECTIONS
 
 	print("feel_test: %d passed, %d failed" % [_passes, _fails])

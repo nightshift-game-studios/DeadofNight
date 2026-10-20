@@ -100,7 +100,7 @@ func _run() -> void:
 	inv.add_item(w3)
 	inv.equip(w3)
 	check(inv.equipped.primary == w3 and w3.seen, "equip() marks the item seen")
-	var junk = gear.roll_weapon("scout_rifle", COMMON, 1)
+	var junk = gear.roll_weapon("scout_rifle", RARE, 1) # Rare: still gets the '!' (playtest #18 hides it for routine loot)
 	inv.add_item(junk)
 	_seen_events.clear()
 	inv.dismantle(junk)
