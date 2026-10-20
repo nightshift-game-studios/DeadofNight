@@ -53,6 +53,7 @@ var data: Dictionary = {}
 
 var _items: Dictionary = {} ## offer_id -> preview WeaponItem (rebuilt from the saved dict)
 var _last_refusal: String = ""
+var _income_cache: Dictionary = {} ## diff -> Gravemarks per typical match
 var _anchor_unix: float = -1.0 ## trusted time at _anchor_ticks (this session)
 var _anchor_ticks: int = 0
 
@@ -74,6 +75,7 @@ func reload_data() -> void:
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(DATA_PATH)) if FileAccess.file_exists(DATA_PATH) else null
 	data = parsed if typeof(parsed) == TYPE_DICTIONARY else {}
 	_items.clear()
+	_income_cache.clear()
 
 
 # ================================================================== public API (MERCHANT_API.md)
@@ -228,8 +230,19 @@ func slot_featured(i: int) -> bool:
 
 ## Typical matches needed to afford `price` on a difficulty (data income_per_match).
 func matches_to_afford(price: int, diff: String) -> float:
-	var inc := float(data.get("income_per_match", {}).get(diff, 7))
-	return float(price) / maxf(inc, 0.01)
+	return float(price) / maxf(income_per_match(diff), 0.01)
+
+
+## Gravemarks per typical match: Armory.matches_to_max(diff).per_match (= Armory.expected_match_income at the typical
+## round count) when data income_source is "armory", else data income_per_match. Maps are 1:1 with difficulties.
+func income_per_match(diff: String) -> float:
+	if str(data.get("income_source", "")) == "armory":
+		if not _income_cache.has(diff):
+			var A = load("res://scripts/armory/armory.gd")
+			_income_cache[diff] = float(A.matches_to_max(diff).get("per_match", 0.0)) if A else 0.0
+		if float(_income_cache[diff]) > 0.0:
+			return float(_income_cache[diff])
+	return float(data.get("income_per_match", {}).get(diff, 7))
 
 
 ## Rows for DESIGN.md §20 / tests: {rarity, ip:[lo,hi], perks, price, featured_price, odds_featured, odds_regular, matches{easy, medium, hard}}.
@@ -238,12 +251,28 @@ func design_table() -> Array:
 	for r in 5:
 		var c := rarity_cfg(r)
 		var m := {}
+		var mf := {}
 		for d in DIFFS:
 			m[d] = snappedf(matches_to_afford(price_for(r), d), 0.1)
+			mf[d] = snappedf(matches_to_afford(price_for(r, true), d), 0.1)
 		out.append({"rarity": Rarity.name_of(r), "ip": c.get("item_power", [100, 100]),
-			"perks": Rarity.PERK_SLOTS[r] + (1 if r == Rarity.MYTHIC else 0) + int(c.get("bonus_perks", 0)),
+			"perks": Rarity.PERK_SLOTS[r] + (1 if r == Rarity.MYTHIC else 0) + int(c.get("bonus_perks", 0))
+				+ (1 if r == Rarity.MYTHIC and not signature_perks().is_empty() else 0),
+			"playstyle_min": int(c.get("playstyle_perks_min", 0)), "roll_quality_floor": float(c.get("roll_quality_floor", 0.0)),
 			"price": price_for(r), "featured_price": price_for(r, true),
-			"odds_featured": slot_odds(0)[r], "odds_regular": slot_odds(1)[r], "matches": m})
+			"odds_featured": slot_odds(0)[r], "odds_regular": slot_odds(1)[r], "matches": m, "matches_featured": mf})
+	return out
+
+
+## The first n paid reroll prices after a refresh, each with matches-to-pay per difficulty.
+func reroll_table(n: int = 7) -> Array:
+	var out: Array = []
+	for i in n:
+		var cost := cost_for_reroll(i)
+		var m := {}
+		for d in DIFFS:
+			m[d] = snappedf(matches_to_afford(cost, d), 0.01)
+		out.append({"n": i + 1, "cost": cost, "matches": m})
 	return out
 
 
@@ -444,14 +473,25 @@ func _roll_stock(only_unsold: bool) -> void:
 		var ipr: Array = c.get("item_power", [100, 100])
 		var fb: Dictionary = data.get("featured_bonus", {}) if featured else {}
 		var ip := rng.randi_range(int(ipr[0]), int(ipr[-1])) + int(fb.get("item_power", 0))
-		seed(rng.randi()) # roll_weapon's own picks (stats, maker, name, perks) use the global RNG
-		var w: WeaponItem = gdb.roll_weapon(arch, r, 1, "", ip)
+		# No duds: re-roll (deterministic) until the stat roll reaches the rarity's roll_quality_floor; keep the best.
+		var w: WeaponItem = null
+		for attempt in maxi(int(data.get("max_roll_attempts", 1)), 1):
+			seed(rng.randi()) # roll_weapon's own picks (stats, maker, name, perks) use the global RNG
+			var cand: WeaponItem = gdb.roll_weapon(arch, r, 1, "", ip)
+			if w == null or cand.roll_quality > w.roll_quality:
+				w = cand
+			if w.roll_quality >= float(c.get("roll_quality_floor", 0.0)):
+				break
 		var extra := int(c.get("bonus_perks", 0)) + int(fb.get("bonus_perks", 0))
-		var perk_ids: Array = gdb.perks.keys().filter(func(k): return not (k in w.perks))
-		perk_ids.sort()
+		var perk_ids: Array = _perk_pool().filter(func(k): return not (k in w.perks))
 		while extra > 0 and not perk_ids.is_empty():
 			w.perks.append(perk_ids.pop_at(rng.randi_range(0, perk_ids.size() - 1)))
 			extra -= 1
+		_ensure_playstyle(w, int(c.get("playstyle_perks_min", 0)), rng)
+		if r == Rarity.MYTHIC:
+			var sigs := signature_perks()
+			if not sigs.is_empty():
+				w.perks.append(sigs[rng.randi_range(0, sigs.size() - 1)])
 		w.seen = false
 		var oid := "lot%d_%d" % [int(st.gen), i]
 		stock.append({"offer_id": oid, "slot": i, "featured": featured, "rarity": r,
@@ -459,6 +499,46 @@ func _roll_stock(only_unsold: bool) -> void:
 		_items[oid] = w
 	randomize() # don't leave the global RNG on a predictable seed
 	st["stock"] = stock
+
+
+## Random-perk pool: every perk except Mythic signatures (sorted, so rolls are deterministic).
+func _perk_pool() -> Array:
+	var gdb := _gear_db()
+	var ids: Array = gdb.perks.keys().filter(func(k): return not bool(gdb.perks[k].get("signature", false)))
+	ids.sort()
+	return ids
+
+
+func is_playstyle_perk(id: String) -> bool:
+	return bool(_gear_db().perk(id).get("playstyle", false))
+
+
+## Mythic signature perk ids from data that exist in GearDB.perks (none until MAIN_HOOKS §19c adds them).
+func signature_perks() -> Array:
+	var gdb := _gear_db()
+	return data.get("mythic_signature_perks", []).filter(func(k): return gdb.perks.has(str(k))).map(func(k): return str(k))
+
+
+## Swaps random non-playstyle perks for playstyle ones until `need` are on the gun. A Mythic's archetype perk (index 0,
+## from weapons.json mythic.perk) is never swapped out.
+func _ensure_playstyle(w: WeaponItem, need: int, rng: RandomNumberGenerator) -> void:
+	var locked := 1 if w.rarity == Rarity.MYTHIC and w.arch.has("mythic") else 0
+	var have := Array(w.perks).filter(func(k): return is_playstyle_perk(k)).size()
+	while have < need:
+		var cands: Array = _perk_pool().filter(func(k): return is_playstyle_perk(k) and not (k in w.perks))
+		if cands.is_empty():
+			return
+		var pick: String = cands[rng.randi_range(0, cands.size() - 1)]
+		var idx := -1
+		for j in range(w.perks.size() - 1, locked - 1, -1):
+			if not is_playstyle_perk(w.perks[j]):
+				idx = j
+				break
+		if idx >= 0:
+			w.perks[idx] = pick
+		else:
+			w.perks.append(pick)
+		have += 1
 
 
 # ================================================================== offers

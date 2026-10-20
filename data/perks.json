@@ -1,5 +1,5 @@
 {
-	"_help": "Weapon perks. 'effect' selects the code path in scripts/gear/perk_system.gd; the other fields are its parameters. 'glyph' + 'icon_color' draw the perk badge in the UI.",
+	"_help": "Weapon perks. 'effect' selects the code path in scripts/gear/perk_system.gd; the other fields are its parameters. 'glyph' + 'icon_color' draw the perk badge in the UI. 'playstyle': true marks perks that change how you play (detonating hits, kill-reload rhythm, grenade loop, kill sustain, crouch/slide fighting) as opposed to plain on-kill stat buffs (false); the Merchant guarantees at least one playstyle perk on Legendary / Mythic offers (data/merchant.json playstyle_perks_min). 'signature': true = a Mythic-only signature perk: never in random rolls (GearDB.roll_weapon skips it, MAIN_HOOKS §19c); the Merchant gives each Mythic offer one (data/merchant.json mythic_signature_perks). Signatures reuse stateless effect paths, so they stack safely with pool perks.",
 	"perks": [
 		{
 			"id": "bloodrush",
@@ -14,7 +14,8 @@
 				0.85,
 				0.15,
 				0.12
-			]
+			],
+			"playstyle": false
 		},
 		{
 			"id": "fever_hands",
@@ -28,7 +29,8 @@
 				0.95,
 				0.6,
 				0.15
-			]
+			],
+			"playstyle": false
 		},
 		{
 			"id": "shrapnel_tips",
@@ -43,7 +45,8 @@
 				1.0,
 				0.45,
 				0.1
-			]
+			],
+			"playstyle": true
 		},
 		{
 			"id": "hot_brass",
@@ -57,7 +60,8 @@
 				0.95,
 				0.8,
 				0.2
-			]
+			],
+			"playstyle": true
 		},
 		{
 			"id": "pin_puller",
@@ -70,7 +74,8 @@
 				0.55,
 				0.75,
 				0.25
-			]
+			],
+			"playstyle": true
 		},
 		{
 			"id": "marrow_tap",
@@ -83,7 +88,8 @@
 				0.75,
 				0.2,
 				0.35
-			]
+			],
+			"playstyle": true
 		},
 		{
 			"id": "low_stance",
@@ -96,7 +102,55 @@
 				0.4,
 				0.65,
 				0.85
-			]
+			],
+			"playstyle": true
+		},
+		{
+			"id": "choirfall",
+			"name": "Choirfall",
+			"effect": "explode",
+			"description": "Signature. 40% of hits burst for 80% bonus damage in a wide ring. Built to hold a doorway alone.",
+			"chance": 0.4,
+			"amount": 0.8,
+			"radius": 3.4,
+			"glyph": "CF",
+			"icon_color": [
+				1.0,
+				0.62,
+				0.05
+			],
+			"playstyle": true,
+			"signature": true
+		},
+		{
+			"id": "lantern_tithe",
+			"name": "Lantern Tithe",
+			"effect": "heal_on_kill",
+			"description": "Signature. Every kill restores 28 health. Fight from inside the horde.",
+			"amount": 28,
+			"glyph": "LT",
+			"icon_color": [
+				1.0,
+				0.62,
+				0.05
+			],
+			"playstyle": true,
+			"signature": true
+		},
+		{
+			"id": "bellrope_return",
+			"name": "Bellrope Return",
+			"effect": "grenade_refund",
+			"description": "Signature. Kills refund 35% of your grenade cooldown. Throw, clear, throw again.",
+			"amount": 0.35,
+			"glyph": "BR",
+			"icon_color": [
+				1.0,
+				0.62,
+				0.05
+			],
+			"playstyle": true,
+			"signature": true
 		}
 	]
 }

@@ -124,29 +124,66 @@ func _run() -> void:
 	# ------------------------------------------------------------ data + design table
 	var m := _new_merchant()
 	check(m.data.get("version", 0) == 1 and m.stock_size() == 5, "data/merchant.json loads, stock_size 5")
-	var p := [m.price_for(0), m.price_for(1), m.price_for(2), m.price_for(3), m.price_for(4)]
-	check(p[0] >= 2 and p[0] <= 3 and p[1] == 5 and p[2] >= 9 and p[2] <= 12 and p[3] >= 20 and p[3] <= 28 and p[4] >= 40 and p[4] <= 60,
-		"prices on the Gravemark curve %s (2-3 / 5 / 9-12 / 20-28 / 40-60)" % [p])
-	check(m.price_for(2, true) <= 12 and m.price_for(3, true) <= 28 and m.price_for(4, true) <= 60 and m.price_for(3, true) > m.price_for(3),
-		"featured prices stay in band: %d / %d / %d" % [m.price_for(2, true), m.price_for(3, true), m.price_for(4, true)])
-	check([0, 1, 2, 3, 4, 5, 6].map(func(n): return m.cost_for_reroll(n)) == [1, 2, 4, 7, 12, 18, 24], "reroll costs 1,2,4,7,12 then +6")
+	# Jason's retune (2026-10-19): "not too cheap, rewarding". Targets in Hard matches (Armory income ~14 / match).
+	var A = load("res://scripts/armory/armory.gd")
+	var inc_ok := true
+	for d in ["easy", "medium", "hard"]:
+		inc_ok = inc_ok and absf(m.income_per_match(d) - float(A.matches_to_max(d).per_match)) < 1e-6
+	check(inc_ok and absf(m.income_per_match("easy") - 5.2) < 0.3 and absf(m.income_per_match("medium") - 7.0) < 0.3 and absf(m.income_per_match("hard") - 14.0) < 0.5,
+		"income from Armory.expected_match_income: %.2f / %.2f / %.2f" % [m.income_per_match("easy"), m.income_per_match("medium"), m.income_per_match("hard")])
+	var hard := [0, 1, 2, 3, 4].map(func(r): return m.matches_to_afford(m.price_for(r), "hard"))
+	var bands := [[0.85, 1.1], [1.8, 2.2], [4.0, 5.0], [10.0, 12.0], [20.0, 25.0]]
+	var band_ok := true
+	for r in 5:
+		band_ok = band_ok and hard[r] >= bands[r][0] and hard[r] <= bands[r][1]
+	check(band_ok and m.price_for(0) >= 12 and m.price_for(0) <= 15, "prices in Hard matches %s (targets ~1 / 2 / 4-5 / 10-12 / 20-25; Common 12-15 GM)" % [hard.map(func(x): return snappedf(x, 0.01))])
+	var feat_ok := true
+	for r in range(2, 5):
+		feat_ok = feat_ok and m.price_for(r, true) == int(round(m.price_for(r) * 1.15))
+	check(feat_ok and float(m.data.featured_bonus.price_mult) == 1.15, "featured slot stays x1.15: %d / %d / %d" % [m.price_for(2, true), m.price_for(3, true), m.price_for(4, true)])
+	check([0, 1, 2, 3, 4, 5, 6].map(func(n): return m.cost_for_reroll(n)) == [5, 9, 15, 24, 36, 51, 66], "reroll costs 5,9,15,24,36 then +15")
+	check(m.matches_to_afford(m.cost_for_reroll(0), "hard") >= 0.3 and m.cost_for_reroll(0) < m.price_for(0) and m.cost_for_reroll(3) > m.price_for(1) * 0.8,
+		"rerolls matter: first ~1/3 Hard match, below a Common; the 4th costs about an Uncommon")
 	var o0: Array = m.slot_odds(0)
 	var o1: Array = m.slot_odds(1)
 	check(m.slot_featured(0) and not m.slot_featured(1) and o0[0] == 0.0 and o0[1] == 0.0, "slot 0 featured, Rare or better")
 	check(o1[4] <= 0.02 and o0[4] <= 0.1 and absf(o1.reduce(func(a, b): return a + b, 0.0) - 1.0) < 1e-6, "Mythic is rare (%.1f%% featured, %.1f%% regular)" % [o0[4] * 100, o1[4] * 100])
 	var tbl: Array = m.design_table()
 	for row in tbl:
-		print("  table: %s IP %s perks %d price %d (featured %d) odds F %.1f%% / R %.1f%% matches easy %.1f med %.1f hard %.1f" % [
-			row.rarity, row.ip, row.perks, row.price, row.featured_price, row.odds_featured * 100, row.odds_regular * 100,
-			row.matches.easy, row.matches.medium, row.matches.hard])
-	check(tbl.size() == 5 and tbl[4].matches.easy >= 8.0 and tbl[0].matches.easy <= 1.0 and tbl[3].matches.medium >= 2.5,
-		"matches-to-afford: Common < 1 match, Legendary ~3+ on Medium, Mythic ~10 on Easy")
+		print("  table: %s IP %s perks %d (playstyle >= %d, roll q >= %.2f) price %d (featured %d) odds F %.1f%% / R %.1f%% matches e/m/h %.1f / %.1f / %.1f (featured %.1f / %.1f / %.1f)" % [
+			row.rarity, row.ip, row.perks, row.playstyle_min, row.roll_quality_floor, row.price, row.featured_price, row.odds_featured * 100, row.odds_regular * 100,
+			row.matches.easy, row.matches.medium, row.matches.hard, row.matches_featured.easy, row.matches_featured.medium, row.matches_featured.hard])
+	for row in m.reroll_table(7):
+		print("  reroll #%d: %d GM = %.2f / %.2f / %.2f matches" % [row.n, row.cost, row.matches.easy, row.matches.medium, row.matches.hard])
+	check(tbl.size() == 5 and tbl[0].matches.hard >= 0.85 and tbl[4].matches.easy >= 50.0 and tbl[3].matches_featured.hard > tbl[3].matches.hard,
+		"matches-to-buy table: Common ~1 Hard match, Mythic 50+ Easy matches, featured costs more")
 	var ips_ok := true
 	for r in 4:
 		ips_ok = ips_ok and int(m.rarity_cfg(r + 1).item_power[0]) > int(m.rarity_cfg(r).item_power[-1])
-	check(ips_ok and int(m.rarity_cfg(2).item_power[0]) >= 140, "item power rises with rarity (Rare ~ a round-10 Rare drop)")
-	var inc: float = load("res://scripts/armory/armory.gd").expected_match_income("medium", 13).total
-	print("  Armory.expected_match_income(medium, 13) = %.1f (data income_per_match.medium = %d)" % [inc, m.data.income_per_match.medium])
+	check(ips_ok, "item power rises with rarity")
+	# Legendary / Mythic beat what drops in-run: highest drop IP at the end of a typical match (+ variance)
+	var ipc: Dictionary = root.get_node("GearDB").item_power_cfg()
+	var typical: Dictionary = A.cfg().expected.typical_rounds
+	var max_rounds: int = typical.values().reduce(func(a, b): return maxi(int(a), int(b)), 0)
+	var drop_max := func(rid: String) -> int:
+		return int(ipc.base) + int(ipc.per_round) * (max_rounds - 1) + int(ipc.rarity_bonus[rid]) + int(ipc.variance)
+	check(int(m.rarity_cfg(3).item_power[0]) > drop_max.call("legendary") and int(m.rarity_cfg(4).item_power[0]) > drop_max.call("mythic") + 5,
+		"IP floors beat in-run drops at round %d: Legendary %d > %d, Mythic %d > %d" % [max_rounds, int(m.rarity_cfg(3).item_power[0]), drop_max.call("legendary"),
+		int(m.rarity_cfg(4).item_power[0]), drop_max.call("mythic")])
+	var gdbp: Dictionary = root.get_node("GearDB").perks
+	var play_ids: Array = gdbp.keys().filter(func(k): return bool(gdbp[k].get("playstyle", false)))
+	check(play_ids.size() >= 3 and gdbp.keys().all(func(k): return gdbp[k].has("playstyle") or gdbp[k].get("signature", false)), "perks.json tags playstyle perks (%s)" % [play_ids])
+	var sig_ids: Array = m.signature_perks()
+	check(m.data.mythic_signature_perks.size() >= 2, "data names %d Mythic signature perks" % m.data.mythic_signature_perks.size())
+	if sig_ids.is_empty():
+		print("  (signature perks not in GearDB.perks: MAIN_HOOKS §19c not applied; Mythic offers carry no signature yet)")
+	else:
+		check(sig_ids.all(func(k): return bool(gdbp[k].get("signature", false))), "signature perks are flagged signature (kept out of random drops)")
+		var leaks := 0
+		for k in 300:
+			var drop = root.get_node("GearDB").roll_weapon("", Rarity.MYTHIC, 10)
+			leaks += drop.perks.filter(func(id): return id in sig_ids).size()
+		check(leaks == 0, "300 random Mythic drops carry no signature perk (GearDB filter, §19c)")
 
 	# ------------------------------------------------------------ API shape (MERCHANT_API.md)
 	var methods := ["get_stock", "buy_check", "buy", "reroll_cost", "reroll_check", "reroll", "time_to_refresh", "refresh_if_due", "last_refusal_reason"]
@@ -275,6 +312,10 @@ func _run() -> void:
 	var counts := [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
 	var bad := []
 	var n_hours := 100
+	var low_q := []
+	var no_play := []
+	var commons := []
+	var mythics := 0
 	for i in n_hours:
 		fc.t += H
 		mr.refresh_if_due()
@@ -283,13 +324,61 @@ func _run() -> void:
 			counts[0 if o.featured else 1][r] += 1
 			var c: Dictionary = mr.rarity_cfg(r)
 			var fb := 4 if o.featured else 0
-			var want_perks: int = Rarity.PERK_SLOTS[r] + (1 if r == Rarity.MYTHIC else 0) + (1 if o.featured else 0)
+			var want_perks: int = Rarity.PERK_SLOTS[r] + (1 if r == Rarity.MYTHIC else 0) + (1 if o.featured else 0) \
+				+ (1 if r == Rarity.MYTHIC and not sig_ids.is_empty() else 0)
+			if o.item.roll_quality < float(c.roll_quality_floor):
+				low_q.append([r, o.item.roll_quality])
+			var n_play: int = o.perks.filter(func(k): return mr.is_playstyle_perk(k)).size()
+			if n_play < int(c.playstyle_perks_min):
+				no_play.append([r, o.perks])
+			if r == Rarity.MYTHIC:
+				mythics += 1
+				var mp = o.item.arch.get("mythic", {}).get("perk", "")
+				if mp != "" and o.perks[0] != mp:
+					bad.append(["mythic perk", o.perks])
+				if not sig_ids.is_empty() and o.perks.filter(func(k): return k in sig_ids).size() != 1:
+					bad.append(["signature", o.perks])
+			if r < Rarity.MYTHIC and o.perks.any(func(k): return bool(gdbp[k].get("signature", false))):
+				bad.append(["signature below Mythic", o.perks])
+			if r == Rarity.COMMON:
+				commons.append(o.item)
 			if o.item_power < int(c.item_power[0]) + fb or o.item_power > int(c.item_power[1]) + fb or o.perks.size() != want_perks \
 					or o.price != mr.price_for(r, o.featured) or o.item.rarity != r:
 				bad.append([o.slot, r, o.item_power, o.perks.size(), want_perks])
 	print("  rarity counts featured %s regular %s" % [counts[0], counts[1]])
 	check(bad.is_empty(), "every roll: IP in its rarity band (+4 featured), guaranteed perk count, price by rarity (%d bad: %s)" % [bad.size(), bad.slice(0, 3)])
 	check(counts[0][0] == 0 and counts[0][1] == 0 and counts[0][2] > counts[0][3], "featured slot never below Rare, mostly Rare")
+	check(low_q.is_empty(), "no duds: every offer meets its rarity's roll_quality_floor (%d below: %s)" % [low_q.size(), low_q.slice(0, 3)])
+	check(no_play.is_empty() and counts[0][3] + counts[1][3] > 0 and mythics > 0, "every Legendary / Mythic has >= 1 playstyle perk (%d Leg, %d Myth sampled)" % [counts[0][3] + counts[1][3], mythics])
+	# Commons are a little better than the starter gun: Common rolled at round 1 (GearDB.roll_weapon(arch, COMMON, 1)).
+	var gdbn: Node = root.get_node("GearDB")
+	var s_dmg := 0.0
+	var s_stats := 0.0
+	var s_ipmax := 0
+	var m_dmg := 0.0
+	var m_stats := 0.0
+	var each_ok := true
+	for w in commons:
+		var md: float = w.damage()
+		var mt: float = w.stats.values().reduce(func(a, b): return a + b, 0)
+		var sd := 0.0
+		var stt := 0.0
+		for k in 20:
+			var starter = gdbn.roll_weapon(str(w.archetype), Rarity.COMMON, 1)
+			sd += starter.damage() / 20.0
+			stt += float(starter.stats.values().reduce(func(a, b): return a + b, 0)) / 20.0
+			s_ipmax = maxi(s_ipmax, int(starter.item_power))
+		s_dmg += sd
+		s_stats += stt
+		m_dmg += md
+		m_stats += mt
+		each_ok = each_ok and w.power_mult() > 1.06 and md > sd * 0.97
+	var n_c: int = maxi(commons.size(), 1)
+	var gain := m_dmg / maxf(s_dmg, 0.001) - 1.0
+	check(commons.size() >= 20 and each_ok and s_ipmax < int(m.rarity_cfg(0).item_power[0]),
+		"every Merchant Common out-powers the starter roll (IP %d+ vs starter max %d, damage never below 97%% of the starter average)" % [int(m.rarity_cfg(0).item_power[0]), s_ipmax])
+	check(gain > 0.05 and gain < 0.25 and m_stats / n_c > s_stats / n_c,
+		"...but only a little: +%.1f%% damage, stat total %.0f vs %.0f on average (%d Commons)" % [gain * 100.0, m_stats / n_c, s_stats / n_c, commons.size()])
 	var reg_total: int = counts[1].reduce(func(a, b): return a + b, 0)
 	check(counts[1][4] <= reg_total * 0.03 and counts[1][0] > counts[1][3], "regular slots: Mythic <= 3%% (%d/%d), Common > Legendary" % [counts[1][4], reg_total])
 	mr.free()
@@ -301,9 +390,9 @@ func _run() -> void:
 	var inv := _inventory()
 	prog.bind_inventory(inv)
 	m.refresh_if_due()
-	check(m.reroll_cost() == 1 and m.reroll_check().reason == "Not enough Gravemarks (need 1)" and not m.reroll().ok
-		and m.last_refusal_reason() == "Not enough Gravemarks (need 1)", "reroll with 0 Gravemarks refused: need 1")
-	prog.add_gravemark(200, "test")
+	check(m.reroll_cost() == 5 and m.reroll_check().reason == "Not enough Gravemarks (need 5)" and not m.reroll().ok
+		and m.last_refusal_reason() == "Not enough Gravemarks (need 5)", "reroll with 0 Gravemarks refused: need 5")
+	prog.add_gravemark(2000, "test")
 	# buy slot 1 first: a sold slot must survive rerolls
 	var cheap := _offer(m, func(o): return o.slot == 1)
 	var before_buy: int = prog.gravemarks
@@ -326,11 +415,11 @@ func _run() -> void:
 		ids_prev = now_ids
 		if not rr.ok:
 			paid.append("refused")
-	check(paid == [1, 2, 4, 7, 12, 18] and prog.gravemarks == bal0 - 44, "reroll costs escalate %s, total 44 deducted" % [paid])
+	check(paid == [5, 9, 15, 24, 36, 51] and prog.gravemarks == bal0 - 140, "reroll costs escalate %s, total 140 deducted" % [paid])
 	check(keep_ok and change_ok, "reroll replaces every unsold slot (new offer ids), the sold slot stays sold")
-	check(_count("stock", "reroll") == 6 and _count("cost", 24) >= 1, "stock_changed(reroll) + reroll_cost_changed per reroll")
+	check(_count("stock", "reroll") == 6 and _count("cost", 66) >= 1, "stock_changed(reroll) + reroll_cost_changed per reroll")
 	fc.t = h0 + 11.0 * H
-	check(m.refresh_if_due() and m.reroll_cost() == 1 and int(prog.merchant.rerolls) == 0 and _count("cost", 1) >= 1, "free refresh resets the reroll price to 1")
+	check(m.refresh_if_due() and m.reroll_cost() == 5 and int(prog.merchant.rerolls) == 0 and _count("cost", 5) >= 1, "free refresh resets the reroll price to 5")
 
 	# ------------------------------------------------------------ buy + every refusal
 	sig.clear()
@@ -365,7 +454,7 @@ func _run() -> void:
 		"buy saved at once: merchant state + the gun in [stash]")
 
 	# stash full (40/40): weapon slot occupied, 40 spare armor pieces
-	prog.add_gravemark(500, "test")
+	prog.add_gravemark(2000, "test")
 	var target := _offer(m, func(x): return not x.sold and inv.equipped.get(x.item.slot) != null)
 	var k := 0
 	while inv.carried_count() < 40:

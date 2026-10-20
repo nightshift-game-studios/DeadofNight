@@ -1,13 +1,14 @@
 {
 	"version": 1,
-	"_help": "Home-screen Merchant (Skillz, DESIGN.md §20). Sells rolled guns for Gravemarks. Read by scripts/merchant/merchant.gd. stock_size 4..6 (clamped). slots[i] = rarity weights (common..mythic, relative) for stock slot i; slots past the end reuse the last entry. featured = that slot gets featured_bonus (extra IP, extra perk, price x price_mult). rarity.<id>: price in Gravemarks, item_power [min, max] rolled uniformly (passed to GearDB.roll_weapon, so it replaces the round-based drop IP), bonus_perks added on top of Rarity.PERK_SLOTS. Stock refreshes every refresh_seconds, aligned to multiples of refresh_seconds since the unix epoch (top of the hour). reroll_costs[n] = price of the (n+1)th paid reroll since the last free refresh; past the end, the last cost + reroll_cost_step per extra use. rollback_reanchor_seconds: if the clock goes back further than this behind last_seen_time, the stock is kept and the timer re-anchors to the corrected clock (no early refresh). income_per_match = Gravemarks per typical match (easy/medium/hard) used for matches_to_afford() and the design table.",
+	"_help": "Home-screen Merchant (Skillz, DESIGN.md §20). Sells rolled guns for Gravemarks. Read by scripts/merchant/merchant.gd. stock_size 4..6 (clamped). slots[i] = rarity weights (common..mythic, relative) for stock slot i; slots past the end reuse the last entry. featured = that slot gets featured_bonus (extra IP, extra perk, price x price_mult). rarity.<id>: price in Gravemarks, item_power [min, max] rolled uniformly (passed to GearDB.roll_weapon, so it replaces the round-based drop IP), bonus_perks added on top of Rarity.PERK_SLOTS, roll_quality_floor = the gun is re-rolled (up to max_roll_attempts, deterministic, best kept) until its stat roll quality (0 worst .. 1 best) reaches this, playstyle_perks_min = at least this many perks flagged \"playstyle\": true in data/perks.json (a random non-playstyle perk is swapped; a Mythic's archetype perk is kept). mythic_signature_perks = ids of Mythic-only signature perks; a Mythic offer gets one of them, but only ids that exist in GearDB.perks count (MAIN_HOOKS §19c adds them and keeps them out of random drops). Retune 2026-10-19 (Jason: not too cheap, rewarding): prices ~1/2/4.5/11/22.5 Hard matches. Stock refreshes every refresh_seconds, aligned to multiples of refresh_seconds since the unix epoch (top of the hour). reroll_costs[n] = price of the (n+1)th paid reroll since the last free refresh; past the end, the last cost + reroll_cost_step per extra use. rollback_reanchor_seconds: if the clock goes back further than this behind last_seen_time, the stock is kept and the timer re-anchors to the corrected clock (no early refresh). income_source \"armory\" = matches_to_afford() uses Armory.matches_to_max(diff).per_match (Armory.expected_match_income at the typical round count); income_per_match is the fallback / documented snapshot. Maps map 1:1 to difficulty (arena=easy, rustwell_foundry=medium, lockout_substation=hard), so per-map income = per-difficulty income.",
 	"stock_size": 5,
 	"refresh_seconds": 3600,
 	"rollback_reanchor_seconds": 172800,
-	"reroll_costs": [1, 2, 4, 7, 12],
-	"reroll_cost_step": 6,
+	"reroll_costs": [5, 9, 15, 24, 36],
+	"reroll_cost_step": 15,
 	"archetypes": [],
 	"avoid_duplicate_archetypes": true,
+	"max_roll_attempts": 24,
 	"slots": [
 		{"featured": true, "weights": {"common": 0, "uncommon": 0, "rare": 62, "legendary": 32, "mythic": 6}},
 		{"weights": {"common": 34, "uncommon": 34, "rare": 22, "legendary": 9, "mythic": 1}},
@@ -17,12 +18,14 @@
 		{"weights": {"common": 40, "uncommon": 36, "rare": 18, "legendary": 5.5, "mythic": 0.5}}
 	],
 	"rarity": {
-		"common":    {"price": 2,  "item_power": [125, 131], "bonus_perks": 0},
-		"uncommon":  {"price": 5,  "item_power": [134, 140], "bonus_perks": 0},
-		"rare":      {"price": 10, "item_power": [145, 151], "bonus_perks": 0},
-		"legendary": {"price": 24, "item_power": [157, 163], "bonus_perks": 0},
-		"mythic":    {"price": 50, "item_power": [169, 175], "bonus_perks": 0}
+		"common":    {"price": 13,  "item_power": [118, 124], "bonus_perks": 0, "roll_quality_floor": 0.4,  "playstyle_perks_min": 0},
+		"uncommon":  {"price": 28,  "item_power": [136, 142], "bonus_perks": 0, "roll_quality_floor": 0.45, "playstyle_perks_min": 0},
+		"rare":      {"price": 63,  "item_power": [152, 158], "bonus_perks": 0, "roll_quality_floor": 0.5,  "playstyle_perks_min": 0},
+		"legendary": {"price": 154, "item_power": [184, 190], "bonus_perks": 0, "roll_quality_floor": 0.5,  "playstyle_perks_min": 1},
+		"mythic":    {"price": 315, "item_power": [198, 204], "bonus_perks": 0, "roll_quality_floor": 0.5,  "playstyle_perks_min": 1}
 	},
 	"featured_bonus": {"item_power": 4, "bonus_perks": 1, "price_mult": 1.15},
-	"income_per_match": {"easy": 5, "medium": 7, "hard": 14}
+	"mythic_signature_perks": ["choirfall", "lantern_tithe", "bellrope_return"],
+	"income_source": "armory",
+	"income_per_match": {"easy": 5.2, "medium": 7.0, "hard": 14.0}
 }

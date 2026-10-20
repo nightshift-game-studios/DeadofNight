@@ -208,7 +208,8 @@ func roll_weapon(arch_id: String = "", rarity: int = -1, round_number: int = 1, 
 		w.display_name = a.names.pick_random()
 	else:
 		w.display_name = "%s %s" % [Rarity.name_of(rarity), a.type]
-	var perk_ids: Array = perks.keys().filter(func(k): return k not in w.perks)
+	# Mythic signature perks (perks.json "signature": true) never roll at random; the Merchant hands them out (MAIN_HOOKS §19c).
+	var perk_ids: Array = perks.keys().filter(func(k): return k not in w.perks and not bool(perks[k].get("signature", false)))
 	perk_ids.shuffle()
 	while w.perks.size() < Rarity.PERK_SLOTS[rarity] + (1 if rarity == Rarity.MYTHIC else 0) and perk_ids.size() > 0:
 		w.perks.append(perk_ids.pop_back())
