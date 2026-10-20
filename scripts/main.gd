@@ -13,6 +13,7 @@ extends Node3D
 const ZOMBIE_SCENE := preload("res://scenes/enemy.tscn")
 const BossCatalogScr := preload("res://scripts/enemies/boss_catalog.gd")
 const ArmoryScr := preload("res://scripts/armory/armory.gd")
+const ZombieNavScr := preload("res://scripts/enemies/ai/zombie_nav.gd") ## MAIN_HOOKS §17d
 const PICKUP_SCENE := preload("res://scenes/pickup.tscn")
 const CharacterScreen := preload("res://scripts/ui/character_screen.gd")
 const SkillTreeMenu := preload("res://scripts/ui/skill_tree_menu.gd")
@@ -106,6 +107,7 @@ func _ready() -> void:
 	_setup_ambience()
 	# Bake the navmesh from the level's static colliders at startup, so it always
 	# matches the level even after you move things around in the editor.
+	ZombieNavScr.prepare_nav_region(nav_region) # MAIN_HOOKS §17d: ramp-side carve strips (runtime fallback, see AI_NAV_REPORT.md)
 	nav_region.bake_navigation_mesh(true)
 
 	player.health_changed.connect(hud.set_health)

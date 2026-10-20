@@ -58,6 +58,8 @@ var _burn_acc: float = 0.0
 var _status_tick: bool = false ## true while a burn tick deals damage: no "hit" signal, so ticks pay no points per hit
 const BURN_TICK := 0.5
 var variant_id: String = "" ## data/zombies.json variant ("city" / "worker" / "soldier"), "" = scene default
+const ZombieNavScr := preload("res://scripts/enemies/ai/zombie_nav.gd") ## MAIN_HOOKS §17: pathing, avoidance, step-up, stuck
+var nav: RefCounted ## ZombieNav component (null = old direct/agent chase)
 
 @onready var agent: NavigationAgent3D = $NavigationAgent3D
 @onready var model_root: Node3D = $ModelRoot
@@ -95,6 +97,7 @@ func _ready() -> void:
 	_setup_audio()
 	health_bar = ZombieHealthBar.make(model_height - 0.14) # sits just above the hunched head
 	add_child(health_bar)
+	nav = ZombieNavScr.attach(self) # §17a: one-time setup; avoidance switches on with the first nav.tick()
 
 
 func _spawn_model() -> void:
@@ -265,12 +268,15 @@ func _physics_process(delta: float) -> void:
 
 	knockback = knockback.lerp(Vector3.ZERO, clamp(5.0 * delta, 0.0, 1.0))
 	var spd := speed * slow_mult()
-	velocity.x = move_dir.x * spd + knockback.x
-	velocity.z = move_dir.z * spd + knockback.z
-	if knockback.y > 0.5 and is_on_floor():
-		velocity.y = knockback.y
-		knockback.y = 0.0
-	move_and_slide()
+	if nav: # §17c: repath throttle + RVO avoidance + step-up + move_and_slide + stuck recovery (authority only)
+		nav.tick(delta, move_dir * spd)
+	else:
+		velocity.x = move_dir.x * spd + knockback.x
+		velocity.z = move_dir.z * spd + knockback.z
+		if knockback.y > 0.5 and is_on_floor():
+			velocity.y = knockback.y
+			knockback.y = 0.0
+		move_and_slide()
 	_audio_tick(delta, move_dir != Vector3.ZERO)
 
 	if _attack_anim_t <= 0.0:
@@ -282,8 +288,10 @@ func _physics_process(delta: float) -> void:
 			_play("idle")
 
 
-## Use the navmesh path if one is available; otherwise head straight for the player.
+## ZombieNav path (§17b); without it: the navmesh path if one is available, otherwise straight for the player.
 func _chase_direction(to_player: Vector3) -> Vector3:
+	if nav: # §17b: ZombieNav path (throttled repath, flat waypoint passing)
+		return nav.direction(to_player)
 	var map := agent.get_navigation_map()
 	if map.is_valid() and NavigationServer3D.map_get_iteration_id(map) > 0:
 		agent.target_position = target.global_position
