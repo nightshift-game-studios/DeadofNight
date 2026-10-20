@@ -71,6 +71,37 @@ func _run() -> void:
 	hud.set_ads(false)
 	hud.set_scoped(false)
 
+	# ---------------------------------------------------------------- #6 swap to an empty gun auto-reloads
+	var inv = player.inventory
+	inv.equip_weapon_slot("primary")
+	await wait(3)
+	var sec = inv.equipped.secondary
+	sec.ammo = 0
+	sec.reserve = 40
+	inv.equip_weapon_slot("secondary")
+	await wait(2)
+	check(not player._reloading, "#6 reload waits for the swap (raise) time")
+	await secs(sec.swap_time() + 0.15)
+	check(player._reloading and player.current_weapon() == sec, "#6 swapping to an empty mag with reserve starts the reload")
+	await secs(sec.reload_time() * float(player.reload_multiplier) + 0.5)
+	check(sec.ammo > 0, "#6 ... and it finishes (ammo %d)" % sec.ammo)
+	var pri = inv.equipped.primary
+	pri.ammo = 0
+	pri.reserve = 0
+	inv.equip_weapon_slot("primary")
+	await secs(pri.swap_time() + 0.2)
+	check(not player._reloading, "#6 no reload with no reserve")
+	sec.ammo = 0
+	sec.reserve = 40
+	inv.equip_weapon_slot("secondary")
+	await wait(2)
+	inv.equip_weapon_slot("primary")
+	await secs(sec.swap_time() + 0.2)
+	check(not player._reloading and player.current_weapon() == pri, "#6 swapping away before the raise cancels it")
+	pri.reserve = 50
+	pri.ammo = pri.mag_size()
+	sec.ammo = sec.mag_size()
+
 	#SECTIONS
 
 	print("feel_test: %d passed, %d failed" % [_passes, _fails])

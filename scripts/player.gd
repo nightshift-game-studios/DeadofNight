@@ -717,6 +717,18 @@ func _on_weapon_equipped(w: WeaponItem) -> void:
 	weapon_changed.emit(w)
 	_sync_flashlight()
 	emit_ammo()
+	_swap_reload(w, _swap_t)
+
+
+## Playtest #6: swapping to a gun with an empty magazine and reserve ammo starts its reload once the swap
+## (raise) time is over, if it's still the equipped gun.
+func _swap_reload(w: WeaponItem, delay: float) -> void:
+	if w == null or w.ammo > 0 or w.reserve <= 0:
+		return
+	if delay > 0.0:
+		await get_tree().create_timer(delay, false).timeout
+	if is_instance_valid(self) and not dead and w == inventory.get_equipped_weapon() and w.ammo <= 0 and not _reloading:
+		reload()
 
 
 ## Scope overlay (Gooey, scripts/ui/scope_overlay.gd): hides the first-person viewmodel while scoped.
