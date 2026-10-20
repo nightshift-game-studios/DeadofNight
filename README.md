@@ -135,7 +135,7 @@ scripts/             main.gd (rounds, points, loot, menus), player.gd, enemy.gd,
   ui/                Character screen, skill tree, map picker, pause/settings menus, shared UI style
   world/             MapRegistry, zombie variants, armor models
 data/                weapons, armor, perks, loot tables, skill tree, run picks, maps, zombies (JSON)
-maps/                Extra maps (map contract in maps/MAP_CONTRACT.md), e.g. rustwell_foundry/
+maps/                Extra maps (map contract in docs/map_contract.md), e.g. rustwell_foundry/
 assets/              CC0 models, textures, audio, HDRI sky, fonts (see CREDITS.md)
 tests/               Headless test suites
 ```

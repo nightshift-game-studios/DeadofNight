@@ -720,7 +720,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.001945, 0.40709, 0.024623)
 shape = SubResource("BoxShape3D_66")
 
 [node name="Barrier5" type="StaticBody3D" parent="NavigationRegion3D/Props"]
-transform = Transform3D(0.71091, 0, 0.70328, 0, 1, 0, -0.70328, 0, 0.71091, 10, 0, -4)
+transform = Transform3D(0.71091, 0, 0.70328, 0, 1, 0, -0.70328, 0, 0.71091, 7.5, 0, -1)
 
 [node name="Model" parent="NavigationRegion3D/Props/Barrier5" instance=ExtResource("17_r")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
