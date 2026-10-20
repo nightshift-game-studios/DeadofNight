@@ -1,7 +1,7 @@
 #!/bin/bash
 # Multi-instance MATCH test: the real main.tscn on 1 headless host + 2 headless clients (127.0.0.1). Exit 0 = PASS.
 # usage: tests/net/run_match.sh [project dir] [map] [body]   (logs in $NET_LOGDIR, default /tmp/netz_match)
-P=${1:-/workspace/netz}; MAP=${2:-arena}; BODY=${3:-desi}
+P=${1:-$(pwd)}; MAP=${2:-arena}; BODY=${3:-desi}
 G=${GODOT:-/workspace/tools/Godot_v4.7.2-stable_linux.x86_64}
 L=${NET_LOGDIR:-/tmp/netz_match}; mkdir -p "$L"; rm -f "$L"/*.log
 cd "$P" || exit 2

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Multi-instance lobby tests: 1 headless host + 2-4 headless clients on 127.0.0.1. Exit 0 = PASS.
 # usage: tests/net/run_lobby.sh [project dir]       (logs in $NET_LOGDIR, default /tmp/netz_lobby)
-P=${1:-/workspace/netz}
+P=${1:-$(pwd)}
 G=${GODOT:-/workspace/tools/Godot_v4.7.2-stable_linux.x86_64}
 L=${NET_LOGDIR:-/tmp/netz_lobby}; mkdir -p "$L"; rm -f "$L"/*.log
 cd "$P" || exit 2

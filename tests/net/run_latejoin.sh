@@ -1,7 +1,7 @@
 #!/bin/bash
 # Multi-instance LATE JOIN test (phase 3a): host Alice + Bob start rustwell_foundry; Dan joins mid-round, Eve in the
 # break. Exit 0 = PASS.   usage: tests/net/run_latejoin.sh [project dir] [map]   (logs in $NET_LOGDIR, default /tmp/netz_late)
-P=${1:-/workspace/netz}; MAP=${2:-rustwell_foundry}
+P=${1:-$(pwd)}; MAP=${2:-rustwell_foundry}
 G=${GODOT:-/workspace/tools/Godot_v4.7.2-stable_linux.x86_64}
 L=${NET_LOGDIR:-/tmp/netz_late}; mkdir -p "$L"; rm -f "$L"/*.log
 cd "$P" || exit 2

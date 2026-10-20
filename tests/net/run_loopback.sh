@@ -1,7 +1,7 @@
 #!/bin/bash
 # ENet loopback smoke test: 1 headless server + 1 headless client on 127.0.0.1. Exit 0 = PASS.
 # usage: tests/net/run_loopback.sh [project dir] [port]
-P=${1:-/workspace/netz}; PORT=${2:-$((20000 + RANDOM % 20000))}
+P=${1:-$(pwd)}; PORT=${2:-$((20000 + RANDOM % 20000))}
 G=${GODOT:-/workspace/tools/Godot_v4.7.2-stable_linux.x86_64}
 L=${NET_LOGDIR:-/tmp/netz_loopback}; mkdir -p "$L"
 cd "$P" || exit 2
