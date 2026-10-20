@@ -20,6 +20,7 @@ Callouts="*res://scripts/audio/callout_player.gd"
 GameEvents="*res://scripts/skills/game_events.gd"
 RunState="*res://scripts/skills/run_state.gd"
 Settings="*res://scripts/autoload/settings.gd"
+Merchant="*res://scripts/merchant/merchant.gd"
 
 [display]
 

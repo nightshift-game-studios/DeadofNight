@@ -1,6 +1,6 @@
 extends Node
 ## Autoload "Progress": game-to-game progression saved to user://progress.cfg.
-## On Windows that is %APPDATA%\Godot\app_userdata\FPS Starter\progress.cfg.
+## On Windows that is %APPDATA%\Godot\app_userdata\Gravecrew\progress.cfg (crash-safe: .tmp / .bak beside it).
 ## Add new persistent stats by adding a var, then reading/writing it in load_data/save_data.
 ##
 ## Skill tree v2 (data/skill_tree.json, see /workspace/skillz/GOOEY_HANDOFF.md):
@@ -22,6 +22,15 @@ extends Node
 ## scripts/armory/armory.gd and /workspace/skillz/ARMORY_HANDOFF.md) and a stable per-item `item_id` on stash gear.
 ## v3 saves load with 0 Gravemarks / no armory, and their stash items get an item_id on load (written on the next save).
 ##
+## Save version 5 (2026-10-19, after the Gravecrew rename): adds [merchant] (home-screen Merchant state: stock as
+## WeaponItem.to_dict() + offer ids / sold flags, refresh index, reroll count, last_seen_time, seed; see
+## scripts/merchant/merchant.gd and DESIGN.md §20). v4 saves load with empty merchant state (the Merchant rolls its first
+## stock on first use). The rename's SaveMigration (dir copy-forward) runs before this, so a DeadofNight / FPS Starter
+## save is copied into app_userdata/Gravecrew first and then migrated v4 -> v5 here on load; the two never overlap.
+## Crash-safe writes (v5): save_data() writes progress.cfg.tmp, moves the previous good progress.cfg to progress.cfg.bak,
+## then renames the .tmp over progress.cfg. load_data() falls back to .tmp (only if complete) / .bak when the main file is
+## missing or corrupt, picking the newest by [meta] save_serial; see _pick_save_file().
+##
 ## Economy: data/economy.json -> points_per_hit / points_per_kill (main.gd reads them, see skillz/MAIN_HOOKS.md).
 
 signal ranks_changed ## any rank bought, reset or loaded
@@ -31,7 +40,11 @@ signal currency_changed(balance: int) ## Gravemark balance changed (earned in a 
 signal gravemark_gained(amount: int, source: String) ## a drop paid out (source: boss/elite/special/regular/chest/milestone)
 signal armory_changed(kind: String, id: String) ## kind: "purchase" / "upgrade" / "equip" / "unequip" / "load"
 
-const SAVE_VERSION := 4 ## 1 = v1 skills, 2 = skill ranks, 3 = + persistent gear stash, 4 = + armory / Gravemark / item_id
+const SAVE_VERSION := 5 ## 1 = v1 skills, 2 = skill ranks, 3 = + persistent gear stash, 4 = + armory / Gravemark / item_id, 5 = + merchant, crash-safe writes
+const MERCHANT_SAVE_VERSION := 1 ## [merchant] version (Progress.migrate_merchant)
+const TMP_SUFFIX := ".tmp" ## save_data() writes here first
+const BAK_SUFFIX := ".bak" ## the previous good save
+const CORRUPT_SUFFIX := ".corrupt" ## an unreadable main file is parked here (never rotated into .bak)
 const SKILL_TREE_PATH := "res://data/skill_tree.json"
 const ECONOMY_PATH := "res://data/economy.json"
 const ARMORY_SCRIPT := "res://scripts/armory/armory.gd" ## loaded lazily (Armory reads Progress; no compile cycle)
@@ -72,6 +85,12 @@ var armory_unequipped_on_load: Array = []
 var armory_unequipped_load_id: int = 0
 var armory_rev: int = 0 ## bumped on every armory change (WeaponItem / AdsProfile caches key on it)
 
+## Merchant (save v5). Owned and mutated by scripts/merchant/merchant.gd ({} = never used; v4 saves migrate to {}).
+var merchant: Dictionary = {}
+## Crash-safe saves: which file the last load_data() read ("main", "tmp", "bak" or "none") and the serial it carried.
+var loaded_from: String = "none"
+var save_serial: int = 0 ## bumped on every save_data(); [meta] save_serial picks the newest of .tmp / .bak on recovery
+
 ## Point economy (data/economy.json). Defaults = halved playtest values.
 var economy: Dictionary = {}
 var points_per_hit: int = 5
@@ -102,10 +121,16 @@ func _notification(what: int) -> void:
 
 
 func load_data() -> void:
-	var cfg := ConfigFile.new()
-	if cfg.load(save_path) != OK:
+	var picked := _pick_save_file(save_path)
+	loaded_from = str(picked.source)
+	if picked.cfg == null:
+		merchant = {}
 		_recompute_spent()
 		return # first run, keep defaults
+	var cfg: ConfigFile = picked.cfg
+	if loaded_from != "main":
+		push_warning("Progress: %s was missing or unreadable, recovered from %s" % [save_path, str(picked.path)])
+	save_serial = maxi(save_serial, int(cfg.get_value("meta", "save_serial", 0)))
 	total_kills = cfg.get_value("stats", "total_kills", 0)
 	best_round = cfg.get_value("stats", "best_round", 0)
 	xp = cfg.get_value("stats", "xp", 0)
@@ -123,10 +148,61 @@ func load_data() -> void:
 	armory_unequipped_on_load = load(ARMORY_SCRIPT).sanitize_armory(armory)
 	if not armory_unequipped_on_load.is_empty():
 		armory_unequipped_load_id += 1
+	# v4 -> v5: no [merchant] section -> empty merchant state.
+	merchant = migrate_merchant(cfg.get_value("merchant", "data") if cfg.has_section_key("merchant", "data") else null)
 	armory_rev += 1
 	_recompute_spent()
 	currency_changed.emit(gravemarks)
 	armory_changed.emit("load", "")
+
+
+## Crash-safe load: returns {cfg: ConfigFile or null, source: "main"/"tmp"/"bak"/"none", path}.
+## The main file wins whenever it parses. Otherwise the newest (by [meta] save_serial) of: the .tmp, only if it is
+## complete ([end] complete=true, written last, so a torn write is rejected), and the .bak. Covers a crash between the
+## rename steps (main missing, .tmp complete) and a corrupt main. Old-dir .tmp/.bak files copied forward by
+## SaveMigration are handled the same way: they are only read when there is no readable progress.cfg, and the next
+## save_data() replaces both.
+static func _pick_save_file(path: String) -> Dictionary:
+	var main := ConfigFile.new()
+	if FileAccess.file_exists(path) and main.load(path) == OK:
+		return {"cfg": main, "source": "main", "path": path}
+	var best: ConfigFile = null
+	var best_src := "none"
+	var best_path := ""
+	var best_serial := -1
+	for c in [["tmp", path + TMP_SUFFIX], ["bak", path + BAK_SUFFIX]]:
+		if not FileAccess.file_exists(c[1]):
+			continue
+		var f := ConfigFile.new()
+		if f.load(c[1]) != OK:
+			continue
+		if c[0] == "tmp" and not bool(f.get_value("end", "complete", false)):
+			continue
+		var serial := int(f.get_value("meta", "save_serial", 0))
+		if serial > best_serial:
+			best = f
+			best_src = c[0]
+			best_path = c[1]
+			best_serial = serial
+	return {"cfg": best, "source": best_src, "path": best_path}
+
+
+## [merchant] -> dict owned by scripts/merchant/merchant.gd. v4 and older (no section) or junk -> {} (fresh merchant).
+## Keeps only well-formed fields; stock entries need an offer_id and an item dict.
+static func migrate_merchant(v) -> Dictionary:
+	if typeof(v) != TYPE_DICTIONARY:
+		return {}
+	var out := {"version": MERCHANT_SAVE_VERSION}
+	for k in ["seed", "hour_index", "rerolls", "last_seen_time", "gen"]:
+		if v.has(k):
+			out[k] = int(v[k])
+	var stock: Array = []
+	if typeof(v.get("stock")) == TYPE_ARRAY:
+		for o in v.stock:
+			if typeof(o) == TYPE_DICTIONARY and str(o.get("offer_id", "")) != "" and typeof(o.get("item")) == TYPE_DICTIONARY:
+				stock.append(o.duplicate(true))
+	out["stock"] = stock
+	return out
 
 
 ## Gooey: the "parts moved back to your Armory" notice was shown -> clear the list (the load id stays).
@@ -220,9 +296,52 @@ func save_data() -> void:
 	cfg.set_value("armory", "gravemarks", gravemarks)
 	cfg.set_value("armory", "gravemarks_lifetime", gravemarks_lifetime)
 	cfg.set_value("armory", "data", armory)
-	var err := cfg.save(save_path)
+	if not merchant.is_empty():
+		cfg.set_value("merchant", "version", MERCHANT_SAVE_VERSION)
+		cfg.set_value("merchant", "data", merchant)
+	save_serial += 1
+	cfg.set_value("meta", "save_serial", save_serial)
+	cfg.set_value("meta", "saved_at", int(Time.get_unix_time_from_system()))
+	cfg.set_value("end", "complete", true) # last section: a torn .tmp lacks it
+	var err := write_atomic(cfg, save_path)
 	if err != OK:
 		push_warning("Could not save progress (error %d)" % err)
+
+
+## Intentional wipe (tests, a future "reset progress" button): removes the save AND its crash-safe siblings
+## (.tmp / .bak / .corrupt). Deleting only progress.cfg is not a wipe any more: load_data() would restore the .bak.
+static func delete_save_files(path: String) -> void:
+	for suf in ["", TMP_SUFFIX, BAK_SUFFIX, CORRUPT_SUFFIX]:
+		if FileAccess.file_exists(path + suf):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(path + suf))
+
+
+## Crash-safe ConfigFile write: path.tmp -> (previous good path -> path.bak) -> rename path.tmp over path.
+## An unreadable main file is parked as path.corrupt instead of replacing a good .bak. Returns an Error.
+## At every step either the main file or a complete .tmp / the .bak is readable (see _pick_save_file).
+static func write_atomic(cfg: ConfigFile, path: String) -> int:
+	var tmp := path + TMP_SUFFIX
+	var bak := path + BAK_SUFFIX
+	var err := cfg.save(tmp)
+	if err != OK:
+		return err
+	var g_path := ProjectSettings.globalize_path(path)
+	var g_tmp := ProjectSettings.globalize_path(tmp)
+	var g_bak := ProjectSettings.globalize_path(bak)
+	if FileAccess.file_exists(path):
+		var probe := ConfigFile.new()
+		if probe.load(path) == OK:
+			if FileAccess.file_exists(bak):
+				DirAccess.remove_absolute(g_bak)
+			DirAccess.rename_absolute(g_path, g_bak)
+		else:
+			var g_bad := ProjectSettings.globalize_path(path + CORRUPT_SUFFIX)
+			if FileAccess.file_exists(path + CORRUPT_SUFFIX):
+				DirAccess.remove_absolute(g_bad)
+			DirAccess.rename_absolute(g_path, g_bad)
+	if FileAccess.file_exists(path): # rename to .bak failed (locked file?): replace in place
+		DirAccess.remove_absolute(g_path)
+	return DirAccess.rename_absolute(g_tmp, g_path)
 
 
 ## XP formula lives here so it's easy to tune: 10 per kill + 50 per round reached.
@@ -272,6 +391,15 @@ func spend_gravemark(n: int) -> bool:
 	gravemarks -= n
 	currency_changed.emit(gravemarks)
 	return true
+
+
+## Gives back n Gravemarks from a purchase that could not complete (Merchant). Not income: lifetime / match totals
+## and gravemark_gained are untouched.
+func refund_gravemark(n: int) -> int:
+	if n > 0:
+		gravemarks += n
+		currency_changed.emit(gravemarks)
+	return gravemarks
 
 
 ## New match: per-match Gravemark counters back to 0 (also resets Armory's per-round drop limits).

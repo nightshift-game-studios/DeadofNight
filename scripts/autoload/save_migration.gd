@@ -9,6 +9,10 @@ extends Node
 
 const OLD_DIR_NAMES := ["DeadofNight", "FPS Starter"] ## most recent name first
 const SAVE_FILES := ["progress.cfg", "settings.cfg"]
+## Progress's crash-safe write leftovers (save v5, MAIN_HOOKS §19b). A dir holding only these still counts as a save
+## (a crash can leave progress.cfg missing), and they only ever come from the dir that supplied progress.cfg, so an
+## older dir's .bak never pairs up with a newer dir's progress.cfg.
+const RECOVERY_FILES := ["progress.cfg.bak", "progress.cfg.tmp"]
 
 var migrated_from: String = "" ## newest old dir copied from this launch ("" = nothing to do)
 var migrated_dirs: Array = [] ## every old dir that contributed at least one file, in copy order
@@ -42,7 +46,11 @@ static func migrate_all(srcs: Array, dst: String) -> Dictionary:
 			cands.append({"src": src, "t": newest_save_time(src), "i": i})
 	cands.sort_custom(func(a, b): return a.t > b.t if a.t != b.t else a.i < b.i)
 	for c in cands:
-		var n := _copy_tree(str(c.src), dst)
+		var skip: Array = []
+		for f in ["progress.cfg"] + RECOVERY_FILES:
+			if FileAccess.file_exists(dst.path_join(f)):
+				skip = RECOVERY_FILES # progress.cfg (or its recovery set) already came from a newer dir
+		var n := _copy_tree(str(c.src), dst, skip)
 		if n > 0:
 			out.copied += n
 			out.dirs.append(str(c.src))
@@ -52,7 +60,7 @@ static func migrate_all(srcs: Array, dst: String) -> Dictionary:
 ## Latest modification time (unix s) of the SAVE_FILES in `dir`, 0 if none.
 static func newest_save_time(dir: String) -> int:
 	var t := 0
-	for f in SAVE_FILES:
+	for f in SAVE_FILES + RECOVERY_FILES:
 		var p := dir.path_join(f)
 		if FileAccess.file_exists(p):
 			t = maxi(t, int(FileAccess.get_modified_time(p)))
@@ -60,7 +68,7 @@ static func newest_save_time(dir: String) -> int:
 
 
 static func _has_save(dir: String) -> bool:
-	for f in SAVE_FILES:
+	for f in SAVE_FILES + RECOVERY_FILES:
 		if FileAccess.file_exists(dir.path_join(f)):
 			return true
 	return false
@@ -83,12 +91,12 @@ static func migrate(src: String, dst: String) -> int:
 	return _copy_tree(src, dst)
 
 
-static func _copy_tree(src: String, dst: String) -> int:
+static func _copy_tree(src: String, dst: String, skip: Array = []) -> int:
 	DirAccess.make_dir_recursive_absolute(dst)
 	var n := 0
 	for f in DirAccess.get_files_at(src):
 		var to := dst.path_join(f)
-		if FileAccess.file_exists(to):
+		if FileAccess.file_exists(to) or f in skip:
 			continue
 		if DirAccess.copy_absolute(src.path_join(f), to) == OK:
 			n += 1

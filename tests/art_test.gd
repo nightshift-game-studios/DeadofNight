@@ -53,7 +53,7 @@ func _run() -> void:
 	var test_dir := OS.get_user_data_dir().path_join("art_test")
 	DirAccess.make_dir_recursive_absolute(test_dir)
 	prog.save_path = test_dir.path_join("progress_art_test.cfg")
-	DirAccess.remove_absolute(prog.save_path)
+	load("res://scripts/autoload/progress.gd").delete_save_files(prog.save_path)
 	prog.gravemarks = 0
 	prog.armory = {"upgrades": {}, "owned": [], "equipped": {}}
 	prog.stash = {}
@@ -278,7 +278,7 @@ func _run() -> void:
 	_art_pass3(A, Rig, holder)
 
 	world.queue_free()
-	DirAccess.remove_absolute(prog.save_path)
+	load("res://scripts/autoload/progress.gd").delete_save_files(prog.save_path)
 	print("ART TEST: %s (%d passed, %d failed)" % ["OK" if _fails == 0 else "FAILED", _passes, _fails])
 	quit(_fails)
 

@@ -50,7 +50,7 @@ func _run() -> void:
 	var test_dir := OS.get_user_data_dir().path_join("props_test")
 	DirAccess.make_dir_recursive_absolute(test_dir)
 	prog.save_path = test_dir.path_join("progress_props_test.cfg")
-	DirAccess.remove_absolute(prog.save_path)
+	load("res://scripts/autoload/progress.gd").delete_save_files(prog.save_path)
 	prog.gravemarks = 0
 	prog.bind_inventory(null)
 	var world := Node3D.new()
@@ -64,7 +64,7 @@ func _run() -> void:
 	await _grenade(world)
 	world.queue_free()
 	await process_frame
-	DirAccess.remove_absolute(prog.save_path)
+	load("res://scripts/autoload/progress.gd").delete_save_files(prog.save_path)
 	print("props_test: %d passed, %d failed" % [_passes, _fails])
 	quit(_fails)
 

@@ -63,7 +63,7 @@ func _go() -> void:
 	rs.open_offer(5)
 	await snap("run_pick_offer_r5_milestone.png")
 	rs.skip()
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(prog.save_path))
+	load("res://scripts/autoload/progress.gd").delete_save_files(prog.save_path)
 	quit()
 
 

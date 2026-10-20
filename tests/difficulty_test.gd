@@ -116,6 +116,6 @@ func _run() -> void:
 	check(main.base_health == int(round(b.h * 1.35)), "applying twice doesn't compound")
 	check(D.apply_to_main(main) == D.for_map(main.map_id) and main.base_health == b.h and main.health_per_round == b.hr, "apply_to_main() with no id uses the map's difficulty (arena = easy = base values)")
 	D.set_active("")
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(prog.save_path))
+	load("res://scripts/autoload/progress.gd").delete_save_files(prog.save_path)
 	print("DIFFICULTY TEST: %s (%d passed, %d failed)" % ["OK" if _fails == 0 else "FAILED", _passes, _fails])
 	quit(_fails)

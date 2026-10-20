@@ -372,6 +372,6 @@ func _run() -> void:
 func _finish() -> void:
 	MapRegistry.select("")
 	var progress = root.get_node("Progress")
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(progress.save_path))
+	load("res://scripts/autoload/progress.gd").delete_save_files(progress.save_path)
 	print("MAP TEST: %s (%d passed, %d failed)" % ["OK" if _fails == 0 else "FAILED", _passes, _fails])
 	quit(_fails)

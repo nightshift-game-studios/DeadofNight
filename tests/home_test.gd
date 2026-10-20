@@ -19,7 +19,7 @@ func _initialize() -> void:
 func _go() -> void:
 	var prog = root.get_node("Progress")
 	prog.save_path = "user://progress_home_test.cfg"
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(prog.save_path))
+	load("res://scripts/autoload/progress.gd").delete_save_files(prog.save_path)
 	prog.load_data()
 
 	# --- difficulty helpers (missing field → medium; sort Easy→Hard)
@@ -210,7 +210,7 @@ func _go() -> void:
 	prog.armory_unequipped_on_load = []
 	await process_frame
 
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(prog.save_path))
+	load("res://scripts/autoload/progress.gd").delete_save_files(prog.save_path)
 	print("HOME TEST: %s (%d passed, %d failed)" % ["OK" if _fails == 0 else "FAILED", _passes, _fails])
 	quit(_fails)
 

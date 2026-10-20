@@ -21,7 +21,7 @@ func _initialize() -> void:
 func _go() -> void:
 	var prog = root.get_node("Progress")
 	prog.save_path = "user://progress_armory_ui_test.cfg"
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(prog.save_path))
+	load("res://scripts/autoload/progress.gd").delete_save_files(prog.save_path)
 	prog.load_data()
 	prog.gravemarks = 0
 	prog.armory = {"upgrades": {}, "owned": [], "equipped": {}}
@@ -575,7 +575,7 @@ func _go() -> void:
 			"Hard note visible only for Hard maps")
 	mp.close()
 
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(prog.save_path))
+	load("res://scripts/autoload/progress.gd").delete_save_files(prog.save_path)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(st.SAVE_PATH))
 	print("ARMORY UI TEST: %s (%d passed, %d failed)" % ["OK" if _fails == 0 else "FAILED", _passes, _fails])
 	quit(_fails)

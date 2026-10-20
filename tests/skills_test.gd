@@ -142,7 +142,7 @@ func _run() -> void:
 	await _flow_checks()
 
 	await reset({})
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(prog.save_path))
+	load("res://scripts/autoload/progress.gd").delete_save_files(prog.save_path)
 	print("SKILLS TEST: %s (%d passed, %d failed)" % ["OK" if _fails == 0 else "FAILED", _passes, _fails])
 	quit(_fails)
 

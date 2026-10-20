@@ -57,7 +57,7 @@ func _run() -> void:
 	var gear = root.get_node("GearDB")
 	prog.stash = {"equipped": {"primary": {"class": "weapon"}}} # pretend the real save had gear
 	prog.save_path = "user://progress_stash_test.cfg"
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(prog.save_path))
+	load("res://scripts/autoload/progress.gd").delete_save_files(prog.save_path)
 	check(prog.stash.is_empty(), "changing save_path drops the in-memory stash (tests never see real gear)")
 
 	# ------------------------------------------------------------ economy
@@ -226,6 +226,6 @@ func _run() -> void:
 
 func _finish(prog) -> void:
 	prog.bind_inventory(null)
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(prog.save_path))
+	load("res://scripts/autoload/progress.gd").delete_save_files(prog.save_path)
 	print("STASH TEST: %s (%d passed, %d failed)" % ["OK" if _fails == 0 else "FAILED", _passes, _fails])
 	quit(_fails)

@@ -229,6 +229,6 @@ func _run() -> void:
 	await _look_check(main, "after round-end card pick")
 
 	progress.reset_skills()
-	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://progress_input_test.cfg"))
+	load("res://scripts/autoload/progress.gd").delete_save_files("user://progress_input_test.cfg")
 	print("input_test: %d passed, %d failed" % [_passes, _fails])
 	quit(_fails)

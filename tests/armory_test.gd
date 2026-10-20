@@ -57,7 +57,7 @@ func _run() -> void:
 	var test_dir := OS.get_user_data_dir().path_join("armory_test")
 	DirAccess.make_dir_recursive_absolute(test_dir)
 	prog.save_path = test_dir.path_join("progress_armory_test.cfg")
-	DirAccess.remove_absolute(prog.save_path)
+	load("res://scripts/autoload/progress.gd").delete_save_files(prog.save_path)
 	_reset(prog)
 	prog.currency_changed.connect(func(b): _sig.append(["cur", b]))
 	prog.gravemark_gained.connect(func(n, s): _sig.append(["gain", n, s]))
@@ -133,13 +133,13 @@ func _run() -> void:
 	prog.save_data()
 	var c2 := ConfigFile.new()
 	c2.load(prog.save_path)
-	check(int(c2.get_value("meta", "save_version", 0)) == 4 and prog.SAVE_VERSION == 4, "written as save_version 4")
+	check(int(c2.get_value("meta", "save_version", 0)) == prog.SAVE_VERSION and prog.SAVE_VERSION >= 4, "written as the current save_version (>= 4, v5 = + merchant)")
 	check(int(c2.get_value("armory", "gravemarks", -1)) == 7 and c2.has_section_key("armory", "data"), "[armory] gravemarks + data saved")
 	prog.gravemarks = 0
 	prog.armory = {"upgrades": {}, "owned": [], "equipped": {}}
 	prog.load_data()
-	check(prog.loaded_save_version == 4 and prog.gravemarks == 7 and A.upgrade_tier("auto_rifle") == 2 and A.owned("hush_can")
-		and A.loadout("auto_rifle") == {"muzzle": "hush_can"}, "v4 reload: balance, tier, owned, loadout")
+	check(prog.loaded_save_version == prog.SAVE_VERSION and prog.gravemarks == 7 and A.upgrade_tier("auto_rifle") == 2 and A.owned("hush_can")
+		and A.loadout("auto_rifle") == {"muzzle": "hush_can"}, "v4+ reload: balance, tier, owned, loadout")
 	check(str(prog.stash.equipped.primary.item_id) == mid, "item_id survives the save round trip")
 	var junk: Dictionary = prog.migrate_armory({"upgrades": {"smg": 0, "auto_rifle": "3"}, "owned": ["a", "a", 5], "equipped": {"x": 4, "smg": {"optic": ""}}})
 	check(junk.upgrades == {"auto_rifle": 3} and junk.owned == ["a", "5"] and junk.equipped == {"smg": {}}
@@ -398,7 +398,7 @@ func _run() -> void:
 	_reset(prog)
 	D.set_active("")
 	A.reset_match_state()
-	DirAccess.remove_absolute(prog.save_path)
+	load("res://scripts/autoload/progress.gd").delete_save_files(prog.save_path)
 	print("armory_test: %d passed, %d failed" % [_passes, _fails])
 	quit(_fails)
 

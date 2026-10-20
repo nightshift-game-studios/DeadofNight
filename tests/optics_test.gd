@@ -67,7 +67,7 @@ func _run() -> void:
 	var test_dir := OS.get_user_data_dir().path_join("optics_test")
 	DirAccess.make_dir_recursive_absolute(test_dir)
 	prog.save_path = test_dir.path_join("progress_optics_test.cfg")
-	DirAccess.remove_absolute(prog.save_path)
+	load("res://scripts/autoload/progress.gd").delete_save_files(prog.save_path)
 	_reset(prog)
 
 	# ------------------------------------------------------------ data validity
@@ -350,7 +350,7 @@ func _run() -> void:
 	for n in [ar, sn, sg]:
 		n.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(syn))
-	DirAccess.remove_absolute(prog.save_path)
+	load("res://scripts/autoload/progress.gd").delete_save_files(prog.save_path)
 
 	print("optics_test: %d passed, %d failed" % [_passes, _fails])
 	quit(_fails)

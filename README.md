@@ -115,7 +115,7 @@ Changes apply immediately and are saved for next time.
 | **"Your video card driver does not support Vulkan / D3D12"** | Update your GPU drivers. If that doesn't fix it, start Godot with `--rendering-driver opengl3` (it will look a bit plainer). |
 | **Godot asks to upgrade or convert the project** | You're on a different Godot version. Install **4.7.x** (standard, not .NET). |
 | **Missing textures / pink models** | Make sure you extracted the *whole* zip (and joined all the parts first, if it was split). Then delete the hidden `.godot` folder inside `fps-starter` and reopen it, so Godot re-imports everything. |
-| **I want to reset my progress** | Your saves are in `%APPDATA%\Godot\app_userdata\Gravecrew\` (`progress.cfg`, `settings.cfg`). Delete them to start fresh. |
+| **I want to reset my progress** | Your saves are in `%APPDATA%\Godot\app_userdata\Gravecrew\`. Close the game and delete `progress.cfg` **and** its backups `progress.cfg.bak` / `progress.cfg.tmp` (and `settings.cfg` for default settings). If you delete only `progress.cfg`, the game restores your progress from the backup. |
 | **My progress from before the rename is gone** | It's copied automatically: the game used to be called DeadofNight (and before that FPS Starter). On the first launch as Gravecrew, it copies your saves from the old `%APPDATA%\Godot\app_userdata\DeadofNight\` and `%APPDATA%\Godot\app_userdata\FPS Starter\` folders, newest first, but only if the Gravecrew folder has no save yet. Nothing is overwritten, and the old folders are left in place as a backup. |
 
 ---
