@@ -138,7 +138,11 @@ func trigger(event_id: String, data: Dictionary = {}) -> void:
 		body.trigger(event_id, data)
 
 
-func set_weapon(arch_id: String) -> void:
+var weapon_slot: String = "" ## Inventory.active_weapon_slot of the owner ("" = unknown / old peer)
+
+
+func set_weapon(arch_id: String, slot: String = "") -> void:
+	weapon_slot = slot
 	if body:
 		body.set_weapon(arch_id)
 

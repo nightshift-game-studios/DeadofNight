@@ -233,6 +233,16 @@ func _run() -> void:
 	var Net = root.get_node("Net")
 	check(Net.players().has(a) and Net.players().has(cap_a), "Net.players() includes remote avatars")
 	a.take_damage(10.0, null) # solo: no-op, no error
+	# weapon + slot (G4M3N 2026-10-20: remote avatars carry Inventory.active_weapon_slot)
+	Net.match_players.avatars[5] = a
+	Net.match_players.receive_weapon(5, "sidearm", "secondary")
+	await _frames(1)
+	check(a.weapon_slot == "secondary" and a.body.weapon_socket.get_child_count() == 1, "_rpc_weapon_slot(arch, slot): avatar keeps slot 'secondary' + shows the gun")
+	Net.match_players.receive_weapon(5, "auto_rifle", "")
+	check(a.weapon_slot == "", "old archetype-only _rpc_weapon -> slot '' (still accepted)")
+	Net.match_players.receive_weapon(5, "x".repeat(60), "primary")
+	check(a.weapon_slot == "", "oversized weapon id ignored")
+	Net.match_players.avatars.erase(5)
 	check(Net.match_players.stats.damage_fwd == 0, "avatar damage in solo: ignored")
 	a.queue_free()
 	cap_a.queue_free()
