@@ -243,9 +243,16 @@ func _run() -> void:
 		and cp.reticle_id == "crow_foot" and cp.art_status == "shipped" and not cp.fallback and not cp.owned and not cp.equipped,
 		"preview Crow's Eye on the AR (not owned): 3x, crow_foot reticle, shipped GLB")
 	check(A.optic_profile("auto_rifle").optic_id == "", "a preview doesn't change the loadout")
+	# art5: every optic GLB has shipped, so "pending" is simulated (model path not delivered) for the fallback checks
+	var dpend: Dictionary = A.data().duplicate(true)
+	for a in dpend.attachments:
+		if a.id in ["kilnglass_2x", "wicket_ring"]:
+			a.model = "res://assets/models/attachments/optic/__not_delivered_%s__.glb" % a.id
+	A.reload(dpend)
 	var kp: Dictionary = A.optic_profile("auto_rifle", "kilnglass_2x")
 	check(kp.art_status == "pending" and kp.fallback and _near(kp.ads_fov, 42.0) and kp.glow.mode == "lit",
 		"Kilnglass 2x: GLB pending -> fallback flag (default sight picture), stats still apply")
+	A.reload()
 	check(A.optic_profile("smg", "witchlight_dabs").art_status == "procedural" and not A.optic_profile("smg", "witchlight_dabs").fallback,
 		"Witchlight Dabs: procedural (no GLB by design)")
 	var bp: Dictionary = A.optic_profile("sniper_rifle", "belfry_8x")
@@ -276,6 +283,12 @@ func _run() -> void:
 	# ------------------------------------------------------------ WeaponRig: fallback (no GLB yet) + Witchlight dots
 	var ar := _gun("weapon_assault_rifle")
 	var base_line: Vector3 = Rig.sight_line(Rig.apply(ar, "auto_rifle", {"muzzle": "hush_can"}))
+	# art5: every optic GLB has shipped, so "pending" is simulated (model path not delivered) for the fallback checks
+	dpend = A.data().duplicate(true)
+	for a in dpend.attachments:
+		if a.id in ["kilnglass_2x", "wicket_ring"]:
+			a.model = "res://assets/models/attachments/optic/__not_delivered_%s__.glb" % a.id
+	A.reload(dpend)
 	var pr: Dictionary = Rig.apply(ar, "auto_rifle", {"optic": "wicket_ring"})
 	check(pr.optic.status == "pending" and pr.missing.has("wicket_ring") and not pr.attached.has("optic") and Rig.find_node(ar, "IronSights").visible
 		and pr.sight == Rig.find_node(ar, "SightPoint") and Rig.sight_line(pr).is_equal_approx(base_line) and pr.optic.sight == "irons",
@@ -284,6 +297,7 @@ func _run() -> void:
 	var spr: Dictionary = Rig.apply(sn, "sniper_rifle", {"optic": "kilnglass_2x"})
 	check(spr.optic.status == "pending" and Rig.find_node(sn, "DefaultOptic").visible and spr.optic.sight == "builtin_scope",
 		"pending GLB on the sniper: the built-in scope stays as the sight picture")
+	A.reload()
 	var wr: Dictionary = Rig.apply(ar, "auto_rifle", {"optic": "witchlight_dabs"})
 	var irons: Node3D = Rig.find_node(ar, "IronSights")
 	var dot_mat := (wr.glow_dots[0] as MeshInstance3D).material_override as StandardMaterial3D if wr.glow_dots.size() > 0 else null
@@ -311,9 +325,11 @@ func _run() -> void:
 	var fr: Dictionary = Rig.apply(ar, "auto_rifle", {"optic": "wicket_ring"})
 	check(fr.optic.status == "fitted" and fr.optic.sight == "optic" and not Rig.find_node(ar, "IronSights").visible
 		and fr.attached.optic.is_ancestor_of(fr.sight), "fitted iron set: IronSights hidden, ADS through its own SightPoint")
-	check(_near(Rig.sight_line(fr).y, 0.146, 0.0005), "its SightPoint lands on the AR's eye line (y %.4f, irons 0.146)" % Rig.sight_line(fr).y)
+	# art5 railfix3: the AR Rail sits 1.4 mm higher (0.1134), so the stand-in's line is Rail + 0.034 = 0.1474 (factory irons 0.146)
+	var ar_line: float = Rig.gun_point(ar, Rig.find_node(ar, "Rail")).y + 0.034
+	check(_near(Rig.sight_line(fr).y, ar_line, 0.0005), "its SightPoint lands on Rail + 34 mm (y %.4f, want %.4f)" % [Rig.sight_line(fr).y, ar_line])
 	var fpx: Vector3 = Rig.gun_point(ar, fr.front_post)
-	check(fr.front_post != null and _near(fpx.x, 0.532, 0.002) and _near(fpx.y, 0.146, 0.0005),
+	check(fr.front_post != null and _near(fpx.x, 0.532, 0.002) and _near(fpx.y, ar_line, 0.0005),
 		"FrontPost slid to the factory front sight (x %.3f, y %.3f)" % [fpx.x, fpx.y])
 	var stem: Node3D = Rig.find_node(fr.front_post, "PostStem")
 	var stem_bottom: float = Rig.gun_point(ar, stem).y - 0.01 * stem.scale.y
@@ -351,6 +367,58 @@ func _run() -> void:
 		n.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(syn))
 	load("res://scripts/autoload/progress.gd").delete_save_files(prog.save_path)
+
+	# ------------------------------------------------------------ art5 (Gravecrew): FOV rule, pending-art sniper fallback, glass
+	prog.armory = {"upgrades": {"sniper_rifle": 4, "auto_rifle": 4, "smg": 4}, "owned": A.attachment_ids(), "equipped": {}}
+	prog.notify_armory("load", "", false)
+	A.reload()
+	var lp: Dictionary = A.optic_profile("sniper_rifle", "lamplight_reflex")
+	check(_near(lp.ads_fov, 55.0) and _near(lp.class_fov, 55.0) and _near(lp.fov_cap, 60.0) and lp.fov_source == "class",
+		"FOV rule: Lamplight on the sniper = min(class 55, cap 60) = 55, reported as the effective FOV (source class)")
+	var ls: Dictionary = A.optic_profile("smg", "lamplight_reflex")
+	check(_near(ls.ads_fov, 60.0) and ls.fov_source == "optic" and _near(A.optic_profile("auto_rifle", "lamplight_reflex").ads_fov, 55.0),
+		"same rule on every class: SMG 65 -> capped 60 (source optic), AR stays 55")
+	check(A.optic_profile("sniper_rifle", "kilnglass_2x").fov_source == "optic" and A.optic_profile("auto_rifle", "wicket_ring").fov_source == "class",
+		"fov_source: Kilnglass's 42 wins on the sniper; iron sets are class x fov_mult")
+	for oid in ["pinhole", "lamplight_reflex", "tallow_holo"]:
+		check(str(A.attachment(oid).description).begins_with("ADS FOV capped at"), "%s card text says cap, not zoom" % oid)
+	# pending art on the sniper: the factory scope stays on the gun, so its overlay + FOV stay too
+	var d5: Dictionary = A.data().duplicate(true)
+	for a in d5.attachments:
+		if a.id == "kilnglass_2x":
+			a.model = "res://assets/models/attachments/optic/__not_delivered__.glb"
+	A.reload(d5)
+	A.equip("sniper_rifle", "kilnglass_2x")
+	var kp5: Dictionary = A.optic_profile("sniper_rifle")
+	check(kp5.art_status == "pending" and kp5.fallback and kp5.overlay and not A.ads_mods("sniper_rifle").scope_replaced and _near(kp5.ads_fov, 35.0),
+		"sniper + Kilnglass without its GLB: factory scope kept -> overlay on, FOV 35 (was: no overlay = aiming into the scope housing)")
+	A.reload()
+	A.equip("sniper_rifle", "kilnglass_2x")
+	check(A.ads_mods("sniper_rifle").scope_replaced and not A.optic_profile("sniper_rifle").overlay and _near(Ads.ads_fov("sniper_rifle"), 42.0),
+		"sniper + Kilnglass with its GLB: scope replaced, 3D picture, FOV 42")
+	# glass: shipped lenses forced see-through; Gravesight's screen left as authored; Crow's Eye reticle glow from data
+	var sn5 := _gun("weapon_sniper")
+	var kr: Dictionary = Rig.apply(sn5, "sniper_rifle", {"optic": "kilnglass_2x"})
+	var kl: Array = kr.get("lenses", [])
+	var glass_ok := not kl.is_empty()
+	for ln in kl:
+		var lm := (ln as MeshInstance3D).get_surface_override_material(0) as StandardMaterial3D
+		glass_ok = glass_ok and lm != null and lm.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA and lm.albedo_color.a <= Rig.GLASS_MAX_ALPHA + 1e-4 \
+			and lm.depth_draw_mode == BaseMaterial3D.DEPTH_DRAW_DISABLED
+	check(glass_ok, "Kilnglass Lens: alpha-blended glass, alpha <= %.2f, no depth write" % Rig.GLASS_MAX_ALPHA)
+	var ar5 := _gun("weapon_assault_rifle")
+	var ce: Dictionary = Rig.apply(ar5, "auto_rifle", {"optic": "crows_eye_3x"})
+	var cg: Dictionary = A.attachment("crows_eye_3x").optic.glow
+	var crm := (ce.reticle as MeshInstance3D).get_surface_override_material(0) as StandardMaterial3D if ce.reticle is MeshInstance3D else null
+	check(not (ce.get("lenses", []) as Array).is_empty() and crm != null and crm.emission_enabled and _near(crm.emission_energy_multiplier, float(cg.energy))
+		and crm.emission.is_equal_approx(Color.html(str(cg.color))),
+		"Crow's Eye (lensfix): Lens is glass, Reticle glow from data (%s %.1f %s)" % [cg.mode, cg.energy, cg.color])
+	var gr: Dictionary = Rig.apply(ar5, "auto_rifle", {"optic": "gravesight"})
+	var gl_mat := (Rig.find_node(gr.attached.optic, "Lens") as MeshInstance3D).get_surface_override_material(0) as StandardMaterial3D
+	check(A.attachment("gravesight").optic.lens == "screen" and (gl_mat == null or not gl_mat.has_meta("optic_glass")),
+		"Gravesight lens 'screen': left as authored (digital eyepiece)")
+	sn5.free()
+	ar5.free()
 
 	print("optics_test: %d passed, %d failed" % [_passes, _fails])
 	quit(_fails)

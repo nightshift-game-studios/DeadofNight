@@ -148,7 +148,7 @@ static func apply(model: Node3D, arch: String, loadout = null, shadows: bool = f
 	var out := {"attached": {}, "hidden": [], "missing": [], "muzzle": null, "sight": null, "lamp": null,
 		"skipped": [], "barrel_scale": 1.0, "model": model, "arch": arch, "cylinder": null, "rocket": null,
 		"launcher": null, "heartbeat": null, "glow": [], "anim": {}, "optic": {}, "reticle": null, "front_post": null,
-		"glow_dots": []}
+		"glow_dots": [], "lenses": []}
 	if model == null:
 		return out
 	clear(model)
@@ -526,6 +526,18 @@ static func _fit_optic(model: Node3D, out: Dictionary, lo: Dictionary, p: Dictio
 	var glow: Dictionary = ob.get("glow", {})
 	if info.status == "fitted":
 		var inst: Node3D = out.attached.optic
+		# See-through glass whatever the import did (art5: alpha/depth settings): Lens, Ocular and Lens_* nodes, unless the
+		# optic block says lens "screen" (Gravesight: digital eyepiece, opaque by design).
+		var lenses: Array = []
+		for ln in ["Lens", "Ocular"]:
+			var lnode := find_node(inst, ln)
+			if lnode:
+				lenses.append(lnode)
+			lenses.append_array(inst.find_children(ln + "_*", "MeshInstance3D", true, false))
+		for lnode in lenses:
+			if lnode is MeshInstance3D and str(ob.get("lens", "glass")) == "glass":
+				_glass(lnode as MeshInstance3D)
+		out["lenses"] = lenses
 		var ret := find_node(inst, "Reticle")
 		if ret is MeshInstance3D and str(glow.get("mode", "none")) != "none":
 			_emissive(ret as MeshInstance3D, Color.html(str(glow.get("color", "#ffffff"))), float(glow.get("energy", 1.0)))
@@ -547,6 +559,27 @@ static func _fit_optic(model: Node3D, out: Dictionary, lo: Dictionary, p: Dictio
 		var dopt := find_node(model, "DefaultOptic")
 		info.sight = "builtin_scope" if osp and dopt and dopt.visible else "irons"
 	out.optic = info
+
+
+const GLASS_MAX_ALPHA := 0.55 ## optic lens tint ceiling: the view through it keeps >= 45% of the scene
+## Optic lens -> see-through glass, per instance (shading as authored: Desi's lensfix glass keeps its faint glint): alpha blend (no depth pre-pass, no depth write so the Reticle
+## behind it and the far lens still draw), both faces, alpha <= GLASS_MAX_ALPHA, emission kept (Gravesight's green tint
+## + set_glow still work on the same override), no shadows.
+static func _glass(mi: MeshInstance3D) -> void:
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var n: int = mi.mesh.get_surface_count() if mi.mesh else 0
+	for i in n:
+		var m := mi.get_surface_override_material(i) as StandardMaterial3D
+		if m == null:
+			var base := mi.get_active_material(i) as StandardMaterial3D
+			m = base.duplicate() as StandardMaterial3D if base else StandardMaterial3D.new()
+			m.set_meta("base_emission", m.emission_energy_multiplier if m.emission_enabled else 1.0)
+			mi.set_surface_override_material(i, m)
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+		m.cull_mode = BaseMaterial3D.CULL_DISABLED
+		m.albedo_color.a = minf(m.albedo_color.a, GLASS_MAX_ALPHA)
+		m.set_meta("optic_glass", true)
 
 
 ## Emission on every surface of a reticle mesh (materials duplicated per instance).

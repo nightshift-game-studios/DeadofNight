@@ -1,6 +1,6 @@
 {
 	"version": 1,
-	"_help": "Weapon attachments (Skillz). Bought once with Gravemark (account-wide unlock), then equipped per weapon archetype: every weapon of that archetype uses the archetype's loadout. classes[archetype].slots = slots it has (DESI_ATTACHMENTS.md §1); optic_cap limits optic size (micro<short<mid<long). attachment.classes = optional allow list (default: every class with that slot). tier 1/2/3: equipping needs the weapon's upgrade tier >= tier_requires[tier] (0/2/4). mods (WeaponItem, multiply unless *_add): damage_mult rpm_mult mag_mult reload_mult (time) spread_mult (all fire) hip_spread_mult (not ADS) recoil_mult range_mult (falloff start) swap_mult (time) pellets_add headshot_add reserve_mags_add. ads (AdsProfile): fov (ADS FOV override; the narrowest wins) fov_mult (x the class iron-sight FOV) move_mult spread_mult (multiply the ADS penalties) ads_time_mult sway_mult (x the class ADS time / sway). optic = optics lineup block on optic-slot parts (Armory.optic_profile). art_pending = [model, icon] not shipped yet (default sight picture / glyph until they land). flags = presentation hooks for player.gd/HUD (tracer_hidden, flash_mult, scope_overlay, outline_elites, heartbeat_counter, bipod, flashlight, mine_lamp). effects = SkillEffect defs (same format as skill_tree.json) run by the player's SkillRunner only while a weapon of that archetype is in hand. slots[].hides = default gun meshes (Desi split guns) a fitted part hides; an attachment \"hides\" overrides it ([] = hide nothing); \"hides_by_class\" {archetype: [...]} overrides both for that archetype (Sawn Stub on the shotgun also hides IronSights + the DefaultMag tube); \"inner_hides\" {archetype or \"*\": [node names]} hides nodes inside the part itself on that host (Sawn Stub's MagTubeStub shows on the shotgun only). exclusions = per-archetype parts that can't be equipped together ({id, classes, parts, reason}; Armory.exclusion_reason); a save holding one unequips the last listed part on load (it stays owned). Flashlight parts (mine_lamp, lantern_rail; F toggles the beam) carry light_energy / light_range / light_angle / light_attenuation / light_color for the camera SpotLight3D (Armory.flashlight_config).",
+	"_help": "Weapon attachments (Skillz). Bought once with Gravemark (account-wide unlock), then equipped per weapon archetype: every weapon of that archetype uses the archetype's loadout. classes[archetype].slots = slots it has (DESI_ATTACHMENTS.md §1); optic_cap limits optic size (micro<short<mid<long). attachment.classes = optional allow list (default: every class with that slot). tier 1/2/3: equipping needs the weapon's upgrade tier >= tier_requires[tier] (0/2/4). mods (WeaponItem, multiply unless *_add): damage_mult rpm_mult mag_mult reload_mult (time) spread_mult (all fire) hip_spread_mult (not ADS) recoil_mult range_mult (falloff start) swap_mult (time) pellets_add headshot_add reserve_mags_add. ads (AdsProfile): fov (ADS FOV cap: aimed FOV = min(class FOV x fov_mult, fov), never widens) fov_mult (x the class iron-sight FOV) move_mult spread_mult (multiply the ADS penalties) ads_time_mult sway_mult (x the class ADS time / sway). optic = optics lineup block on optic-slot parts (Armory.optic_profile). art_pending = [model, icon] not shipped yet (default sight picture / glyph until they land). flags = presentation hooks for player.gd/HUD (tracer_hidden, flash_mult, scope_overlay, outline_elites, heartbeat_counter, bipod, flashlight, mine_lamp). effects = SkillEffect defs (same format as skill_tree.json) run by the player's SkillRunner only while a weapon of that archetype is in hand. slots[].hides = default gun meshes (Desi split guns) a fitted part hides; an attachment \"hides\" overrides it ([] = hide nothing); \"hides_by_class\" {archetype: [...]} overrides both for that archetype (Sawn Stub on the shotgun also hides IronSights + the DefaultMag tube); \"inner_hides\" {archetype or \"*\": [node names]} hides nodes inside the part itself on that host (Sawn Stub's MagTubeStub shows on the shotgun only). exclusions = per-archetype parts that can't be equipped together ({id, classes, parts, reason}; Armory.exclusion_reason); a save holding one unequips the last listed part on load (it stays owned). Flashlight parts (mine_lamp, lantern_rail; F toggles the beam) carry light_energy / light_range / light_angle / light_attenuation / light_color for the camera SpotLight3D (Armory.flashlight_config).",
 	"slots": [
 		{
 			"id": "optic",
@@ -341,12 +341,10 @@
 				"night": "fair",
 				"replaces_irons": false,
 				"rarity": "common",
-				"tradeoff": "cheap night aid, slightly slower"
+				"tradeoff": "cheap night aid, slightly slower",
+				"lens": "glass"
 			},
-			"procedural": "glow_dots",
-			"art_pending": [
-				"icon"
-			]
+			"procedural": "glow_dots"
 		},
 		{
 			"id": "wicket_ring",
@@ -389,12 +387,9 @@
 				"night": "poor",
 				"replaces_irons": true,
 				"rarity": "common",
-				"tradeoff": "fastest + steadiest, least precise"
-			},
-			"art_pending": [
-				"model",
-				"icon"
-			]
+				"tradeoff": "fastest + steadiest, least precise",
+				"lens": "glass"
+			}
 		},
 		{
 			"id": "mason_notch",
@@ -436,12 +431,9 @@
 				"night": "poor",
 				"replaces_irons": true,
 				"rarity": "common",
-				"tradeoff": "precise irons, slower, dark"
-			},
-			"art_pending": [
-				"model",
-				"icon"
-			]
+				"tradeoff": "precise irons, slower, dark",
+				"lens": "glass"
+			}
 		},
 		{
 			"id": "foxfire_post",
@@ -483,12 +475,9 @@
 				"night": "good",
 				"replaces_irons": true,
 				"rarity": "common",
-				"tradeoff": "best in the dark, worse headshots"
-			},
-			"art_pending": [
-				"model",
-				"icon"
-			]
+				"tradeoff": "best in the dark, worse headshots",
+				"lens": "glass"
+			}
 		},
 		{
 			"id": "pinhole",
@@ -498,7 +487,7 @@
 			"cost": 2,
 			"unique": false,
 			"summary": "Pistol dot: light zoom, stay mobile while aiming.",
-			"description": "ADS zoom 62 FOV. ADS movement penalty halved. ADS time -10%.",
+			"description": "ADS FOV capped at 62 (narrows sidearm/SMG views; never widens). ADS movement penalty halved. ADS time -10%.",
 			"drawback": "Tiny window: sway +10%.",
 			"icon": "att_pinhole",
 			"model": "res://assets/models/attachments/optic/pinhole.glb",
@@ -531,7 +520,8 @@
 				"night": "good",
 				"replaces_irons": true,
 				"rarity": "uncommon",
-				"tradeoff": "mobile + quick, twitchy"
+				"tradeoff": "mobile + quick, twitchy",
+				"lens": "glass"
 			}
 		},
 		{
@@ -542,7 +532,7 @@
 			"cost": 4,
 			"unique": false,
 			"summary": "Warm reflex dot that tightens aimed fire.",
-			"description": "ADS zoom 60 FOV. ADS spread -20%.",
+			"description": "ADS FOV capped at 60 (narrows sidearm/SMG views; rifles and sniper stay 55). ADS spread -20%.",
 			"drawback": "Hooded window: ADS time +5%.",
 			"icon": "att_lamplight_reflex",
 			"model": "res://assets/models/attachments/optic/lamplight_reflex.glb",
@@ -574,7 +564,8 @@
 				"night": "good",
 				"replaces_irons": true,
 				"rarity": "uncommon",
-				"tradeoff": "tighter aimed fire"
+				"tradeoff": "tighter aimed fire",
+				"lens": "glass"
 			}
 		},
 		{
@@ -585,7 +576,7 @@
 			"cost": 4,
 			"unique": false,
 			"summary": "Wide holo window you can fire from the hip.",
-			"description": "ADS zoom 58 FOV. Hip-fire spread -15%.",
+			"description": "ADS FOV capped at 58 (narrows sidearm/SMG/shotgun views; rifles stay 55). Hip-fire spread -15%.",
 			"drawback": "ADS time +5%: a heavier box.",
 			"icon": "att_tallow_holo",
 			"model": "res://assets/models/attachments/optic/tallow_holo.glb",
@@ -618,7 +609,8 @@
 				"night": "good",
 				"replaces_irons": true,
 				"rarity": "uncommon",
-				"tradeoff": "hip fire + wide view"
+				"tradeoff": "hip fire + wide view",
+				"lens": "glass"
 			}
 		},
 		{
@@ -663,12 +655,9 @@
 				"night": "fair",
 				"replaces_irons": true,
 				"rarity": "rare",
-				"tradeoff": "first zoom, early and cheap"
-			},
-			"art_pending": [
-				"model",
-				"icon"
-			]
+				"tradeoff": "first zoom, early and cheap",
+				"lens": "glass"
+			}
 		},
 		{
 			"id": "crows_eye_3x",
@@ -725,7 +714,8 @@
 				"night": "fair",
 				"replaces_irons": true,
 				"rarity": "rare",
-				"tradeoff": "reach + falloff damage, heavy"
+				"tradeoff": "reach + falloff damage, heavy",
+				"lens": "glass"
 			}
 		},
 		{
@@ -778,7 +768,8 @@
 				"night": "poor",
 				"replaces_irons": true,
 				"rarity": "rare",
-				"tradeoff": "crit zoom, slow and swaying"
+				"tradeoff": "crit zoom, slow and swaying",
+				"lens": "glass"
 			}
 		},
 		{
@@ -830,12 +821,9 @@
 				"night": "fair",
 				"replaces_irons": true,
 				"rarity": "rare",
-				"tradeoff": "most zoom + crits, slowest, tunnel vision"
-			},
-			"art_pending": [
-				"model",
-				"icon"
-			]
+				"tradeoff": "most zoom + crits, slowest, tunnel vision",
+				"lens": "glass"
+			}
 		},
 		{
 			"id": "gravesight",
@@ -887,7 +875,8 @@
 				"night": "good",
 				"replaces_irons": true,
 				"rarity": "legendary",
-				"tradeoff": "boss hunter"
+				"tradeoff": "boss hunter",
+				"lens": "screen"
 			}
 		},
 		{
@@ -940,7 +929,8 @@
 				"night": "poor",
 				"replaces_irons": false,
 				"rarity": "legendary",
-				"tradeoff": "crowd damage, factory irons"
+				"tradeoff": "crowd damage, factory irons",
+				"lens": "glass"
 			}
 		},
 		{

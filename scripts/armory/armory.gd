@@ -428,7 +428,11 @@ static func _compute_lo(arch: String, lo: Dictionary) -> Dictionary:
 				mods[k] += float(m[k])
 	mods["item_power_bonus"] = power_bonus(arch)
 	var oid := str(ads.optic)
-	ads.scope_replaced = oid != "" and has_builtin_scope(arch) and _optic_hides(oid, arch).has("DefaultOptic")
+	# Only an optic that is actually on the gun replaces the built-in scope: a pending GLB (art not delivered) leaves
+	# DefaultOptic on the sniper (WeaponRig fits nothing, hides nothing), so the factory scope picture, overlay and FOV
+	# stay. (art5: Kilnglass on live without its GLB = no overlay, aimed into the factory scope's opaque housing = black.)
+	ads.scope_replaced = oid != "" and has_builtin_scope(arch) and _optic_hides(oid, arch).has("DefaultOptic") \
+		and optic_art_status(oid) in ["shipped", "procedural"]
 	ads.overlay = bool(flg.get("scope_overlay", false)) or (has_builtin_scope(arch) and not ads.scope_replaced)
 	return {"mods": mods, "ads": ads, "flags": flg}
 
@@ -539,11 +543,13 @@ static func optic_lineup(weapon_id: String) -> Array:
 ## optic = null: the equipped optic. optic = "" : the factory sights. optic = "<id>": preview that optic in the loadout
 ## (the rest of the loadout stays, so grips/stocks that touch ADS are counted). Keys:
 ##   weapon_id, arch, optic_id, name, type, label ("2x"), magnification (nominal), true_magnification (vs the 75 hip view),
-##   ads_fov, class_fov, fov_mult, ads_time (s), ads_time_mult, sway_mult, ads_spread_mult (x the ADS spread, 1 = class),
+##   ads_fov (the effective aimed FOV, the one the camera uses), class_fov (class FOV for this build: FOV_BY_FAMILY, or 55
+##   for a sniper whose scope an optic replaced), fov_mult, fov_cap (the parts' ads.fov: a ceiling, 0 = none),
+##   fov_source ("optic" = the cap is narrower and wins, "class" = class_fov x fov_mult wins), ads_time (s), ads_time_mult, sway_mult, ads_spread_mult (x the ADS spread, 1 = class),
 ##   ads_move_mult (move speed while aiming), overlay (2D scope overlay), sight_picture ("overlay" | "3d"),
 ##   reticle_id, reticle {shape, color, size_moa}, glow {mode, energy, color}, night ("poor" | "fair" | "good"),
 ##   replaces_irons, hides, rarity, tier, cost, owned, equipped, compatible, art_status, fallback (equipped/previewed
-##   optic without a GLB: the default sight picture shows), tradeoff, summary, description, drawback, icon.
+##   optic without a GLB: the default sight picture shows; on the sniper that is the factory scope with its overlay + FOV), tradeoff, summary, description, drawback, icon.
 static func optic_profile(weapon_id: String, optic = null) -> Dictionary:
 	var arch := resolve_weapon(weapon_id)
 	var lo: Dictionary = loadout(arch).duplicate()
@@ -565,6 +571,7 @@ static func optic_profile(weapon_id: String, optic = null) -> Dictionary:
 			and str(ob.get("reticle_id", "")) == "factory_irons":
 		ob = (fac.get("optic", {}) as Dictionary).duplicate(true)
 	var fov: float = A.merge_fov(arch, ad) if A else 55.0
+	var cfov: float = A.class_fov(arch, ad) * float(ad.fov_mult) if A else fov
 	var art := optic_art_status(oid)
 	var p := {"weapon_id": weapon_id, "arch": arch, "optic_id": oid,
 		"name": str(a.get("name", fac.get("name", "Factory Irons"))) if oid != "" else str(fac.get("name", "Factory Irons")),
@@ -572,6 +579,7 @@ static func optic_profile(weapon_id: String, optic = null) -> Dictionary:
 		"magnification": float(ob.get("magnification", 0.0)),
 		"true_magnification": A.true_magnification(fov) if A else 1.0,
 		"ads_fov": fov, "class_fov": A.class_fov(arch, ad) if A else fov, "fov_mult": float(ad.fov_mult),
+		"fov_cap": float(ad.fov), "fov_source": "optic" if float(ad.fov) > 0.0 and float(ad.fov) < cfov else "class",
 		"ads_time": A.ads_time_for(arch, ad) if A else 0.25, "ads_time_mult": float(ad.ads_time_mult),
 		"sway_mult": float(ad.sway_mult), "ads_spread_mult": float(ad.spread_mult),
 		"ads_move_mult": A.move_mult_for(ad) if A else 0.7,

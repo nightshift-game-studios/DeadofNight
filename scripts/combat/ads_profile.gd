@@ -79,7 +79,9 @@ static func class_fov(archetype_id: String, ads: Dictionary = {}) -> float:
 	return float(FOV_BY_FAMILY.get(fam, 55.0))
 
 
-## Pure merge (tests + Armory.optic_profile previews): min(class_fov x fov_mult, optic fov).
+## Pure merge (tests + Armory.optic_profile previews): min(class_fov x fov_mult, optic fov). An optic's ads.fov is a
+## ceiling, never a widening: Lamplight's 60 tightens the 65 sidearm/SMG view and the 60.. shotgun view stays, but a rifle
+## (55), heavy (55) or de-scoped sniper (SNIPER_IRONS_FOV 55) keeps 55. DESIGN.md §19 "FOV rule".
 static func merge_fov(archetype_id: String, ads: Dictionary) -> float:
 	var f := class_fov(archetype_id, ads) * float(ads.get("fov_mult", 1.0))
 	var optic := float(ads.get("fov", 0.0))
