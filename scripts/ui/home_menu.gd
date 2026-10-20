@@ -369,6 +369,7 @@ func start_match(map_id: String) -> bool:
 	_ui_snd("ui_equip")
 	if dry_run:
 		return true
+	get_tree().paused = false # the map picker (MenuBase.open) paused the tree; main would load frozen
 	get_tree().change_scene_to_file(MAIN_SCENE)
 	return true
 
