@@ -15,6 +15,7 @@ It's made by Nightshift Game Studios.
 - **Three night maps, three difficulties:** **Arena** (Easy) is the original walled arena. **Rustwell Foundry** (Medium) is an overrun steel works where you buy doors to open the Rail Spur, Warehouse, Foundry Hall and Tank Farm. **Lockout Substation** (Hard) is a quarantined electrical yard with a battery vault. Harder maps bring tougher, faster zombies, bosses sooner, and bigger rewards.
 - **Bosses:** the Bellwether, the Choir Host and the Lantern Stalker show up on boss rounds.
 - **Gravemarks and the Armory:** Gravemarks are a rare currency: bosses, chests and round milestones pay them, and zombies sometimes drop one. Spend them in the **Armory** (home menu) on weapon upgrades (Reworks) and attachments, including the **Mine Lamp** flashlight.
+- **The Merchant:** the Gravedigger on the home menu sells rolled guns for Gravemarks (Common 13 up to Mythic 315). His stock refreshes every hour, and you can pay to reroll it (5, 9, 15, 24, 36, then +15 each). Mythic guns from the Merchant carry a signature perk you can't find anywhere else.
 
 ---
 
@@ -43,7 +44,7 @@ The game ships as a Godot project. You play it with the free Godot engine, so th
 1. In the Godot **Project Manager**, click **Import**.
 2. Browse to the extracted `fps-starter` folder, select **`project.godot`**, then confirm with **Import** (in some versions the button says **Import & Edit**). The editor opens.
 3. **The first launch takes a minute or two** while Godot imports the models, textures and sounds. This only happens once.
-4. Press **F5**, or click the ▶ **Play** button at the top right. The game opens on the **home menu**: **Play** → pick a map (Easy / Medium / Hard) → **Deploy**. **Kit / Inventory**, **Armory** and **Settings** are there too. Have fun!
+4. Press **F5**, or click the ▶ **Play** button at the top right. The game opens on the **home menu**: **Play** → pick a map (Easy / Medium / Hard) → **Deploy**. **Kit / Inventory**, **Armory**, **Merchant** and **Settings** are there too. Have fun!
 
 Next time, just open Godot, double-click **Gravecrew** in the project list, and press F5.
 
