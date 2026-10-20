@@ -395,6 +395,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("flashlight"):
 		_toggle_flashlight()
 		get_viewport().set_input_as_handled()
+	elif event is InputEventMouseButton and event.pressed \
+			and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		wheel_swap(1 if event.button_index == MOUSE_BUTTON_WHEEL_DOWN else -1)
 	elif event.is_action_pressed("weapon_1"):
 		inventory.equip_index(0)
 	elif event.is_action_pressed("weapon_2"):
@@ -718,6 +721,29 @@ func _on_weapon_equipped(w: WeaponItem) -> void:
 	_sync_flashlight()
 	emit_ammo()
 	_swap_reload(w, _swap_t)
+
+
+## Playtest #7: mouse wheel cycles weapons (down = next, up = previous) through the Inventory item API.
+## WHEEL_SWAP_DEBOUNCE keeps one notch from skipping a gun. No optic zooms with the wheel today; if one ever does,
+## give it uses_wheel() -> true and the wheel stays with it while aiming.
+const WHEEL_SWAP_DEBOUNCE := 0.15
+var _wheel_swap_at: float = -10.0
+func wheel_swap(dir: int) -> bool:
+	var now := Time.get_ticks_msec() / 1000.0
+	if now - _wheel_swap_at < WHEEL_SWAP_DEBOUNCE:
+		return false
+	if ads_active and _optic_uses_wheel():
+		return false
+	var nxt := inventory.cycle_weapon_item(dir)
+	if nxt == null or not inventory.equip_weapon_item(nxt):
+		return false
+	_wheel_swap_at = now
+	return true
+
+
+func _optic_uses_wheel() -> bool:
+	var n := get_tree().get_first_node_in_group("scope_overlay")
+	return n != null and n.has_method("uses_wheel") and bool(n.uses_wheel())
 
 
 ## Playtest #6: swapping to a gun with an empty magazine and reserve ammo starts its reload once the swap

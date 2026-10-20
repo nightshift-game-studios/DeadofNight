@@ -243,6 +243,25 @@ func equip_weapon_slot(s: String) -> void:
 	weapon_equipped.emit(equipped[s])
 
 
+## Draw an equipped weapon by item (mouse wheel, playtest #7). False if `w` isn't equipped in a weapon slot.
+func equip_weapon_item(w: WeaponItem) -> bool:
+	for s in WEAPON_SLOTS:
+		if w != null and equipped.get(s) == w:
+			equip_weapon_slot(s)
+			return true
+	return false
+
+
+## The equipped weapon `dir` steps from the active one (+1 next, -1 previous), wrapping and skipping empty
+## slots; null with fewer than two weapons.
+func cycle_weapon_item(dir: int) -> WeaponItem:
+	var ws := weapons()
+	if ws.size() < 2:
+		return null
+	var i := ws.find(get_equipped_weapon())
+	return ws[posmod((i if i >= 0 else 0) + (1 if dir >= 0 else -1), ws.size())]
+
+
 ## Keys 1-3.
 func equip_index(i: int) -> void:
 	if i >= 0 and i < WEAPON_SLOTS.size():

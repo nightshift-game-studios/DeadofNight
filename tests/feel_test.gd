@@ -102,6 +102,26 @@ func _run() -> void:
 	pri.ammo = pri.mag_size()
 	sec.ammo = sec.mag_size()
 
+	# ---------------------------------------------------------------- #7 mouse wheel cycles weapons
+	inv.equip_weapon_slot("primary")
+	await secs(0.3)
+	# (headless can't capture the mouse, and player._unhandled_input spends an uncaptured click on capturing it,
+	#  so drive wheel_swap() directly, the same call the wheel branch makes)
+	var src := FileAccess.get_file_as_string("res://scripts/player.gd")
+	check(src.contains("MOUSE_BUTTON_WHEEL_DOWN else -1)") and src.contains("wheel_swap(1 if event.button_index == MOUSE_BUTTON_WHEEL_DOWN"),
+		"#7 _unhandled_input: wheel down -> +1, wheel up -> -1")
+	player._wheel_swap_at = -10.0
+	check(inv.cycle_weapon_item(1) == sec and inv.cycle_weapon_item(-1) == sec, "#7 Inventory.cycle_weapon_item by item (2 guns, heavy empty skipped)")
+	check(player.wheel_swap(1) and player.current_weapon() == sec, "#7 wheel down -> next weapon (secondary)")
+	check(not player.wheel_swap(1) and player.current_weapon() == sec, "#7 a second notch inside the debounce is ignored")
+	await secs(player.WHEEL_SWAP_DEBOUNCE + 0.05)
+	check(player.wheel_swap(-1) and player.current_weapon() == pri, "#7 wheel up -> previous weapon (primary)")
+	await secs(player.WHEEL_SWAP_DEBOUNCE + 0.05)
+	check(player.wheel_swap(-1) and player.current_weapon() == sec, "#7 wraps around")
+	check(not inv.equip_weapon_item(null), "#7 equip_weapon_item(null) refused")
+	inv.equip_weapon_slot("primary")
+	await secs(0.3)
+
 	#SECTIONS
 
 	print("feel_test: %d passed, %d failed" % [_passes, _fails])
