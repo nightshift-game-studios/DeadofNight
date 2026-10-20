@@ -21,6 +21,12 @@ Treyarch/Call of Duty audio or music.
 | sfx/world/* | tools/gen_player.py | tier 4: frag bounce/explode, Tremor Charge loop |
 | sfx/ui/* (other) | tools/gen_ui.py | tier 5: stingers, menu/UI, loot chimes, chest |
 | music/*, ambience/* | tools/gen_music.py | tier 6: seamless OGG loops |
+| sfx/zombies/gallspitter_windup_01..02.wav | tools/gen_gallspitter.py | Gallspitter wind-up (0.70 s telegraph): wet throat gurgle, throat-sac blub, rattly inhale |
+| sfx/zombies/gallspitter_spit_01..03.wav | tools/gen_gallspitter.py | Gallspitter spit/launch (0.45 s): hock, wet burst, ejected liquid, push thump |
+| sfx/world/bile_glob_travel_loop.wav | tools/gen_gallspitter.py | bile_glob projectile: seamless 1.4 s mono fizz/bubble hiss loop (3D) |
+| sfx/world/bile_glob_impact_01..03.wav | tools/gen_gallspitter.py | bile_glob impact: splat, spray, droplets, short acid sizzle |
+| sfx/world/gall_puddle_sizzle_01.wav | tools/gen_gallspitter.py | gall puddle: 4.0 s one-shot sizzle/bubbling with built-in fade-out |
+| sfx/world/gall_puddle_sizzle_loop.wav | tools/gen_gallspitter.py | gall puddle: seamless 2.0 s mono sizzle loop (for non-4 s puddles) |
 
 Shared code: `tools/dsp.py`, `tools/synth.py`. Regenerate everything with `tools/build_all.sh`.
 The seeds are fixed, so the decoded audio is bit-identical on every run (OGG container serial
