@@ -40,6 +40,8 @@ const CoopHudScript := preload("res://scripts/ui/coop_hud.gd")
 const CalloutBannerScript := preload("res://scripts/ui/callout_banner.gd")
 var _cross_parts: Array[CanvasItem] = [] ## crosshair ticks + dot (dimmed by set_scoped; the hit marker is not in here)
 var scoped: bool = false ## scope overlay up (crosshair dimmed)
+var _hold_ring: Control
+var hold_progress: float = -1.0 ## hold-E equip: 0..1 while held, -1 hidden
 var ads_hidden: bool = false ## playtest #5: aiming down sights (any optic, irons too) hides the crosshair ticks + dot
 const SCOPED_CROSS_ALPHA := 0.12
 var _last_hit: Dictionary = {} ## last hit_registered payload (tests / debugging)
@@ -311,6 +313,17 @@ func _ready() -> void:
 	_prompt_label = UIStyle.label("", 17, UIStyle.BONE)
 	ph.add_child(_prompt_label)
 
+	# Hold-E equip ring (playtest #3), around the crosshair
+	_hold_ring = Control.new()
+	_hold_ring.set_anchors_preset(Control.PRESET_CENTER)
+	_hold_ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hold_ring.visible = false
+	_hold_ring.draw.connect(func():
+		_hold_ring.draw_arc(Vector2.ZERO, 24.0, 0.0, TAU, 48, Color(0, 0, 0, 0.45), 6.0, true)
+		if hold_progress > 0.0:
+			_hold_ring.draw_arc(Vector2.ZERO, 24.0, -PI * 0.5, -PI * 0.5 + TAU * hold_progress, 48, Color(UIStyle.BONE, 0.95), 4.0, true))
+	root.add_child(_hold_ring)
+
 	# Brief control hints (match start only)
 	_hint = UIStyle.label("", 15, UIStyle.BONE_DIM, false, 4)
 	_hint.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
@@ -416,6 +429,8 @@ func _bind_player() -> void:
 	if p.has_signal("ability_charges_changed"):
 		p.ability_charges_changed.connect(set_ability_charges)
 		set_ability_charges(int(p.get("ability_charges")), int(p.get("ability_charges_max")))
+	if p.has_signal("interact_hold_changed"):
+		p.interact_hold_changed.connect(set_hold_progress)
 	if p.has_signal("ads_changed"):
 		p.ads_changed.connect(set_ads)
 		set_ads(bool(p.get("ads_active")))
@@ -706,6 +721,14 @@ func set_scoped(on: bool) -> void:
 	for c in _cross_parts:
 		if is_instance_valid(c):
 			c.modulate.a = SCOPED_CROSS_ALPHA if on else 1.0
+
+
+## Player interact_hold_changed (playtest #3): ring fills over the hold time; < 0 hides it.
+func set_hold_progress(p: float) -> void:
+	hold_progress = p
+	if _hold_ring:
+		_hold_ring.visible = p >= 0.0
+		_hold_ring.queue_redraw()
 
 
 ## Player ads_changed (playtest #5): no crosshair while aiming down sights. The hit marker (same centre

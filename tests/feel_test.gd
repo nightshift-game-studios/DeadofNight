@@ -24,6 +24,12 @@ func secs(t: float) -> void:
 	await create_timer(t).timeout
 
 
+## Wall-clock wait past the wheel debounce (the gun swap's view-model build can stall frames).
+func past_debounce(player) -> void:
+	while Time.get_ticks_msec() / 1000.0 - player._wheel_swap_at < player.WHEEL_SWAP_DEBOUNCE + 0.02:
+		await process_frame
+
+
 func _initialize() -> void:
 	_run.call_deferred()
 
@@ -113,14 +119,88 @@ func _run() -> void:
 	player._wheel_swap_at = -10.0
 	check(inv.cycle_weapon_item(1) == sec and inv.cycle_weapon_item(-1) == sec, "#7 Inventory.cycle_weapon_item by item (2 guns, heavy empty skipped)")
 	check(player.wheel_swap(1) and player.current_weapon() == sec, "#7 wheel down -> next weapon (secondary)")
-	check(not player.wheel_swap(1) and player.current_weapon() == sec, "#7 a second notch inside the debounce is ignored")
-	await secs(player.WHEEL_SWAP_DEBOUNCE + 0.05)
+	var again: bool = player.wheel_swap(1)
+	check(not again and player.current_weapon() == sec, "#7 a second notch inside the debounce is ignored (again=%s cur=%s)" % [again, player.current_weapon().archetype])
+	await past_debounce(player)
 	check(player.wheel_swap(-1) and player.current_weapon() == pri, "#7 wheel up -> previous weapon (primary)")
-	await secs(player.WHEEL_SWAP_DEBOUNCE + 0.05)
+	await past_debounce(player)
 	check(player.wheel_swap(-1) and player.current_weapon() == sec, "#7 wraps around")
 	check(not inv.equip_weapon_item(null), "#7 equip_weapon_item(null) refused")
 	inv.equip_weapon_slot("primary")
 	await secs(0.3)
+
+	# ---------------------------------------------------------------- #3 hold E equips a ground item
+	var gdb = root.get_node("GearDB")
+	var near := func(item) -> Node:
+		main.spawn_pickup(item, player.global_position, false)
+		for i in 30:
+			await physics_frame
+			for n in player._nearby:
+				if is_instance_valid(n) and n.get("item") == item:
+					return n
+		return null
+	var g1 = gdb.roll_weapon("auto_rifle", 2, 3)
+	var p1 = await near.call(g1)
+	check(p1 != null and p1.can_hold_interact() and p1.get_prompt().contains("hold: equip"), "#3 gear pickup is hold-able, prompt says so")
+	Input.action_release("interact")
+	player._interact()
+	await wait(3)
+	check(inv.backpack[g1.slot].has(g1) and not is_instance_valid(p1), "#3 tap E still picks up into the backpack")
+	var g2 = gdb.roll_weapon("scout_rifle", 2, 3)
+	var was = inv.equipped[g2.slot]
+	var p2 = await near.call(g2)
+	Input.action_press("interact")
+	player._interact()
+	await secs(0.2)
+	check(is_instance_valid(p2) and hud._hold_ring.visible and hud.hold_progress > 0.2 and hud.hold_progress < 1.0,
+		"#3 holding: ring visible, filling (%.2f)" % hud.hold_progress)
+	await secs(0.35)
+	check(inv.equipped[g2.slot] == g2 and player.current_weapon() == g2 and not is_instance_valid(p2), "#3 hold 0.4 s: equipped and drawn")
+	check(inv.backpack[g2.slot].has(was) and was.seen, "#3 the old piece went to the backpack")
+	check(not hud._hold_ring.visible, "#3 ring hidden after")
+	Input.action_release("interact")
+	# full backpack: the old piece drops where the new one lay
+	var bsize: int = inv.backpack_size
+	while inv.backpack[g2.slot].size() < bsize:
+		inv.backpack[g2.slot].append(gdb.roll_weapon("smg", 0, 1))
+	var g3 = gdb.roll_weapon("hand_cannon", 3, 3)
+	var p3 = await near.call(g3)
+	Input.action_press("interact")
+	player._interact()
+	await secs(0.55)
+	Input.action_release("interact")
+	await wait(3)
+	var dropped := false
+	for n in main.pickups_root.get_children():
+		if n.get("item") == g2:
+			dropped = true
+			player.set_nearby_interactable(n, false)
+			n.free()
+	check(inv.equipped[g3.slot] == g3 and dropped, "#3 backpack full: equipped, and the old gun lies on the ground")
+	# armor
+	var a9 = gdb.roll_armor("helmet", 2, 3)
+	var pa = await near.call(a9)
+	Input.action_press("interact")
+	player._interact()
+	await secs(0.55)
+	Input.action_release("interact")
+	check(inv.equipped.helmet == a9, "#3 armor equips by hold too")
+	# consumables / chests act at once (no hold)
+	var cons_ok := true
+	for c in main.get_tree().get_nodes_in_group("chests"):
+		if c.has_method("can_hold_interact") and c.can_hold_interact():
+			cons_ok = false
+	check(cons_ok and not FileAccess.get_file_as_string("res://scripts/items/chest.gd").contains("can_hold_interact"), "#3 chests / doors keep tap-to-use")
+	var src2 := FileAccess.get_file_as_string("res://scripts/items/inventory.gd")
+	check(src2.contains("func equip_refusal") and src2.contains("slot_refusal"), "#3 Inventory.equip_refusal hook for Skillz's slot rule")
+	if inv.backpack[g1.slot].has(g1):
+		inv.equip(g1)
+	for i in range(inv.backpack[g2.slot].size() - 1, -1, -1):
+		inv.backpack[g2.slot].remove_at(i)
+	inv.equip_weapon_slot("primary")
+	await secs(0.4)
+	pri = inv.equipped.primary
+	sec = inv.equipped.secondary
 
 	#SECTIONS
 

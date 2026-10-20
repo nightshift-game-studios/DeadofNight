@@ -145,6 +145,44 @@ func equip(item: GearItem) -> void:
 	changed.emit()
 
 
+## Can `gear` go straight into an equip slot? "" = yes, else a refusal reason for the prompt. Skillz's
+## primary/secondary slot rule (GearDB.slot_for + its refusal) plugs in here.
+func equip_refusal(gear: GearItem) -> String:
+	if gear == null:
+		return "Nothing to equip"
+	var gdb := get_node_or_null("/root/GearDB")
+	if gdb and gdb.has_method("slot_refusal"):
+		return str(gdb.slot_refusal(gear, self))
+	return ""
+
+
+## Hold-E (playtest #3): take a ground item and equip it at once. The old piece goes to the backpack (seen);
+## with no backpack / stash room it comes back as {displaced} for the caller to drop where the new one lay.
+## Weapons are drawn. Returns {ok, displaced (GearItem|null), reason}.
+func take_and_equip(gear: GearItem) -> Dictionary:
+	var why := equip_refusal(gear)
+	if why != "":
+		return {"ok": false, "displaced": null, "reason": why}
+	var s: String = gear.slot
+	var old: GearItem = equipped.get(s)
+	var displaced: GearItem = null
+	if old:
+		if backpack[s].size() < backpack_size and not stash_full():
+			backpack[s].append(old)
+			_set_seen(old, true)
+		else:
+			displaced = old
+	equipped[s] = gear
+	_set_seen(gear, true)
+	if s in WEAPON_SLOTS:
+		(gear as WeaponItem).init_ammo()
+		equip_weapon_slot(s)
+	else:
+		armor_changed.emit()
+	changed.emit()
+	return {"ok": true, "displaced": displaced, "reason": ""}
+
+
 ## Remove an item from the backpack for good (scrap). Frees one stash space.
 func dismantle(item: GearItem) -> void:
 	if not backpack[item.slot].has(item):

@@ -120,12 +120,22 @@ func can_interact() -> bool:
 func get_prompt() -> String:
 	var gear := item as GearItem
 	if gear:
-		return "Pick up %s  (%s %s, IP %d)" % [gear.display_name, gear.rarity_name(), gear.type_name(), gear.item_power]
+		return "Pick up %s  (%s %s, IP %d)   hold: equip" % [gear.display_name, gear.rarity_name(), gear.type_name(), gear.item_power]
 	return "Pick up " + item.display_name
 
 
 func interact(player: Node) -> void:
 	if player.receive_item(item):
+		queue_free()
+
+
+## Hold E (playtest #3): gear only. Tap E still runs interact() (pick up into the backpack).
+func can_hold_interact() -> bool:
+	return item is GearItem
+
+
+func interact_hold(player: Node) -> void:
+	if item is GearItem and player.has_method("equip_from_ground") and player.equip_from_ground(item, global_position):
 		queue_free()
 
 

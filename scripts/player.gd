@@ -23,6 +23,7 @@ signal weapons_updated
 signal stats_changed
 signal pickup_prompt_changed(text: String, key_action: String) ## routed to hud.show_hint()
 signal loot_received(item: Item)
+signal interact_hold_changed(progress: float) ## hold-E equip ring: 0..1 while holding, -1 = hidden
 ## Every hit the player lands (hitscan, melee, explosions they caused). The HUD draws hit
 ## markers from it and HitSfx plays the matching hitmarker sound.
 signal hit_registered(target: Node, damage: float, is_headshot: bool, is_kill: bool)
@@ -413,6 +414,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _physics_process(delta: float) -> void:
 	_tick_timers(delta)
 	_tick_ads(delta)
+	_tick_hold(delta)
 	var on_floor := is_on_floor()
 	if on_floor and not _was_on_floor:
 		if _fall_speed > 3.5:
@@ -737,7 +739,7 @@ func wheel_swap(dir: int) -> bool:
 	var nxt := inventory.cycle_weapon_item(dir)
 	if nxt == null or not inventory.equip_weapon_item(nxt):
 		return false
-	_wheel_swap_at = now
+	_wheel_swap_at = Time.get_ticks_msec() / 1000.0 # after the view-model build, so a hitch can't eat the debounce
 	return true
 
 
@@ -1260,11 +1262,69 @@ func _update_prompt() -> void:
 	pickup_prompt_changed.emit("" if _nearby.is_empty() else _nearby[0].get_prompt(), "interact")
 
 
+## E pressed. Gear pickups (can_hold_interact) wait for the release: a tap picks up as before, holding
+## HOLD_EQUIP_TIME equips it (interact_hold). Everything else (doors, buys, chests, ammo) acts at once.
 func _interact() -> void:
 	_nearby = _nearby.filter(func(n): return is_instance_valid(n) and n.can_interact())
 	if not _nearby.is_empty():
-		_nearby[0].interact(self)
+		var n: Node = _nearby[0]
+		if n.has_method("can_hold_interact") and n.can_hold_interact():
+			_hold_target = n
+			_hold_t = 0.0
+			interact_hold_changed.emit(0.0)
+			return
+		n.interact(self)
 	_update_prompt()
+
+
+const HOLD_EQUIP_TIME := 0.4
+var _hold_target: Node = null
+var _hold_t: float = 0.0
+
+
+## Runs from _physics_process while a hold-able interact is pending.
+func _tick_hold(delta: float) -> void:
+	if _hold_target == null:
+		return
+	var n := _hold_target
+	if not is_instance_valid(n) or n not in _nearby or dead or not input_enabled:
+		_end_hold()
+		return
+	if not Input.is_action_pressed("interact"):
+		_end_hold()
+		n.interact(self) # released early: a tap
+		_update_prompt()
+		return
+	_hold_t += delta
+	interact_hold_changed.emit(clampf(_hold_t / HOLD_EQUIP_TIME, 0.0, 1.0))
+	if _hold_t >= HOLD_EQUIP_TIME:
+		_end_hold()
+		n.interact_hold(self)
+		_update_prompt()
+
+
+func _end_hold() -> void:
+	_hold_target = null
+	_hold_t = 0.0
+	interact_hold_changed.emit(-1.0)
+
+
+## Pickup.interact_hold: equip `gear` straight off the ground (Inventory.take_and_equip). A piece with no
+## backpack room is dropped where the new one lay. False (prompt shows why) if refused.
+func equip_from_ground(gear: GearItem, at: Vector3) -> bool:
+	var r: Dictionary = inventory.take_and_equip(gear)
+	if not r.ok:
+		pickup_prompt_changed.emit(str(r.reason), "")
+		return false
+	var old: GearItem = r.displaced
+	if old:
+		var m := get_tree().current_scene
+		if m and m.has_method("spawn_pickup"):
+			m.spawn_pickup(old, at, false)
+	loot_received.emit(gear)
+	_ev(&"pickup_collected", {"item": gear})
+	_snd("weapon_swap")
+	return true
 
 
 ## Pickups call this. Returns false (and shows a message) if there's no room.
