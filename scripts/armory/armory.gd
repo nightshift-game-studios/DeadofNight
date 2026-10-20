@@ -548,6 +548,7 @@ static func optic_lineup(weapon_id: String) -> Array:
 ##   fov_source ("optic" = the cap is narrower and wins, "class" = class_fov x fov_mult wins), ads_time (s), ads_time_mult, sway_mult, ads_spread_mult (x the ADS spread, 1 = class),
 ##   ads_move_mult (move speed while aiming), overlay (2D scope overlay), sight_picture ("overlay" | "3d"),
 ##   reticle_id, reticle {shape, color, size_moa}, glow {mode, energy, color}, night ("poor" | "fair" | "good"),
+##   aperture_mm (clear window diameter around the sight axis, 0 = the gun's own irons),
 ##   replaces_irons, hides, rarity, tier, cost, owned, equipped, compatible, art_status, fallback (equipped/previewed
 ##   optic without a GLB: the default sight picture shows; on the sniper that is the factory scope with its overlay + FOV), tradeoff, summary, description, drawback, icon.
 static func optic_profile(weapon_id: String, optic = null) -> Dictionary:
@@ -586,6 +587,7 @@ static func optic_profile(weapon_id: String, optic = null) -> Dictionary:
 		"overlay": bool(ad.overlay), "sight_picture": "overlay" if bool(ad.overlay) else "3d",
 		"reticle_id": str(ob.get("reticle_id", "factory_irons")), "reticle": (ob.get("reticle", {}) as Dictionary).duplicate(true),
 		"glow": (ob.get("glow", {}) as Dictionary).duplicate(true), "night": str(ob.get("night", "poor")),
+		"aperture_mm": float(ob.get("aperture_mm", 0.0)),
 		"replaces_irons": bool(ob.get("replaces_irons", false)) if oid != "" else false,
 		"hides": _optic_hides(oid, arch) if oid != "" else [],
 		"rarity": str(ob.get("rarity", "common")), "tier": int(a.get("tier", 0)), "cost": int(a.get("cost", 0)),

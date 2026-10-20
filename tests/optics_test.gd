@@ -414,9 +414,18 @@ func _run() -> void:
 		and crm.emission.is_equal_approx(Color.html(str(cg.color))),
 		"Crow's Eye (lensfix): Lens is glass, Reticle glow from data (%s %.1f %s)" % [cg.mode, cg.energy, cg.color])
 	var gr: Dictionary = Rig.apply(ar5, "auto_rifle", {"optic": "gravesight"})
-	var gl_mat := (Rig.find_node(gr.attached.optic, "Lens") as MeshInstance3D).get_surface_override_material(0) as StandardMaterial3D
-	check(A.attachment("gravesight").optic.lens == "screen" and (gl_mat == null or not gl_mat.has_meta("optic_glass")),
-		"Gravesight lens 'screen': left as authored (digital eyepiece)")
+	var g_ok: bool = A.attachment("gravesight").optic.lens == "glass" and (gr.get("lenses", []) as Array).size() >= 2
+	for gn in gr.get("lenses", []):
+		var gm := (gn as MeshInstance3D).get_surface_override_material(0) as StandardMaterial3D
+		g_ok = g_ok and gm != null and gm.has_meta("optic_glass") and gm.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA \
+			and gm.albedo_color.a <= Rig.GLASS_MAX_ALPHA + 1e-4 and gm.emission_enabled and gm.emission.g > gm.emission.r
+	var grm := (gr.reticle as MeshInstance3D).get_surface_override_material(0) as StandardMaterial3D if gr.reticle is MeshInstance3D else null
+	check(g_ok and grm != null and grm.emission.is_equal_approx(Color.html("#7CFFB2")),
+		"Gravesight (art5b): lens 'glass' -> Lens + Ocular see-through, green tint kept, #7CFFB2 cross Reticle glows")
+	var peep: Dictionary = Rig.apply(ar5, "auto_rifle", {"optic": "pinhole"})
+	var peep_mm := float(A.attachment("pinhole").optic.get("aperture_mm", 0.0))
+	check(peep.optic.status == "fitted" and peep.reticle is MeshInstance3D and peep_mm >= 2.0 and peep_mm <= 3.5,
+		"Pinhole 3 mm peep (art5b, G4M3N): fitted, pin-dot Reticle, aperture_mm %.1f in data" % peep_mm)
 	sn5.free()
 	ar5.free()
 

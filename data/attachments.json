@@ -342,7 +342,8 @@
 				"replaces_irons": false,
 				"rarity": "common",
 				"tradeoff": "cheap night aid, slightly slower",
-				"lens": "glass"
+				"lens": "glass",
+				"aperture_mm": 0.0
 			},
 			"procedural": "glow_dots"
 		},
@@ -388,7 +389,8 @@
 				"replaces_irons": true,
 				"rarity": "common",
 				"tradeoff": "fastest + steadiest, least precise",
-				"lens": "glass"
+				"lens": "glass",
+				"aperture_mm": 6.8
 			}
 		},
 		{
@@ -432,7 +434,8 @@
 				"replaces_irons": true,
 				"rarity": "common",
 				"tradeoff": "precise irons, slower, dark",
-				"lens": "glass"
+				"lens": "glass",
+				"aperture_mm": 2.2
 			}
 		},
 		{
@@ -476,7 +479,8 @@
 				"replaces_irons": true,
 				"rarity": "common",
 				"tradeoff": "best in the dark, worse headshots",
-				"lens": "glass"
+				"lens": "glass",
+				"aperture_mm": 4.6
 			}
 		},
 		{
@@ -521,7 +525,8 @@
 				"replaces_irons": true,
 				"rarity": "uncommon",
 				"tradeoff": "mobile + quick, twitchy",
-				"lens": "glass"
+				"lens": "glass",
+				"aperture_mm": 2.8
 			}
 		},
 		{
@@ -565,7 +570,8 @@
 				"replaces_irons": true,
 				"rarity": "uncommon",
 				"tradeoff": "tighter aimed fire",
-				"lens": "glass"
+				"lens": "glass",
+				"aperture_mm": 16.8
 			}
 		},
 		{
@@ -610,7 +616,8 @@
 				"replaces_irons": true,
 				"rarity": "uncommon",
 				"tradeoff": "hip fire + wide view",
-				"lens": "glass"
+				"lens": "glass",
+				"aperture_mm": 24.8
 			}
 		},
 		{
@@ -656,7 +663,8 @@
 				"replaces_irons": true,
 				"rarity": "rare",
 				"tradeoff": "first zoom, early and cheap",
-				"lens": "glass"
+				"lens": "glass",
+				"aperture_mm": 21.8
 			}
 		},
 		{
@@ -715,7 +723,8 @@
 				"replaces_irons": true,
 				"rarity": "rare",
 				"tradeoff": "reach + falloff damage, heavy",
-				"lens": "glass"
+				"lens": "glass",
+				"aperture_mm": 31.0
 			}
 		},
 		{
@@ -769,7 +778,8 @@
 				"replaces_irons": true,
 				"rarity": "rare",
 				"tradeoff": "crit zoom, slow and swaying",
-				"lens": "glass"
+				"lens": "glass",
+				"aperture_mm": 26.8
 			}
 		},
 		{
@@ -822,7 +832,8 @@
 				"replaces_irons": true,
 				"rarity": "rare",
 				"tradeoff": "most zoom + crits, slowest, tunnel vision",
-				"lens": "glass"
+				"lens": "glass",
+				"aperture_mm": 29.4
 			}
 		},
 		{
@@ -876,7 +887,8 @@
 				"replaces_irons": true,
 				"rarity": "legendary",
 				"tradeoff": "boss hunter",
-				"lens": "screen"
+				"lens": "glass",
+				"aperture_mm": 24.2
 			}
 		},
 		{
@@ -930,7 +942,8 @@
 				"replaces_irons": false,
 				"rarity": "legendary",
 				"tradeoff": "crowd damage, factory irons",
-				"lens": "glass"
+				"lens": "glass",
+				"aperture_mm": 0.0
 			}
 		},
 		{

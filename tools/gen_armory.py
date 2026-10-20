@@ -153,8 +153,7 @@ att("gravesight", "Gravesight", "optic", 3, 8, "Outlines elites and bosses throu
     drawback="ADS time +15%. Sway +10%.",
     ads={"fov": 45, "ads_time_mult": 1.15, "sway_mult": 1.1}, flags={"outline_elites": True},
     effects=[cd("target_boss", 0.15)], size="mid", unique=True,
-    extra=optic("unique", "1.8x", "grave_cross", "cross", "#7CFFB2", 3.0, "lit", 1.6, "good", tradeoff="boss hunter",
-                lens="screen"))
+    extra=optic("unique", "1.8x", "grave_cross", "cross", "#7CFFB2", 3.0, "lit", 1.6, "good", tradeoff="boss hunter"))  # art5b: lens "glass" (Desi opened the tube; green-tinted glass, G4M3N)
 att("heartbeat_counter", "Heartbeat Counter", "optic", 2, 4, "Rail box that counts the dead around you.",
     "HUD shows zombies within 10 m. +12% damage while 5 or more are that close.",
     drawback="No zoom: ADS keeps the iron-sight FOV.", flags={"heartbeat_counter": True, "heartbeat_radius": 10.0},
@@ -342,6 +341,17 @@ by_id = {a["id"]: a for a in A}
 # ---- optics pass checks (DESIGN.md §19): every optic-slot part has an optic block; the lineup is priced on the curve.
 REPO = os.path.join(ROOT, "..")
 PRICE_BANDS = {"irons": (2, 4), "dot": (2, 4), "holo": (3, 5), "prism": (4, 6), "scope": (7, 8), "unique": (4, 8)}
+# Clear aperture (mm, diameter) of each optic model around its sight axis, measured on the shipped GLBs with
+# tools/_optics/aperture.gd (16 rays parallel to the axis, 0.1 mm radius steps; glass, Reticle and the iron set's FrontPost don't
+# count). The render check samples inside this window (projected at the SightPoint); Gooey may show it as a "window" stat.
+# 0 = not measured (procedural Witchlight / Heartbeat: the gun's own irons). art5b: Pinhole = Desi's 3 mm peep (G4M3N: keep it;
+# Wicket Ring is the ghost ring), 2.8 mm clear on the faceted bore.
+APERTURE_MM = {"wicket_ring": 6.8, "mason_notch": 2.2, "foxfire_post": 4.6, "pinhole": 2.8, "lamplight_reflex": 16.8,
+               "tallow_holo": 24.8, "kilnglass_2x": 21.8, "crows_eye_3x": 31.0, "longwatch_6x": 26.8, "belfry_8x": 29.4,
+               "gravesight": 24.2}
+for a in A:
+    if "optic" in a:
+        a["optic"]["aperture_mm"] = APERTURE_MM.get(a["id"], 0.0)
 LINEUP = [a["id"] for a in A if a["slot"] == "optic"]
 for a in A:
     if a["slot"] != "optic":
