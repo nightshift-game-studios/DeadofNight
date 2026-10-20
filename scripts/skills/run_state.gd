@@ -21,6 +21,7 @@ signal offer_closed(result: String, card_id: String) ## result: "chosen" | "skip
 signal card_picked(card_id: String, new_rank: int)
 signal cards_changed
 signal rerolled(cost: int, free: bool)
+signal reroll_refused(reason: String) ## NET M13: co-op paid reroll refused by the host / timed out (not charged)
 signal banished(card_id: String)
 
 const PICKS_PATH := "res://data/run_picks.json"
@@ -41,6 +42,9 @@ var offer_round: int = 0
 var offer_is_milestone: bool = false
 var offer_open: bool = false
 var rerolls_paid_this_offer: int = 0
+var reroll_pending: bool = false ## NET M13: a co-op paid reroll is waiting for the host's answer
+var last_refusal_reason: String = "" ## NET M13: "" or why the last co-op reroll wasn't charged ("points", "timeout", "offer_closed")
+var _reroll_req: int = 0 ## NET M13: id of the co-op reroll in flight; clear() / open_offer() bump it so a stale answer is ignored
 var banished_this_offer: int = 0
 var picks_log: Array = [] ## [[round, id, rank]]
 var rng := RandomNumberGenerator.new()
@@ -126,6 +130,9 @@ func clear() -> void:
 	offer.clear()
 	offer_open = false
 	rerolls_paid_this_offer = 0
+	reroll_pending = false # NET M13
+	last_refusal_reason = ""
+	_reroll_req += 1
 	banished_this_offer = 0
 	clear_time_scale()
 	refresh_allowances()
@@ -251,6 +258,9 @@ func open_offer(round_number: int) -> Array:
 	offer_round = round_number
 	offer_is_milestone = is_milestone(round_number)
 	rerolls_paid_this_offer = 0
+	reroll_pending = false # NET M13
+	last_refusal_reason = ""
+	_reroll_req += 1
 	banished_this_offer = 0
 	offer = roll_offer(round_number)
 	offer_open = true
@@ -277,15 +287,17 @@ func reroll_cost() -> int:
 
 
 func can_reroll() -> bool:
-	return offer_open and (free_rerolls > 0 or (player != null and player.points >= reroll_cost()))
+	return offer_open and not reroll_pending and (free_rerolls > 0 or (player != null and player.points >= reroll_cost()))
 
 
 ## Spends a free reroll or points (player.spend_points) and redraws the whole offer.
 func reroll() -> bool:
-	if not offer_open:
+	if not offer_open or reroll_pending:
 		return false
 	var free := free_rerolls > 0
 	var cost := reroll_cost()
+	if not free and NetGate.is_networked(): # NET M13: co-op paid reroll is charged by the host (solo: unchanged below)
+		return _net_reroll(cost)
 	if free:
 		free_rerolls -= 1
 	elif player == null or not player.spend_points(cost):
@@ -296,6 +308,33 @@ func reroll() -> bool:
 	rerolled.emit(cost, free)
 	offer_ready.emit(offer_entries(), offer_is_milestone)
 	return true
+
+
+## NET M13: the host charges `cost` (spend_with_callback); the offer redraws on its "yes". Refused / no answer within
+## net.json spend.timeout_s -> not charged, last_refusal_reason + reroll_refused. A "yes" for an offer that closed
+## meanwhile is refunded. Returns true only if it already rerolled (host player); a client gets false + reroll_pending.
+func _net_reroll(cost: int) -> bool:
+	_reroll_req += 1
+	var req := _reroll_req
+	reroll_pending = true
+	last_refusal_reason = ""
+	NetGate.spend_with_callback(cost, "reroll", func(ok: bool, why: String) -> bool:
+		if req != _reroll_req:
+			return false # answer for an offer that was closed / reset meanwhile: a "yes" is refunded, state untouched
+		reroll_pending = false
+		if ok and not offer_open:
+			ok = false
+			why = "offer_closed"
+		if not ok:
+			last_refusal_reason = why
+			reroll_refused.emit(why)
+			return false
+		rerolls_paid_this_offer += 1
+		offer = roll_offer(offer_round)
+		rerolled.emit(cost, false)
+		offer_ready.emit(offer_entries(), offer_is_milestone)
+		return true)
+	return not reroll_pending and last_refusal_reason == ""
 
 
 func skip_reward() -> int:

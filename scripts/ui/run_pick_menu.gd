@@ -24,6 +24,7 @@ var _reroll_btn: Button
 var _skip_btn: Button
 var _banish_btn: Button
 var _hint: RichTextLabel
+var refusal_label: Label ## NET M13: "REROLL REFUSED (...)" after a refused co-op reroll; cleared by the next offer
 var _focus_slot: int = 0
 
 
@@ -44,6 +45,8 @@ func _ready() -> void:
 	RunState.rerolled.connect(func(_c, _f): _ui_snd("ui_equip"))
 	RunState.banished.connect(func(_i): _ui_snd("ui_scrap_dismantle"))
 	RunState.cards_changed.connect(_refresh_run_list)
+	if RunState.has_signal("reroll_refused"): # NET M13: a co-op paid reroll the host refused / timed out
+		RunState.reroll_refused.connect(_on_reroll_refused)
 
 
 # ---------------------------------------------------------------- build
@@ -76,6 +79,10 @@ func _build() -> void:
 	_reroll_btn = _action_btn("R", acts, do_reroll)
 	_skip_btn = _action_btn("S", acts, do_skip)
 	_banish_btn = _action_btn("B", acts, toggle_banish)
+	refusal_label = UIStyle.label("", 12, UIStyle.BAD, true)
+	refusal_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	refusal_label.visible = false
+	content.add_child(refusal_label)
 	_hint = _rich(11, 900)
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(_hint)
@@ -158,6 +165,8 @@ func _on_offer_ready(cards: Array, is_milestone: bool) -> void:
 	_entries = cards
 	_milestone = is_milestone
 	_banish_mode = false
+	if refusal_label:
+		refusal_label.visible = false
 	if not was_open:
 		_focus_slot = 0
 		_ui_snd("loot_drop_legendary" if is_milestone else "menu_open")
@@ -173,6 +182,17 @@ func _on_offer_closed(result: String, _id: String) -> void:
 	_ui_snd("menu_close")
 	visible = false
 	_banish_mode = false
+
+
+## NET M13 (Skillz review): refresh the offer (button state, cost, points) and say why.
+const REFUSAL_TEXT := {"points": "not enough points", "timeout": "host didn't answer", "offer_closed": "offer closed"}
+func _on_reroll_refused(reason: String) -> void:
+	if not visible:
+		return
+	refresh()
+	var why: String = REFUSAL_TEXT.get(reason, reason)
+	refusal_label.text = ("REROLL REFUSED (%s)" % why if why != "" else "REROLL REFUSED").to_upper()
+	refusal_label.visible = true
 
 
 func refresh() -> void:

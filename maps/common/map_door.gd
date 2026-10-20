@@ -82,6 +82,8 @@ func get_prompt() -> String:
 
 
 func interact(player: Node) -> void:
+	if NetGate.door_interact(self, player): # NET M13: co-op -> host charges the opener, open() runs on every peer; solo: false
+		return
 	if is_open:
 		return
 	if player and player.has_method("spend_points") and not player.spend_points(cost):
