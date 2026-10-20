@@ -5,8 +5,8 @@
 A first-person, wave-based zombie shooter in the style of Black Ops Zombies, with looter-shooter gear.
 It's made by Nightshift Game Studios.
 
-- **Repository:** https://github.com/nightshift-game-studios/DeadofNight
-- **Download:** https://github.com/nightshift-game-studios/DeadofNight/releases
+- **Repository:** https://github.com/nightshift-game-studios/Gravecrew
+- **Download:** https://github.com/nightshift-game-studios/Gravecrew/releases
 
 - **Survive rounds** of zombies that get faster and tougher every wave. Walkers come first, then foundry workers and armored soldiers.
 - **Pick a class.** **Soldier** gets Dash and a Frag grenade. **Scout** gets Adrenaline and a Tremor Charge.
@@ -23,7 +23,7 @@ It's made by Nightshift Game Studios.
 The game ships as a Godot project. You play it with the free Godot engine, so there's nothing to compile.
 
 ### 1. Download the game
-1. Open the **Releases** page: **https://github.com/nightshift-game-studios/DeadofNight/releases**
+1. Open the **Releases** page: **https://github.com/nightshift-game-studios/Gravecrew/releases**
 2. Download **the latest release zip** (`fps-starter-full.zip`).
    - If the release has split parts (`fps-starter-full.zip.001`, `.002`, …), download all of them into one folder.
      Open PowerShell in that folder and run this to join them into one zip:
@@ -142,9 +142,9 @@ tests/               Headless test suites
 
 ### Get the source
 ```
-git clone https://github.com/nightshift-game-studios/DeadofNight.git
+git clone https://github.com/nightshift-game-studios/Gravecrew.git
 ```
-Then import `DeadofNight/project.godot` in Godot 4.7 as above.
+Then import `Gravecrew/project.godot` in Godot 4.7 as above.
 
 ### Running the tests
 From a terminal in the project folder (with `godot` pointing at your Godot 4.7 executable):
