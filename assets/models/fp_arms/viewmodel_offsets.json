@@ -1,0 +1,149 @@
+{
+ "_note": "PROPOSAL for Skillz (via Desi). fps-starter NOT edited. view.offset that puts the camera at the fp_arms v2 solved hip eye at real scale (arms 1.0). view.length unchanged. Camera space metres: x right, y up, -z forward. Without it the arms still attach correctly via GripR/GripL, but the framing is the current offset, not the solved one.",
+ "guns": {
+  "sidearm": {
+   "weapon_file": "weapon_pistol.glb",
+   "view_length": 0.26,
+   "current_offset": [
+    0.2,
+    -0.2,
+    -0.42
+   ],
+   "proposed_offset": [
+    0.1967,
+    -0.1127,
+    -0.3812
+   ],
+   "hip_width_frac": 0.16912694622871743,
+   "eye_clearance_mm": 381.7
+  },
+  "hand_cannon": {
+   "weapon_file": "weapon_hand_cannon.glb",
+   "view_length": 0.3,
+   "current_offset": [
+    0.2,
+    -0.2,
+    -0.42
+   ],
+   "proposed_offset": [
+    0.2425,
+    -0.1359,
+    -0.4525
+   ],
+   "hip_width_frac": 0.1718583591988179,
+   "eye_clearance_mm": 402.8
+  },
+  "auto_rifle": {
+   "weapon_file": "weapon_assault_rifle.glb",
+   "view_length": 0.62,
+   "current_offset": [
+    0.2,
+    -0.22,
+    -0.5
+   ],
+   "proposed_offset": [
+    0.0616,
+    -0.0965,
+    -0.2644
+   ],
+   "hip_width_frac": 0.4636616384708736,
+   "eye_clearance_mm": 112.9
+  },
+  "scout_rifle": {
+   "weapon_file": "weapon_scout_rifle.glb",
+   "view_length": 0.66,
+   "current_offset": [
+    0.2,
+    -0.22,
+    -0.5
+   ],
+   "proposed_offset": [
+    0.0541,
+    -0.0683,
+    -0.2352
+   ],
+   "hip_width_frac": 0.35589931860994833,
+   "eye_clearance_mm": 86.6
+  },
+  "smg": {
+   "weapon_file": "weapon_smg.glb",
+   "view_length": 0.42,
+   "current_offset": [
+    0.2,
+    -0.2,
+    -0.44
+   ],
+   "proposed_offset": [
+    0.068,
+    -0.0777,
+    -0.1938
+   ],
+   "hip_width_frac": 0.2657466671062761,
+   "eye_clearance_mm": 105.7
+  },
+  "shotgun": {
+   "weapon_file": "weapon_shotgun.glb",
+   "view_length": 0.62,
+   "current_offset": [
+    0.2,
+    -0.22,
+    -0.5
+   ],
+   "proposed_offset": [
+    0.0418,
+    -0.0673,
+    -0.2116
+   ],
+   "hip_width_frac": 0.20792456054151348,
+   "eye_clearance_mm": 82.1
+  },
+  "pulse_rifle": {
+   "weapon_file": "weapon_lmg.glb",
+   "view_length": 0.62,
+   "current_offset": [
+    0.2,
+    -0.22,
+    -0.5
+   ],
+   "proposed_offset": [
+    0.0535,
+    -0.0671,
+    -0.2411
+   ],
+   "hip_width_frac": 0.32930865152576166,
+   "eye_clearance_mm": 107.6
+  },
+  "sniper_rifle": {
+   "weapon_file": "weapon_sniper.glb",
+   "view_length": 0.8,
+   "current_offset": [
+    0.2,
+    -0.22,
+    -0.55
+   ],
+   "proposed_offset": [
+    0.0288,
+    -0.0888,
+    -0.311
+   ],
+   "hip_width_frac": 0.17829721212534294,
+   "eye_clearance_mm": 84.8
+  },
+  "rocket_launcher": {
+   "weapon_file": "weapon_rocket_launcher.glb",
+   "view_length": 0.6,
+   "current_offset": [
+    0.22,
+    -0.22,
+    -0.45
+   ],
+   "proposed_offset": [
+    0.063,
+    -0.0305,
+    -0.1818
+   ],
+   "hip_width_frac": 0.4624816805036449,
+   "eye_clearance_mm": 98.3
+  }
+ }
+}

@@ -46,6 +46,11 @@ const ArmoryScr := preload("res://scripts/armory/armory.gd")
 const WeaponRigScr := preload("res://scripts/gear/weapon_rig.gd") ## Armory attachments on the view model (Skillz art pass)
 var _gun_model: Node3D ## current first-person gun model (re-fitted when the Armory loadout changes)
 var _gun_rig: Dictionary = {} ## last WeaponRig.apply() result: attached / hidden / missing / muzzle / sight / lamp
+const FPArmsScr := preload("res://scripts/gear/fp_arms.gd") ## Desi fp_arms v2: first-person arms on the view model
+const ADS_NEAR := 0.002 ## camera near plane while aiming (fp_arms v2: stops stocks / tubes clipping the ADS eye black)
+var _fp_arms: Node3D ## arms instance under _gun_model (null without a gun / arms clips)
+var arms_tint = "P1" ## forearm band colour: "P1".."P4" or a Color (co-op sets the local player's own colour)
+var _hip_near: float = 0.02 ## camera.near outside ADS (read from the scene in _ready)
 ## Mine Lamp (Skillz §10 + Mapz): camera SpotLight3D, F to toggle, gated on Armory.has_flashlight(archetype) (Mine Lamp or Lantern Rail).
 var _flashlight: SpotLight3D
 var _flashlight_on: bool = false
@@ -186,6 +191,7 @@ func _ready() -> void:
 	_shape = collision.shape.duplicate()
 	collision.shape = _shape
 	_gun_rest = gun.position
+	_hip_near = camera.near
 	flash.visible = false
 	_base_wall_jumps = max_wall_jumps
 	_base_wall_jump_up = wall_jump_up
@@ -724,6 +730,7 @@ func set_viewmodel_hidden(hidden: bool) -> void:
 func _build_view_model(w: WeaponItem) -> void:
 	for c in gun_model_root.get_children():
 		c.queue_free()
+	_fp_arms = null
 	gun.visible = not viewmodel_hidden_by_scope
 	var view: Dictionary = w.arch.get("view", {})
 	var length: float = float(view.get("length", 0.4))
@@ -746,6 +753,13 @@ func _build_view_model(w: WeaponItem) -> void:
 	muzzle.position = Vector3(0, top * 0.55, -length * 0.5) # fallback for guns without a Muzzle socket
 	_gun_model = model
 	_fit_attachments(w)
+	_fp_arms = FPArmsScr.attach(model, w.archetype, FPArmsScr.TINTS.get(arms_tint, FPArmsScr.TINTS.P1) if arms_tint is String else arms_tint)
+
+
+## Forearm band colour of the first-person arms ("P1".."P4" or a Color).
+func set_arms_tint(c) -> void:
+	arms_tint = c
+	FPArmsScr.set_tint(_fp_arms, c)
 
 
 func _aim_point(max_dist: float) -> Vector3:
@@ -801,6 +815,7 @@ func _fire_round(w: WeaponItem) -> void:
 	_ev(&"shot_fired", {"weapon": w, "ammo_after": w.ammo, "last_round": last_round})
 	emit_ammo()
 	WeaponRigScr.on_fire(_gun_rig, w.ammo, minf(w.fire_interval(), 1.0)) # revolver cylinder turns, launcher Rocket hides
+	FPArmsScr.on_fire(_fp_arms) # <arch>_Fire one-shot
 	var any_hit := false
 
 	var base_damage := w.damage() * PerkSystem.damage_mult(w, self)
@@ -961,6 +976,7 @@ func reload() -> void:
 	_reload_tween.tween_interval(t * 0.2)
 	_reload_tween.tween_property(gun, "rotation_degrees:x", 0.0, t * 0.4)
 	_reload_tween.tween_callback(_finish_reload.bind(w))
+	FPArmsScr.on_reload(_fp_arms, _gun_model, t) # <arch>_Reload at clip length / t + reload_parts.json part motions
 
 
 func _finish_reload(w: WeaponItem) -> void:
@@ -971,6 +987,7 @@ func _finish_reload(w: WeaponItem) -> void:
 	w.ammo += taken
 	w.reserve -= taken
 	WeaponRigScr.on_reload(_gun_rig, 0.0) # Rocket visible even when the reload was finished early (Slide Loader)
+	FPArmsScr.reset_parts(_gun_model)
 	PerkSystem.on_reload(w)
 	emit_ammo()
 	_ev(&"reload_finished", {"weapon": w})
@@ -1000,6 +1017,7 @@ func _cancel_reload() -> void:
 	_reloading = false
 	if gun:
 		gun.rotation_degrees.x = 0.0
+	FPArmsScr.reset_parts(_gun_model)
 
 
 ## Top up primary/secondary reserves at round start (heavy ammo comes from drops).
@@ -1350,6 +1368,8 @@ func _tick_ads(_delta: float) -> void:
 	ads_blend = AdsProfileScr.step_blend(ads_blend, ads_active, _delta, arch) # §18: in over the build's ADS time
 	if camera:
 		camera.fov = AdsProfileScr.blend_fov(ads_blend, arch, _hip_fov)
+		camera.near = ADS_NEAR if ads_blend > 0.0 else _hip_near # fp_arms v2: every gun, rocket launcher included
+	FPArmsScr.set_ads(_fp_arms, ads_blend > 0.0)
 
 
 # ------------------------------------------------------------------ Mine Lamp (Skillz §10)

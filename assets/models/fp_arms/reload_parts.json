@@ -1,0 +1,275 @@
+{
+ "_doc": "Gravecrew fp_arms: gun-side part motions for the <id>_Reload clips (NOT baked into the arms or the gun GLBs). t = fraction of the clip length (= weapons.json base_reload). Code or a gun-side AnimationPlayer moves these nodes; the left hand in the arms clip is keyed to meet them.",
+ "guns": {
+  "sidearm": {
+   "glb": "weapons/weapon_pistol.glb",
+   "clip": "sidearm_Reload",
+   "length_s": 1.2,
+   "type": "mag",
+   "parts": [
+    {
+     "node": "DefaultMag",
+     "motion": "detach + drop 10 cm (gun -Y) while left hand holds it",
+     "t0": 0.25,
+     "t1": 0.38
+    },
+    {
+     "node": "DefaultMag",
+     "motion": "hidden / new mag spawned in left hand",
+     "t0": 0.5,
+     "t1": 0.62
+    },
+    {
+     "node": "DefaultMag",
+     "motion": "insert from -8 cm to seated",
+     "t0": 0.62,
+     "t1": 0.74
+    },
+    {
+     "node": "DefaultMag",
+     "motion": "slap (+0.8 cm) then rest",
+     "t0": 0.74,
+     "t1": 0.8
+    }
+   ]
+  },
+  "hand_cannon": {
+   "glb": "weapons/weapon_hand_cannon.glb",
+   "clip": "hand_cannon_Reload",
+   "length_s": 1.6,
+   "type": "revolver",
+   "parts": [
+    {
+     "node": "Cylinder",
+     "motion": "swing out to gun-left ~80 deg about its crane axis (front-lower edge)",
+     "t0": 0.15,
+     "t1": 0.35
+    },
+    {
+     "node": "(speedloader)",
+     "motion": "spawn in left hand, insert into the cylinder rear",
+     "t0": 0.5,
+     "t1": 0.65
+    },
+    {
+     "node": "Cylinder",
+     "motion": "swing closed",
+     "t0": 0.75,
+     "t1": 0.85
+    }
+   ]
+  },
+  "auto_rifle": {
+   "glb": "weapons/weapon_assault_rifle.glb",
+   "clip": "auto_rifle_Reload",
+   "length_s": 1.9,
+   "type": "mag",
+   "parts": [
+    {
+     "node": "DefaultMag",
+     "motion": "detach + drop 10 cm (gun -Y) while left hand holds it",
+     "t0": 0.25,
+     "t1": 0.38
+    },
+    {
+     "node": "DefaultMag",
+     "motion": "hidden / new mag spawned in left hand",
+     "t0": 0.5,
+     "t1": 0.62
+    },
+    {
+     "node": "DefaultMag",
+     "motion": "insert from -8 cm to seated",
+     "t0": 0.62,
+     "t1": 0.74
+    },
+    {
+     "node": "DefaultMag",
+     "motion": "slap (+0.8 cm) then rest",
+     "t0": 0.74,
+     "t1": 0.8
+    }
+   ]
+  },
+  "scout_rifle": {
+   "glb": "weapons/weapon_scout_rifle.glb",
+   "clip": "scout_rifle_Reload",
+   "length_s": 1.8,
+   "type": "mag",
+   "parts": [
+    {
+     "node": "DefaultMag",
+     "motion": "detach + drop 10 cm (gun -Y) while left hand holds it",
+     "t0": 0.25,
+     "t1": 0.38
+    },
+    {
+     "node": "DefaultMag",
+     "motion": "hidden / new mag spawned in left hand",
+     "t0": 0.5,
+     "t1": 0.62
+    },
+    {
+     "node": "DefaultMag",
+     "motion": "insert from -8 cm to seated",
+     "t0": 0.62,
+     "t1": 0.74
+    },
+    {
+     "node": "DefaultMag",
+     "motion": "slap (+0.8 cm) then rest",
+     "t0": 0.74,
+     "t1": 0.8
+    }
+   ]
+  },
+  "smg": {
+   "glb": "weapons/weapon_smg.glb",
+   "clip": "smg_Reload",
+   "length_s": 1.5,
+   "type": "mag",
+   "parts": [
+    {
+     "node": "DefaultMag",
+     "motion": "detach + drop 10 cm (gun -Y) while left hand holds it",
+     "t0": 0.25,
+     "t1": 0.38
+    },
+    {
+     "node": "DefaultMag",
+     "motion": "hidden / new mag spawned in left hand",
+     "t0": 0.5,
+     "t1": 0.62
+    },
+    {
+     "node": "DefaultMag",
+     "motion": "insert from -8 cm to seated",
+     "t0": 0.62,
+     "t1": 0.74
+    },
+    {
+     "node": "DefaultMag",
+     "motion": "slap (+0.8 cm) then rest",
+     "t0": 0.74,
+     "t1": 0.8
+    }
+   ]
+  },
+  "shotgun": {
+   "glb": "weapons/weapon_shotgun.glb",
+   "clip": "shotgun_Reload",
+   "length_s": 2.3,
+   "type": "shells",
+   "parts": [
+    {
+     "node": "(shell)",
+     "motion": "spawn in left hand, push into loading port x0.08 y-0.013",
+     "t0": 0.25,
+     "t1": 0.45
+    },
+    {
+     "node": "(shell)",
+     "motion": "second shell",
+     "t0": 0.55,
+     "t1": 0.75
+    },
+    {
+     "node": "pump",
+     "motion": "pump rack NOT possible: pump is baked into Body (gap)",
+     "t0": 0.0,
+     "t1": 0.0
+    }
+   ]
+  },
+  "pulse_rifle": {
+   "glb": "weapons/weapon_lmg.glb",
+   "clip": "pulse_rifle_Reload",
+   "length_s": 1.8,
+   "type": "box",
+   "parts": [
+    {
+     "node": "(lid)",
+     "motion": "feed-cover lid opens: no Lid node exists (gap) - hand mimes lifting at x0.18 y0.157",
+     "t0": 0.12,
+     "t1": 0.2
+    },
+    {
+     "node": "DefaultMag",
+     "motion": "box: detach, down 12 cm + out 6 cm",
+     "t0": 0.32,
+     "t1": 0.44
+    },
+    {
+     "node": "DefaultMag",
+     "motion": "new box in from -10 cm, seated",
+     "t0": 0.66,
+     "t1": 0.74
+    },
+    {
+     "node": "(lid)",
+     "motion": "lid closed by the hand",
+     "t0": 0.84,
+     "t1": 0.9
+    }
+   ]
+  },
+  "rocket_launcher": {
+   "glb": "weapons/weapon_rocket_launcher.glb",
+   "clip": "rocket_launcher_Reload",
+   "length_s": 2.2,
+   "type": "cassette",
+   "parts": [
+    {
+     "node": "DefaultMag",
+     "motion": "rear breech cassette: pull down 10 cm with the left hand",
+     "t0": 0.28,
+     "t1": 0.4
+    },
+    {
+     "node": "DefaultMag",
+     "motion": "swap / new cassette in hand",
+     "t0": 0.52,
+     "t1": 0.64
+    },
+    {
+     "node": "DefaultMag",
+     "motion": "seat from -8 cm, push +0.8 cm",
+     "t0": 0.64,
+     "t1": 0.82
+    }
+   ]
+  },
+  "sniper_rifle": {
+   "glb": "weapons/weapon_sniper.glb",
+   "clip": "sniper_rifle_Reload",
+   "length_s": 2.4,
+   "type": "mag",
+   "parts": [
+    {
+     "node": "DefaultMag",
+     "motion": "detach + drop 10 cm (gun -Y) while left hand holds it",
+     "t0": 0.25,
+     "t1": 0.38
+    },
+    {
+     "node": "DefaultMag",
+     "motion": "hidden / new mag spawned in left hand",
+     "t0": 0.5,
+     "t1": 0.62
+    },
+    {
+     "node": "DefaultMag",
+     "motion": "insert from -8 cm to seated",
+     "t0": 0.62,
+     "t1": 0.74
+    },
+    {
+     "node": "DefaultMag",
+     "motion": "slap (+0.8 cm) then rest",
+     "t0": 0.74,
+     "t1": 0.8
+    }
+   ]
+  }
+ }
+}
