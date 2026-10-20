@@ -54,29 +54,127 @@ def att(id, name, slot, tier, cost, summary, desc, mods=None, ads=None, flags=No
     A.append(a)
 
 # ---------------- optics (Rail)
+# Optics pass (2026-10-19, Jason via G4M3N): a sight lineup players choose between. DESIGN.md §19, DESI_OPTICS.md, GOOEY_OPTICS.md.
+# Each optic-slot part carries an "optic" block (presentation + lineup facts, Armory.optic_profile) and ADS keys merged
+# per class by AdsProfile: fov (absolute ADS FOV; magnified glass: from the true magnification vs the 75 deg hip view),
+# fov_mult (x the class iron-sight FOV; iron variants), ads_time_mult, sway_mult, spread_mult, move_mult.
+import math
+HIP_FOV = 75.0
+def mag_fov(m):  # true magnification m -> ADS FOV (deg) against the default 75 deg hip view
+    return round(math.degrees(2 * math.atan(math.tan(math.radians(HIP_FOV / 2)) / m)), 1)
+OVERLAY_MIN_MAG = 4.0  # 4x and up use Gooey's 2D scope overlay; below that the 3D sight picture through the model
+OPTIC_TYPES = ["irons", "dot", "holo", "prism", "scope", "unique"]
+RARITY = {"irons": "common", "dot": "uncommon", "holo": "uncommon", "prism": "rare", "scope": "rare", "unique": "legendary"}
+def optic(type, label, reticle_id, shape, color, size_moa, glow_mode, glow_energy, night, mag=0.0, overlay=None,
+          replaces_irons=True, rarity=None, tradeoff=""):
+    return {"optic": {
+        "type": type, "label": label, "magnification": mag, "reticle_id": reticle_id,
+        "reticle": {"shape": shape, "color": color, "size_moa": size_moa},
+        "overlay": (mag >= OVERLAY_MIN_MAG) if overlay is None else overlay,
+        "glow": {"mode": glow_mode, "energy": glow_energy, "color": color}, "night": night,
+        "replaces_irons": replaces_irons, "rarity": rarity or RARITY[type], "tradeoff": tradeoff}}
+NOT_SNIPER = [c for c in CLASSES if c != "sniper_rifle"]
+
+# -- iron-sight variants (micro: every gun). They REPLACE the factory IronSights (slot hides), except Witchlight Dabs,
+#    which is paint on the factory irons (hides [] and no model: WeaponRig adds three glow dots to the gun's own sights).
+att("witchlight_dabs", "Witchlight Dabs", "optic", 1, 2, "Glow paint on your own irons: readable after dusk.",
+    "Factory irons with three faint green dots (rear pair + front post). No zoom change.",
+    drawback="ADS time +5%: the dots pull the eye.", ads={"ads_time_mult": 1.05}, size="micro", classes=NOT_SNIPER,
+    hides=[], extra=dict(optic("irons", "Irons", "three_dot", "three_dot", "#B8F5A0", 1.5, "dim", 1.2, "fair",
+                               replaces_irons=False, tradeoff="cheap night aid, slightly slower"), model="", procedural="glow_dots"))
+att("wicket_ring", "Wicket Ring", "optic", 1, 2, "Wide ghost ring: snap onto targets, see around them.",
+    "Rear aperture + thin post. ADS time -20%, sway -15%, a slightly wider ADS view (x1.06).",
+    drawback="ADS spread +12%: a coarse picture at range.",
+    ads={"fov_mult": 1.06, "ads_time_mult": 0.8, "sway_mult": 0.85, "spread_mult": 1.12}, size="micro",
+    extra=optic("irons", "Irons", "ghost_ring", "ghost_ring", "#2A2622", 0, "none", 0.0, "poor",
+                tradeoff="fastest + steadiest, least precise"))
+att("mason_notch", "Mason's Notch", "optic", 1, 3, "Square notch and flat post for careful shots.",
+    "Notch-and-post irons. ADS spread -15%, ADS view x0.94 (a touch of zoom).",
+    drawback="ADS time +10%. Black steel: hard to read at night.",
+    ads={"fov_mult": 0.94, "ads_time_mult": 1.1, "spread_mult": 0.85}, size="micro",
+    extra=optic("irons", "Irons", "notch_post", "notch_post", "#2A2622", 0, "none", 0.0, "poor",
+                tradeoff="precise irons, slower, dark"))
+att("foxfire_post", "Foxfire Post", "optic", 1, 4, "Rotten-wood glow bead you can find in pitch dark.",
+    "Wide U-notch + a bright foxfire bead. ADS time -5%. The bead glows in the dark.",
+    drawback="Precision multiplier -0.1: the fat bead hides distant heads.",
+    ads={"ads_time_mult": 0.95}, mods={"headshot_add": -0.1}, size="micro",
+    extra=optic("irons", "Irons", "glow_bead", "glow_bead", "#9CFF7A", 4.0, "tritium", 2.5, "good",
+                tradeoff="best in the dark, worse headshots"))
+
+# -- reflex / holo (1x-ish; the class iron FOV still wins on rifles: narrowest of class and optic)
 att("pinhole", "Pinhole", "optic", 1, 2, "Pistol dot: light zoom, stay mobile while aiming.",
-    "ADS zoom 62 FOV. ADS movement penalty halved.", ads={"fov": 62, "move_mult": 1.2}, size="micro")
-att("lamplight_reflex", "Lamplight Reflex", "optic", 1, 3, "Warm reflex dot that tightens aimed fire.",
-    "ADS zoom 60 FOV. ADS spread -20%.", ads={"fov": 60, "spread_mult": 0.8}, size="short")
-att("tallow_holo", "Tallow Holo", "optic", 1, 3, "Wide holo window you can fire from the hip.",
-    "ADS zoom 58 FOV. Hip-fire spread -15%.", ads={"fov": 58}, mods={"hip_spread_mult": 0.85}, size="short")
+    "ADS zoom 62 FOV. ADS movement penalty halved. ADS time -10%.", ads={"fov": 62, "move_mult": 1.2, "ads_time_mult": 0.9, "sway_mult": 1.1},
+    drawback="Tiny window: sway +10%.", size="micro",
+    extra=optic("dot", "1x", "pin_dot", "dot", "#FF4A2E", 2.0, "lit", 1.4, "good", tradeoff="mobile + quick, twitchy"))
+att("lamplight_reflex", "Lamplight Reflex", "optic", 1, 4, "Warm reflex dot that tightens aimed fire.",
+    "ADS zoom 60 FOV. ADS spread -20%.", drawback="Hooded window: ADS time +5%.",
+    ads={"fov": 60, "spread_mult": 0.8, "ads_time_mult": 1.05}, size="short",
+    extra=optic("dot", "1x", "amber_dot", "dot", "#FFB347", 3.0, "lit", 1.6, "good", tradeoff="tighter aimed fire"))
+att("tallow_holo", "Tallow Holo", "optic", 1, 4, "Wide holo window you can fire from the hip.",
+    "ADS zoom 58 FOV. Hip-fire spread -15%.", drawback="ADS time +5%: a heavier box.",
+    ads={"fov": 58, "ads_time_mult": 1.05}, mods={"hip_spread_mult": 0.85}, size="short",
+    extra=optic("holo", "1x", "tallow_ring", "ring_dot", "#F2E6C8", 65.0, "lit", 1.3, "good", tradeoff="hip fire + wide view"))
+
+# -- mid-range glass (3D sight picture through the model)
+att("kilnglass_2x", "Kilnglass 2x", "optic", 1, 4, "Squat furnace-glass prism for the middle distance.",
+    "2x: ADS zoom %.1f FOV. ADS spread -10%%." % mag_fov(2.0),
+    drawback="ADS time +15%. Sway +15%. ADS movement -10%.",
+    ads={"fov": mag_fov(2.0), "ads_time_mult": 1.15, "sway_mult": 1.15, "spread_mult": 0.9, "move_mult": 0.9}, size="mid",
+    extra=optic("prism", "2x", "kiln_chevron", "chevron", "#FF6A2A", 4.0, "lit", 1.2, "fair", mag=2.0,
+                tradeoff="first zoom, early and cheap"))
 att("crows_eye_3x", "Crow's Eye 3x", "optic", 2, 5, "Prism scope that punishes targets past falloff.",
-    "ADS zoom 40 FOV. +15% damage beyond falloff range while aiming.",
-    drawback="ADS movement -15%.", ads={"fov": 40, "move_mult": 0.85},
-    effects=[cd(["ads", "beyond_falloff"], 0.15, sources=["gun"])], size="mid")
+    "3x: ADS zoom %.1f FOV. +15%% damage beyond falloff range while aiming." % mag_fov(3.0),
+    drawback="ADS time +25%. Sway +30%. ADS movement -15%.",
+    ads={"fov": mag_fov(3.0), "move_mult": 0.85, "ads_time_mult": 1.25, "sway_mult": 1.3},
+    effects=[cd(["ads", "beyond_falloff"], 0.15, sources=["gun"])], size="mid",
+    extra=optic("prism", "3x", "crow_foot", "crow_foot", "#E3D9BD", 6.0, "dim", 0.6, "fair", mag=3.0,
+                tradeoff="reach + falloff damage, heavy"))
+
+# -- high zoom (Gooey's 2D scope overlay)
 att("longwatch_6x", "Longwatch 6x", "optic", 3, 7, "Long scope with a full overlay and heavier crits.",
-    "ADS zoom 22 FOV with scope overlay. Precision multiplier +0.4.",
-    drawback="Hip-fire spread +40%. ADS movement -25%.", ads={"fov": 22, "move_mult": 0.75},
-    mods={"headshot_add": 0.4, "hip_spread_mult": 1.4}, flags={"scope_overlay": True}, classes=LONG, size="long")
+    "6x: ADS zoom %.1f FOV with scope overlay. Precision multiplier +0.4." % mag_fov(6.0),
+    drawback="ADS time +45%. Sway +60%. Hip-fire spread +40%. ADS movement -25%.",
+    ads={"fov": mag_fov(6.0), "move_mult": 0.75, "ads_time_mult": 1.45, "sway_mult": 1.6},
+    mods={"headshot_add": 0.4, "hip_spread_mult": 1.4}, flags={"scope_overlay": True}, classes=LONG, size="long",
+    extra=optic("scope", "6x", "longwatch_mil", "mil_dot", "#E3D9BD", 0.0, "none", 0.0, "poor", mag=6.0,
+                tradeoff="crit zoom, slow and swaying"))
+att("belfry_8x", "Belfry 8x", "optic", 3, 8, "Bell-tower glass: see the far dead before they see you.",
+    "8x: ADS zoom %.1f FOV with scope overlay. Precision multiplier +0.5. Lantern-lit centre dot." % mag_fov(8.0),
+    drawback="ADS time +60%. Sway +80%. Hip-fire spread +50%. ADS movement -30%.",
+    ads={"fov": mag_fov(8.0), "move_mult": 0.7, "ads_time_mult": 1.6, "sway_mult": 1.8},
+    mods={"headshot_add": 0.5, "hip_spread_mult": 1.5}, flags={"scope_overlay": True}, classes=["sniper_rifle"], size="long",
+    extra=optic("scope", "8x", "belfry_post", "post_crosshair", "#FFD27A", 1.0, "lit", 1.0, "fair", mag=8.0,
+                tradeoff="most zoom + crits, slowest, tunnel vision"))
+
+# -- uniques (playstyle optics; kept from the art passes)
 att("gravesight", "Gravesight", "optic", 3, 8, "Outlines elites and bosses through walls.",
     "ADS zoom 45 FOV. Bosses and elites are outlined through walls. +15% damage to them.",
-    ads={"fov": 45}, flags={"outline_elites": True}, effects=[cd("target_boss", 0.15)], size="mid", unique=True)
+    drawback="ADS time +15%. Sway +10%.",
+    ads={"fov": 45, "ads_time_mult": 1.15, "sway_mult": 1.1}, flags={"outline_elites": True},
+    effects=[cd("target_boss", 0.15)], size="mid", unique=True,
+    extra=optic("unique", "1.8x", "grave_cross", "cross", "#7CFFB2", 3.0, "lit", 1.6, "good", tradeoff="boss hunter"))
 att("heartbeat_counter", "Heartbeat Counter", "optic", 2, 4, "Rail box that counts the dead around you.",
     "HUD shows zombies within 10 m. +12% damage while 5 or more are that close.",
     drawback="No zoom: ADS keeps the iron-sight FOV.", flags={"heartbeat_counter": True, "heartbeat_radius": 10.0},
     effects=[cd("crowded", 0.12, count=5, radius=10.0)], size="micro", unique=True,
     # Art pass 2: the box sits off to the gun-left of the Rail and keeps the iron sights (Desi VERIFY_BATCH2 / G4M3N).
-    hides=[])
+    hides=[], extra=optic("unique", "Irons", "factory_irons", "factory", "#2A2622", 0, "none", 0.0, "poor",
+                          replaces_irons=False, tradeoff="crowd damage, factory irons"))
+
+# The no-attachment choice (shown first in the lineup). Not an attachment: the gun's own IronSights, or the sniper's
+# built-in DefaultOptic scope (2D overlay, AdsProfile sniper FOV 35).
+FACTORY_OPTIC = {
+    "irons": {"id": "", "name": "Factory Irons", "summary": "The gun's own sights.", "cost": 0,
+              "optic": {"type": "irons", "label": "Irons", "magnification": 0.0, "reticle_id": "factory_irons",
+                        "reticle": {"shape": "factory", "color": "#2A2622", "size_moa": 0.0}, "overlay": False,
+                        "glow": {"mode": "none", "energy": 0.0, "color": "#2A2622"}, "night": "poor",
+                        "replaces_irons": False, "rarity": "common", "tradeoff": "free baseline"}},
+    "scope": {"id": "", "name": "Factory Scope", "summary": "The sniper's own scope.", "cost": 0,
+              "optic": {"type": "scope", "label": "2.4x", "magnification": 2.4, "reticle_id": "factory_scope",
+                        "reticle": {"shape": "mil_dot", "color": "#E3D9BD", "size_moa": 0.0}, "overlay": True,
+                        "glow": {"mode": "none", "energy": 0.0, "color": "#E3D9BD"}, "night": "poor",
+                        "replaces_irons": False, "rarity": "common", "tradeoff": "free baseline"}},
+}
 
 # ---------------- muzzles (Muzzle)
 amb = lambda m: cd("target_unhurt", m, sources=["gun"])
@@ -223,7 +321,7 @@ EXCLUSIONS = [
 TIER_REQ = {1: 0, 2: 2, 3: 4}  # weapon upgrade tier needed to EQUIP an attachment of this tier
 MOD_KEYS = {"damage_mult", "rpm_mult", "mag_mult", "reload_mult", "spread_mult", "hip_spread_mult", "recoil_mult",
             "range_mult", "swap_mult", "pellets_add", "headshot_add", "reserve_mags_add"}
-ADS_KEYS = {"fov", "move_mult", "spread_mult"}
+ADS_KEYS = {"fov", "fov_mult", "move_mult", "spread_mult", "ads_time_mult", "sway_mult"}
 ids = set()
 for a in A:
     assert a["id"] not in ids, a["id"]; ids.add(a["id"])
@@ -239,6 +337,49 @@ for a in A:
     for c in a.get("classes", []):
         assert c in CLASSES
 by_id = {a["id"]: a for a in A}
+# ---- optics pass checks (DESIGN.md §19): every optic-slot part has an optic block; the lineup is priced on the curve.
+REPO = os.path.join(ROOT, "..")
+PRICE_BANDS = {"irons": (2, 4), "dot": (2, 4), "holo": (3, 5), "prism": (4, 6), "scope": (7, 8), "unique": (4, 8)}
+LINEUP = [a["id"] for a in A if a["slot"] == "optic"]
+for a in A:
+    if a["slot"] != "optic":
+        continue
+    o = a.get("optic")
+    assert o and o["type"] in OPTIC_TYPES and o["reticle_id"] and o["glow"]["mode"] in ("none", "dim", "lit", "tritium"), a["id"]
+    assert o["night"] in ("poor", "fair", "good") and o["tradeoff"], a["id"]
+    lo, hi = PRICE_BANDS[o["type"]]
+    assert lo <= a["cost"] <= hi, (a["id"], a["cost"], o["type"])
+    m = float(o["magnification"])
+    assert o["overlay"] == (m >= OVERLAY_MIN_MAG) or a.get("flags", {}).get("scope_overlay"), a["id"]
+    assert bool(a.get("flags", {}).get("scope_overlay")) == o["overlay"], a["id"]  # one source of truth for the overlay
+    if m >= 1.5 and o["type"] != "unique":
+        assert abs(a["ads"]["fov"] - mag_fov(m)) < 0.06, (a["id"], a["ads"]["fov"])  # true magnification vs the 75 deg hip
+    if o["type"] == "scope":
+        assert a["tier"] == 3 and a["size"] == "long", a["id"]  # high zoom: Rework IV
+    if o["type"] == "irons":
+        assert a["size"] == "micro" and "fov" not in a["ads"], a["id"]  # irons: class FOV x fov_mult only
+        assert (a.get("hides", None) == []) == (not o["replaces_irons"]), a["id"]  # only a replacing set hides IronSights
+    # no strictly-better optic: every non-unique part pays somewhere (a drawback line and a stat above 1 / a negative add)
+    if o["type"] != "unique":
+        ad = a["ads"]
+        worse = (ad.get("ads_time_mult", 1) > 1 or ad.get("sway_mult", 1) > 1 or ad.get("spread_mult", 1) > 1 or
+                 ad.get("move_mult", 1) < 1 or a["mods"].get("headshot_add", 0) < 0 or a["mods"].get("hip_spread_mult", 1) > 1)
+        assert worse and a["drawback"], a["id"]
+# irons are the cheapest, high zoom the priciest: mean price rises irons <= dot/holo <= prism <= scope
+mean = lambda t: sum(by_id[i]["cost"] for i in LINEUP if by_id[i]["optic"]["type"] in t) / max(1, len([i for i in LINEUP if by_id[i]["optic"]["type"] in t]))
+assert mean(["irons"]) <= mean(["dot", "holo"]) <= mean(["prism"]) <= mean(["scope"]), "optic price curve"
+# Skillz placeholder icons (tools/optics/placeholder_icons.py: reticle glyphs) until Desi's renders land; drop the id here then.
+PLACEHOLDER_ICONS = {"witchlight_dabs", "wicket_ring", "mason_notch", "foxfire_post", "kilnglass_2x", "belfry_8x"}
+# art status: parts whose GLB / icon isn't in the repo yet are flagged (WeaponRig falls back to the default sight picture;
+# art_test skips their paths). Re-run this generator when Desi's files land and the flag drops off.
+for a in A:
+    miss = []
+    if a.get("model") and not os.path.exists(os.path.join(REPO, a["model"].replace("res://", ""))):
+        miss.append("model")
+    if not os.path.exists(os.path.join(REPO, "assets", "icons", a["icon"] + ".png")) or a["id"] in PLACEHOLDER_ICONS:
+        miss.append("icon")
+    if miss:
+        a["art_pending"] = miss
 for ex in EXCLUSIONS:
     assert len(ex["parts"]) >= 2 and ex["classes"] and ex["reason"], ex["id"]
     assert len({by_id[x]["slot"] for x in ex["parts"]}) == len(ex["parts"]), ex["id"]  # one per slot
@@ -259,12 +400,21 @@ att_doc = {
               "list (default: every class with that slot). tier 1/2/3: equipping needs the weapon's upgrade tier >= "
               "tier_requires[tier] (0/2/4). mods (WeaponItem, multiply unless *_add): damage_mult rpm_mult mag_mult reload_mult "
               "(time) spread_mult (all fire) hip_spread_mult (not ADS) recoil_mult range_mult (falloff start) swap_mult (time) "
-              "pellets_add headshot_add reserve_mags_add. ads (AdsProfile): fov (ADS FOV override; the narrowest wins) move_mult "
-              "spread_mult (multiply the ADS penalties). flags = presentation hooks for player.gd/HUD (tracer_hidden, flash_mult, "
+              "pellets_add headshot_add reserve_mags_add. ads (AdsProfile): fov (ADS FOV override; the narrowest wins) fov_mult "
+              "(x the class iron-sight FOV) move_mult spread_mult (multiply the ADS penalties) ads_time_mult sway_mult (x the "
+              "class ADS time / sway). optic = optics lineup block on optic-slot parts (Armory.optic_profile). art_pending = "
+              "[model, icon] not shipped yet (default sight picture / glyph until they land). flags = presentation hooks for player.gd/HUD (tracer_hidden, flash_mult, "
               "scope_overlay, outline_elites, heartbeat_counter, bipod, flashlight, mine_lamp). effects = SkillEffect defs (same format as "
               "skill_tree.json) run by the player's SkillRunner only while a weapon of that archetype is in hand. slots[].hides = default gun meshes (Desi split guns) a fitted part hides; an attachment \"hides\" overrides it ([] = hide nothing); \"hides_by_class\" {archetype: [...]} overrides both for that archetype (Sawn Stub on the shotgun also hides IronSights + the DefaultMag tube); \"inner_hides\" {archetype or \"*\": [node names]} hides nodes inside the part itself on that host (Sawn Stub's MagTubeStub shows on the shotgun only). exclusions = per-archetype parts that can't be equipped together ({id, classes, parts, reason}; Armory.exclusion_reason); a save holding one unequips the last listed part on load (it stays owned). Flashlight parts (mine_lamp, lantern_rail; F toggles the beam) carry light_energy / light_range / light_angle / light_attenuation / light_color for the camera SpotLight3D (Armory.flashlight_config)."),
     "slots": SLOTS, "optic_sizes": OPTIC_SIZES, "tier_requires": {str(k): v for k, v in TIER_REQ.items()},
-    "classes": CLASSES, "exclusions": EXCLUSIONS, "attachments": A,
+    "classes": CLASSES, "exclusions": EXCLUSIONS,
+    "optics": {"_help": ("Optics lineup (DESIGN.md §19). magnification = true zoom vs the 75 deg hip view (ADS fov = "
+                         "2*atan(tan(37.5)/m)); overlay = Gooey's 2D scope overlay (>= overlay_min_mag); else the 3D sight "
+                         "picture through the model's SightPoint. factory = the no-attachment choice (irons, or the sniper's "
+                         "built-in scope). price_bands = Gravemark range per optic type (gen_armory.py asserts it)."),
+               "hip_fov": HIP_FOV, "overlay_min_mag": OVERLAY_MIN_MAG, "types": OPTIC_TYPES, "lineup": LINEUP,
+               "price_bands": {k: list(v) for k, v in PRICE_BANDS.items()}, "factory": FACTORY_OPTIC},
+    "attachments": A,
 }
 
 armory = {

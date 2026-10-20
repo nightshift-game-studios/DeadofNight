@@ -1,6 +1,6 @@
 {
 	"version": 1,
-	"_help": "Weapon attachments (Skillz). Bought once with Gravemark (account-wide unlock), then equipped per weapon archetype: every weapon of that archetype uses the archetype's loadout. classes[archetype].slots = slots it has (DESI_ATTACHMENTS.md §1); optic_cap limits optic size (micro<short<mid<long). attachment.classes = optional allow list (default: every class with that slot). tier 1/2/3: equipping needs the weapon's upgrade tier >= tier_requires[tier] (0/2/4). mods (WeaponItem, multiply unless *_add): damage_mult rpm_mult mag_mult reload_mult (time) spread_mult (all fire) hip_spread_mult (not ADS) recoil_mult range_mult (falloff start) swap_mult (time) pellets_add headshot_add reserve_mags_add. ads (AdsProfile): fov (ADS FOV override; the narrowest wins) move_mult spread_mult (multiply the ADS penalties). flags = presentation hooks for player.gd/HUD (tracer_hidden, flash_mult, scope_overlay, outline_elites, heartbeat_counter, bipod, flashlight, mine_lamp). effects = SkillEffect defs (same format as skill_tree.json) run by the player's SkillRunner only while a weapon of that archetype is in hand. slots[].hides = default gun meshes (Desi split guns) a fitted part hides; an attachment \"hides\" overrides it ([] = hide nothing); \"hides_by_class\" {archetype: [...]} overrides both for that archetype (Sawn Stub on the shotgun also hides IronSights + the DefaultMag tube); \"inner_hides\" {archetype or \"*\": [node names]} hides nodes inside the part itself on that host (Sawn Stub's MagTubeStub shows on the shotgun only). exclusions = per-archetype parts that can't be equipped together ({id, classes, parts, reason}; Armory.exclusion_reason); a save holding one unequips the last listed part on load (it stays owned). Flashlight parts (mine_lamp, lantern_rail; F toggles the beam) carry light_energy / light_range / light_angle / light_attenuation / light_color for the camera SpotLight3D (Armory.flashlight_config).",
+	"_help": "Weapon attachments (Skillz). Bought once with Gravemark (account-wide unlock), then equipped per weapon archetype: every weapon of that archetype uses the archetype's loadout. classes[archetype].slots = slots it has (DESI_ATTACHMENTS.md §1); optic_cap limits optic size (micro<short<mid<long). attachment.classes = optional allow list (default: every class with that slot). tier 1/2/3: equipping needs the weapon's upgrade tier >= tier_requires[tier] (0/2/4). mods (WeaponItem, multiply unless *_add): damage_mult rpm_mult mag_mult reload_mult (time) spread_mult (all fire) hip_spread_mult (not ADS) recoil_mult range_mult (falloff start) swap_mult (time) pellets_add headshot_add reserve_mags_add. ads (AdsProfile): fov (ADS FOV override; the narrowest wins) fov_mult (x the class iron-sight FOV) move_mult spread_mult (multiply the ADS penalties) ads_time_mult sway_mult (x the class ADS time / sway). optic = optics lineup block on optic-slot parts (Armory.optic_profile). art_pending = [model, icon] not shipped yet (default sight picture / glyph until they land). flags = presentation hooks for player.gd/HUD (tracer_hidden, flash_mult, scope_overlay, outline_elites, heartbeat_counter, bipod, flashlight, mine_lamp). effects = SkillEffect defs (same format as skill_tree.json) run by the player's SkillRunner only while a weapon of that archetype is in hand. slots[].hides = default gun meshes (Desi split guns) a fitted part hides; an attachment \"hides\" overrides it ([] = hide nothing); \"hides_by_class\" {archetype: [...]} overrides both for that archetype (Sawn Stub on the shotgun also hides IronSights + the DefaultMag tube); \"inner_hides\" {archetype or \"*\": [node names]} hides nodes inside the part itself on that host (Sawn Stub's MagTubeStub shows on the shotgun only). exclusions = per-archetype parts that can't be equipped together ({id, classes, parts, reason}; Armory.exclusion_reason); a save holding one unequips the last listed part on load (it stays owned). Flashlight parts (mine_lamp, lantern_rail; F toggles the beam) carry light_energy / light_range / light_angle / light_attenuation / light_color for the camera SpotLight3D (Armory.flashlight_config).",
 	"slots": [
 		{
 			"id": "optic",
@@ -181,7 +181,315 @@
 			"reason": "The Shell Saddle's full-length tube won't fit under a Sawn Stub."
 		}
 	],
+	"optics": {
+		"_help": "Optics lineup (DESIGN.md §19). magnification = true zoom vs the 75 deg hip view (ADS fov = 2*atan(tan(37.5)/m)); overlay = Gooey's 2D scope overlay (>= overlay_min_mag); else the 3D sight picture through the model's SightPoint. factory = the no-attachment choice (irons, or the sniper's built-in scope). price_bands = Gravemark range per optic type (gen_armory.py asserts it).",
+		"hip_fov": 75.0,
+		"overlay_min_mag": 4.0,
+		"types": [
+			"irons",
+			"dot",
+			"holo",
+			"prism",
+			"scope",
+			"unique"
+		],
+		"lineup": [
+			"witchlight_dabs",
+			"wicket_ring",
+			"mason_notch",
+			"foxfire_post",
+			"pinhole",
+			"lamplight_reflex",
+			"tallow_holo",
+			"kilnglass_2x",
+			"crows_eye_3x",
+			"longwatch_6x",
+			"belfry_8x",
+			"gravesight",
+			"heartbeat_counter"
+		],
+		"price_bands": {
+			"irons": [
+				2,
+				4
+			],
+			"dot": [
+				2,
+				4
+			],
+			"holo": [
+				3,
+				5
+			],
+			"prism": [
+				4,
+				6
+			],
+			"scope": [
+				7,
+				8
+			],
+			"unique": [
+				4,
+				8
+			]
+		},
+		"factory": {
+			"irons": {
+				"id": "",
+				"name": "Factory Irons",
+				"summary": "The gun's own sights.",
+				"cost": 0,
+				"optic": {
+					"type": "irons",
+					"label": "Irons",
+					"magnification": 0.0,
+					"reticle_id": "factory_irons",
+					"reticle": {
+						"shape": "factory",
+						"color": "#2A2622",
+						"size_moa": 0.0
+					},
+					"overlay": false,
+					"glow": {
+						"mode": "none",
+						"energy": 0.0,
+						"color": "#2A2622"
+					},
+					"night": "poor",
+					"replaces_irons": false,
+					"rarity": "common",
+					"tradeoff": "free baseline"
+				}
+			},
+			"scope": {
+				"id": "",
+				"name": "Factory Scope",
+				"summary": "The sniper's own scope.",
+				"cost": 0,
+				"optic": {
+					"type": "scope",
+					"label": "2.4x",
+					"magnification": 2.4,
+					"reticle_id": "factory_scope",
+					"reticle": {
+						"shape": "mil_dot",
+						"color": "#E3D9BD",
+						"size_moa": 0.0
+					},
+					"overlay": true,
+					"glow": {
+						"mode": "none",
+						"energy": 0.0,
+						"color": "#E3D9BD"
+					},
+					"night": "poor",
+					"replaces_irons": false,
+					"rarity": "common",
+					"tradeoff": "free baseline"
+				}
+			}
+		}
+	},
 	"attachments": [
+		{
+			"id": "witchlight_dabs",
+			"name": "Witchlight Dabs",
+			"slot": "optic",
+			"tier": 1,
+			"cost": 2,
+			"unique": false,
+			"summary": "Glow paint on your own irons: readable after dusk.",
+			"description": "Factory irons with three faint green dots (rear pair + front post). No zoom change.",
+			"drawback": "ADS time +5%: the dots pull the eye.",
+			"icon": "att_witchlight_dabs",
+			"model": "",
+			"hides": [],
+			"mods": {},
+			"ads": {
+				"ads_time_mult": 1.05
+			},
+			"flags": {},
+			"effects": [],
+			"classes": [
+				"sidearm",
+				"hand_cannon",
+				"auto_rifle",
+				"scout_rifle",
+				"pulse_rifle",
+				"smg",
+				"shotgun",
+				"rocket_launcher"
+			],
+			"size": "micro",
+			"optic": {
+				"type": "irons",
+				"label": "Irons",
+				"magnification": 0.0,
+				"reticle_id": "three_dot",
+				"reticle": {
+					"shape": "three_dot",
+					"color": "#B8F5A0",
+					"size_moa": 1.5
+				},
+				"overlay": false,
+				"glow": {
+					"mode": "dim",
+					"energy": 1.2,
+					"color": "#B8F5A0"
+				},
+				"night": "fair",
+				"replaces_irons": false,
+				"rarity": "common",
+				"tradeoff": "cheap night aid, slightly slower"
+			},
+			"procedural": "glow_dots",
+			"art_pending": [
+				"icon"
+			]
+		},
+		{
+			"id": "wicket_ring",
+			"name": "Wicket Ring",
+			"slot": "optic",
+			"tier": 1,
+			"cost": 2,
+			"unique": false,
+			"summary": "Wide ghost ring: snap onto targets, see around them.",
+			"description": "Rear aperture + thin post. ADS time -20%, sway -15%, a slightly wider ADS view (x1.06).",
+			"drawback": "ADS spread +12%: a coarse picture at range.",
+			"icon": "att_wicket_ring",
+			"model": "res://assets/models/attachments/optic/wicket_ring.glb",
+			"mods": {},
+			"ads": {
+				"fov_mult": 1.06,
+				"ads_time_mult": 0.8,
+				"sway_mult": 0.85,
+				"spread_mult": 1.12
+			},
+			"flags": {},
+			"effects": [],
+			"size": "micro",
+			"optic": {
+				"type": "irons",
+				"label": "Irons",
+				"magnification": 0.0,
+				"reticle_id": "ghost_ring",
+				"reticle": {
+					"shape": "ghost_ring",
+					"color": "#2A2622",
+					"size_moa": 0
+				},
+				"overlay": false,
+				"glow": {
+					"mode": "none",
+					"energy": 0.0,
+					"color": "#2A2622"
+				},
+				"night": "poor",
+				"replaces_irons": true,
+				"rarity": "common",
+				"tradeoff": "fastest + steadiest, least precise"
+			},
+			"art_pending": [
+				"model",
+				"icon"
+			]
+		},
+		{
+			"id": "mason_notch",
+			"name": "Mason's Notch",
+			"slot": "optic",
+			"tier": 1,
+			"cost": 3,
+			"unique": false,
+			"summary": "Square notch and flat post for careful shots.",
+			"description": "Notch-and-post irons. ADS spread -15%, ADS view x0.94 (a touch of zoom).",
+			"drawback": "ADS time +10%. Black steel: hard to read at night.",
+			"icon": "att_mason_notch",
+			"model": "res://assets/models/attachments/optic/mason_notch.glb",
+			"mods": {},
+			"ads": {
+				"fov_mult": 0.94,
+				"ads_time_mult": 1.1,
+				"spread_mult": 0.85
+			},
+			"flags": {},
+			"effects": [],
+			"size": "micro",
+			"optic": {
+				"type": "irons",
+				"label": "Irons",
+				"magnification": 0.0,
+				"reticle_id": "notch_post",
+				"reticle": {
+					"shape": "notch_post",
+					"color": "#2A2622",
+					"size_moa": 0
+				},
+				"overlay": false,
+				"glow": {
+					"mode": "none",
+					"energy": 0.0,
+					"color": "#2A2622"
+				},
+				"night": "poor",
+				"replaces_irons": true,
+				"rarity": "common",
+				"tradeoff": "precise irons, slower, dark"
+			},
+			"art_pending": [
+				"model",
+				"icon"
+			]
+		},
+		{
+			"id": "foxfire_post",
+			"name": "Foxfire Post",
+			"slot": "optic",
+			"tier": 1,
+			"cost": 4,
+			"unique": false,
+			"summary": "Rotten-wood glow bead you can find in pitch dark.",
+			"description": "Wide U-notch + a bright foxfire bead. ADS time -5%. The bead glows in the dark.",
+			"drawback": "Precision multiplier -0.1: the fat bead hides distant heads.",
+			"icon": "att_foxfire_post",
+			"model": "res://assets/models/attachments/optic/foxfire_post.glb",
+			"mods": {
+				"headshot_add": -0.1
+			},
+			"ads": {
+				"ads_time_mult": 0.95
+			},
+			"flags": {},
+			"effects": [],
+			"size": "micro",
+			"optic": {
+				"type": "irons",
+				"label": "Irons",
+				"magnification": 0.0,
+				"reticle_id": "glow_bead",
+				"reticle": {
+					"shape": "glow_bead",
+					"color": "#9CFF7A",
+					"size_moa": 4.0
+				},
+				"overlay": false,
+				"glow": {
+					"mode": "tritium",
+					"energy": 2.5,
+					"color": "#9CFF7A"
+				},
+				"night": "good",
+				"replaces_irons": true,
+				"rarity": "common",
+				"tradeoff": "best in the dark, worse headshots"
+			},
+			"art_pending": [
+				"model",
+				"icon"
+			]
+		},
 		{
 			"id": "pinhole",
 			"name": "Pinhole",
@@ -190,61 +498,177 @@
 			"cost": 2,
 			"unique": false,
 			"summary": "Pistol dot: light zoom, stay mobile while aiming.",
-			"description": "ADS zoom 62 FOV. ADS movement penalty halved.",
-			"drawback": "",
+			"description": "ADS zoom 62 FOV. ADS movement penalty halved. ADS time -10%.",
+			"drawback": "Tiny window: sway +10%.",
 			"icon": "att_pinhole",
 			"model": "res://assets/models/attachments/optic/pinhole.glb",
 			"mods": {},
 			"ads": {
 				"fov": 62,
-				"move_mult": 1.2
+				"move_mult": 1.2,
+				"ads_time_mult": 0.9,
+				"sway_mult": 1.1
 			},
 			"flags": {},
 			"effects": [],
-			"size": "micro"
+			"size": "micro",
+			"optic": {
+				"type": "dot",
+				"label": "1x",
+				"magnification": 0.0,
+				"reticle_id": "pin_dot",
+				"reticle": {
+					"shape": "dot",
+					"color": "#FF4A2E",
+					"size_moa": 2.0
+				},
+				"overlay": false,
+				"glow": {
+					"mode": "lit",
+					"energy": 1.4,
+					"color": "#FF4A2E"
+				},
+				"night": "good",
+				"replaces_irons": true,
+				"rarity": "uncommon",
+				"tradeoff": "mobile + quick, twitchy"
+			}
 		},
 		{
 			"id": "lamplight_reflex",
 			"name": "Lamplight Reflex",
 			"slot": "optic",
 			"tier": 1,
-			"cost": 3,
+			"cost": 4,
 			"unique": false,
 			"summary": "Warm reflex dot that tightens aimed fire.",
 			"description": "ADS zoom 60 FOV. ADS spread -20%.",
-			"drawback": "",
+			"drawback": "Hooded window: ADS time +5%.",
 			"icon": "att_lamplight_reflex",
 			"model": "res://assets/models/attachments/optic/lamplight_reflex.glb",
 			"mods": {},
 			"ads": {
 				"fov": 60,
-				"spread_mult": 0.8
+				"spread_mult": 0.8,
+				"ads_time_mult": 1.05
 			},
 			"flags": {},
 			"effects": [],
-			"size": "short"
+			"size": "short",
+			"optic": {
+				"type": "dot",
+				"label": "1x",
+				"magnification": 0.0,
+				"reticle_id": "amber_dot",
+				"reticle": {
+					"shape": "dot",
+					"color": "#FFB347",
+					"size_moa": 3.0
+				},
+				"overlay": false,
+				"glow": {
+					"mode": "lit",
+					"energy": 1.6,
+					"color": "#FFB347"
+				},
+				"night": "good",
+				"replaces_irons": true,
+				"rarity": "uncommon",
+				"tradeoff": "tighter aimed fire"
+			}
 		},
 		{
 			"id": "tallow_holo",
 			"name": "Tallow Holo",
 			"slot": "optic",
 			"tier": 1,
-			"cost": 3,
+			"cost": 4,
 			"unique": false,
 			"summary": "Wide holo window you can fire from the hip.",
 			"description": "ADS zoom 58 FOV. Hip-fire spread -15%.",
-			"drawback": "",
+			"drawback": "ADS time +5%: a heavier box.",
 			"icon": "att_tallow_holo",
 			"model": "res://assets/models/attachments/optic/tallow_holo.glb",
 			"mods": {
 				"hip_spread_mult": 0.85
 			},
 			"ads": {
-				"fov": 58
+				"fov": 58,
+				"ads_time_mult": 1.05
 			},
 			"flags": {},
 			"effects": [],
-			"size": "short"
+			"size": "short",
+			"optic": {
+				"type": "holo",
+				"label": "1x",
+				"magnification": 0.0,
+				"reticle_id": "tallow_ring",
+				"reticle": {
+					"shape": "ring_dot",
+					"color": "#F2E6C8",
+					"size_moa": 65.0
+				},
+				"overlay": false,
+				"glow": {
+					"mode": "lit",
+					"energy": 1.3,
+					"color": "#F2E6C8"
+				},
+				"night": "good",
+				"replaces_irons": true,
+				"rarity": "uncommon",
+				"tradeoff": "hip fire + wide view"
+			}
+		},
+		{
+			"id": "kilnglass_2x",
+			"name": "Kilnglass 2x",
+			"slot": "optic",
+			"tier": 1,
+			"cost": 4,
+			"unique": false,
+			"summary": "Squat furnace-glass prism for the middle distance.",
+			"description": "2x: ADS zoom 42.0 FOV. ADS spread -10%.",
+			"drawback": "ADS time +15%. Sway +15%. ADS movement -10%.",
+			"icon": "att_kilnglass_2x",
+			"model": "res://assets/models/attachments/optic/kilnglass_2x.glb",
+			"mods": {},
+			"ads": {
+				"fov": 42.0,
+				"ads_time_mult": 1.15,
+				"sway_mult": 1.15,
+				"spread_mult": 0.9,
+				"move_mult": 0.9
+			},
+			"flags": {},
+			"effects": [],
+			"size": "mid",
+			"optic": {
+				"type": "prism",
+				"label": "2x",
+				"magnification": 2.0,
+				"reticle_id": "kiln_chevron",
+				"reticle": {
+					"shape": "chevron",
+					"color": "#FF6A2A",
+					"size_moa": 4.0
+				},
+				"overlay": false,
+				"glow": {
+					"mode": "lit",
+					"energy": 1.2,
+					"color": "#FF6A2A"
+				},
+				"night": "fair",
+				"replaces_irons": true,
+				"rarity": "rare",
+				"tradeoff": "first zoom, early and cheap"
+			},
+			"art_pending": [
+				"model",
+				"icon"
+			]
 		},
 		{
 			"id": "crows_eye_3x",
@@ -254,14 +678,16 @@
 			"cost": 5,
 			"unique": false,
 			"summary": "Prism scope that punishes targets past falloff.",
-			"description": "ADS zoom 40 FOV. +15% damage beyond falloff range while aiming.",
-			"drawback": "ADS movement -15%.",
+			"description": "3x: ADS zoom 28.7 FOV. +15% damage beyond falloff range while aiming.",
+			"drawback": "ADS time +25%. Sway +30%. ADS movement -15%.",
 			"icon": "att_crows_eye_3x",
 			"model": "res://assets/models/attachments/optic/crows_eye_3x.glb",
 			"mods": {},
 			"ads": {
-				"fov": 40,
-				"move_mult": 0.85
+				"fov": 28.7,
+				"move_mult": 0.85,
+				"ads_time_mult": 1.25,
+				"sway_mult": 1.3
 			},
 			"flags": {},
 			"effects": [
@@ -279,7 +705,28 @@
 					}
 				}
 			],
-			"size": "mid"
+			"size": "mid",
+			"optic": {
+				"type": "prism",
+				"label": "3x",
+				"magnification": 3.0,
+				"reticle_id": "crow_foot",
+				"reticle": {
+					"shape": "crow_foot",
+					"color": "#E3D9BD",
+					"size_moa": 6.0
+				},
+				"overlay": false,
+				"glow": {
+					"mode": "dim",
+					"energy": 0.6,
+					"color": "#E3D9BD"
+				},
+				"night": "fair",
+				"replaces_irons": true,
+				"rarity": "rare",
+				"tradeoff": "reach + falloff damage, heavy"
+			}
 		},
 		{
 			"id": "longwatch_6x",
@@ -289,8 +736,8 @@
 			"cost": 7,
 			"unique": false,
 			"summary": "Long scope with a full overlay and heavier crits.",
-			"description": "ADS zoom 22 FOV with scope overlay. Precision multiplier +0.4.",
-			"drawback": "Hip-fire spread +40%. ADS movement -25%.",
+			"description": "6x: ADS zoom 14.6 FOV with scope overlay. Precision multiplier +0.4.",
+			"drawback": "ADS time +45%. Sway +60%. Hip-fire spread +40%. ADS movement -25%.",
 			"icon": "att_longwatch_6x",
 			"model": "res://assets/models/attachments/optic/longwatch_6x.glb",
 			"mods": {
@@ -298,8 +745,10 @@
 				"hip_spread_mult": 1.4
 			},
 			"ads": {
-				"fov": 22,
-				"move_mult": 0.75
+				"fov": 14.6,
+				"move_mult": 0.75,
+				"ads_time_mult": 1.45,
+				"sway_mult": 1.6
 			},
 			"flags": {
 				"scope_overlay": true
@@ -309,7 +758,84 @@
 				"sniper_rifle",
 				"scout_rifle"
 			],
-			"size": "long"
+			"size": "long",
+			"optic": {
+				"type": "scope",
+				"label": "6x",
+				"magnification": 6.0,
+				"reticle_id": "longwatch_mil",
+				"reticle": {
+					"shape": "mil_dot",
+					"color": "#E3D9BD",
+					"size_moa": 0.0
+				},
+				"overlay": true,
+				"glow": {
+					"mode": "none",
+					"energy": 0.0,
+					"color": "#E3D9BD"
+				},
+				"night": "poor",
+				"replaces_irons": true,
+				"rarity": "rare",
+				"tradeoff": "crit zoom, slow and swaying"
+			}
+		},
+		{
+			"id": "belfry_8x",
+			"name": "Belfry 8x",
+			"slot": "optic",
+			"tier": 3,
+			"cost": 8,
+			"unique": false,
+			"summary": "Bell-tower glass: see the far dead before they see you.",
+			"description": "8x: ADS zoom 11.0 FOV with scope overlay. Precision multiplier +0.5. Lantern-lit centre dot.",
+			"drawback": "ADS time +60%. Sway +80%. Hip-fire spread +50%. ADS movement -30%.",
+			"icon": "att_belfry_8x",
+			"model": "res://assets/models/attachments/optic/belfry_8x.glb",
+			"mods": {
+				"headshot_add": 0.5,
+				"hip_spread_mult": 1.5
+			},
+			"ads": {
+				"fov": 11.0,
+				"move_mult": 0.7,
+				"ads_time_mult": 1.6,
+				"sway_mult": 1.8
+			},
+			"flags": {
+				"scope_overlay": true
+			},
+			"effects": [],
+			"classes": [
+				"sniper_rifle"
+			],
+			"size": "long",
+			"optic": {
+				"type": "scope",
+				"label": "8x",
+				"magnification": 8.0,
+				"reticle_id": "belfry_post",
+				"reticle": {
+					"shape": "post_crosshair",
+					"color": "#FFD27A",
+					"size_moa": 1.0
+				},
+				"overlay": true,
+				"glow": {
+					"mode": "lit",
+					"energy": 1.0,
+					"color": "#FFD27A"
+				},
+				"night": "fair",
+				"replaces_irons": true,
+				"rarity": "rare",
+				"tradeoff": "most zoom + crits, slowest, tunnel vision"
+			},
+			"art_pending": [
+				"model",
+				"icon"
+			]
 		},
 		{
 			"id": "gravesight",
@@ -320,12 +846,14 @@
 			"unique": true,
 			"summary": "Outlines elites and bosses through walls.",
 			"description": "ADS zoom 45 FOV. Bosses and elites are outlined through walls. +15% damage to them.",
-			"drawback": "",
+			"drawback": "ADS time +15%. Sway +10%.",
 			"icon": "att_gravesight",
 			"model": "res://assets/models/attachments/optic/gravesight.glb",
 			"mods": {},
 			"ads": {
-				"fov": 45
+				"fov": 45,
+				"ads_time_mult": 1.15,
+				"sway_mult": 1.1
 			},
 			"flags": {
 				"outline_elites": true
@@ -339,7 +867,28 @@
 					}
 				}
 			],
-			"size": "mid"
+			"size": "mid",
+			"optic": {
+				"type": "unique",
+				"label": "1.8x",
+				"magnification": 0.0,
+				"reticle_id": "grave_cross",
+				"reticle": {
+					"shape": "cross",
+					"color": "#7CFFB2",
+					"size_moa": 3.0
+				},
+				"overlay": false,
+				"glow": {
+					"mode": "lit",
+					"energy": 1.6,
+					"color": "#7CFFB2"
+				},
+				"night": "good",
+				"replaces_irons": true,
+				"rarity": "legendary",
+				"tradeoff": "boss hunter"
+			}
 		},
 		{
 			"id": "heartbeat_counter",
@@ -371,7 +920,28 @@
 					}
 				}
 			],
-			"size": "micro"
+			"size": "micro",
+			"optic": {
+				"type": "unique",
+				"label": "Irons",
+				"magnification": 0.0,
+				"reticle_id": "factory_irons",
+				"reticle": {
+					"shape": "factory",
+					"color": "#2A2622",
+					"size_moa": 0
+				},
+				"overlay": false,
+				"glow": {
+					"mode": "none",
+					"energy": 0.0,
+					"color": "#2A2622"
+				},
+				"night": "poor",
+				"replaces_irons": false,
+				"rarity": "legendary",
+				"tradeoff": "crowd damage, factory irons"
+			}
 		},
 		{
 			"id": "pocket_hush",

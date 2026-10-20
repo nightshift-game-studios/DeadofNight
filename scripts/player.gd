@@ -37,6 +37,10 @@ const AdsProfileScr := preload("res://scripts/combat/ads_profile.gd")
 const PlayerStatusScr := preload("res://scripts/combat/player_status.gd") ## MAIN_HOOKS §15b: Crawler root, Bloater bile slow
 signal ads_changed(active: bool) ## Gooey sniper scope overlay listens when AdsProfile.wants_scope_overlay(archetype)
 var ads_active: bool = false
+## Optics pass (Skillz MAIN_HOOKS §18): 0 = hip .. 1 = fully aimed, stepped over the build's ADS time
+## (AdsProfile.ads_time: class base x optic/part ads_time_mult). FOV, spread and the gun pose follow it.
+var ads_blend: float = 0.0
+var _ads_sway_t: float = 0.0
 var _hip_fov: float = 75.0
 const ArmoryScr := preload("res://scripts/armory/armory.gd")
 const WeaponRigScr := preload("res://scripts/gear/weapon_rig.gd") ## Armory attachments on the view model (Skillz art pass)
@@ -660,8 +664,13 @@ func _update_view(delta: float, sprinting: bool) -> void:
 	var swap_dip := Vector3(0, -0.25, 0) * (_swap_t / 0.4)
 	var sprint_pose := Vector3(-0.05, -0.03, 0.05) if sprinting and hs > walk_speed else Vector3.ZERO
 	var posed := _ads_posed()
+	# §18: the pose lerp follows the build's ADS time (20/s at 0.25 s), plus the optic's breathing sway while aimed.
+	var rate: float = AdsProfileScr.view_lerp_rate(_weapon_archetype()) if (ads_active or ads_blend > 0.0) else 20.0
+	_ads_sway_t += delta
+	var sway := AdsProfileScr.ads_sway_offset(_ads_sway_t, _weapon_archetype(), _ads_moving(), move_state == Move.CROUCH) \
+		* ads_blend if posed else Vector3.ZERO
 	gun.position = gun.position.lerp(_view_rest() + bob * (AdsProfileScr.ADS_BOB_MULT if posed else 1.0) \
-		+ _gun_kick * (0.35 if posed else 1.0) + swap_dip + sprint_pose, clamp(20.0 * delta, 0.0, 1.0))
+		+ _gun_kick * (0.35 if posed else 1.0) + swap_dip + sprint_pose + sway, clamp(rate * delta, 0.0, 1.0))
 
 
 func add_shake(amount: float) -> void:
@@ -694,6 +703,7 @@ func _on_weapon_equipped(w: WeaponItem) -> void:
 		return
 	_swap_t = w.swap_time()
 	_cooldown = max(_cooldown, _swap_t)
+	ads_blend = 0.0 # §18: a new gun is raised from the hip
 	_burst_left = 0
 	if _audio_ready:
 		_snd("weapon_swap")
@@ -804,7 +814,7 @@ func _fire_round(w: WeaponItem) -> void:
 		var cam_basis := camera.global_basis
 		var max_range: float = float(w.arch.get("base_range", 20)) * 4.0
 		var spread := deg_to_rad(w.spread_deg() * PerkSystem.spread_mult(w, self) * mod_stat("spread_mult", 1.0) \
-			* AdsProfileScr.spread_mult(ads_active) \
+			* AdsProfileScr.aim_spread_mult(ads_blend, _weapon_archetype(), _ads_moving()) \
 			* (1.4 if not is_on_floor() else 1.0) * (0.7 if move_state != Move.NORMAL else 1.0))
 		var impact_sounds := {} # one impact sound per surface per round (shotguns!)
 		for i in w.pellets():
@@ -1336,9 +1346,10 @@ func _tick_ads(_delta: float) -> void:
 	var w = inventory.get_equipped_weapon() if inventory else null
 	if w and "archetype" in w:
 		arch = str(w.archetype)
-	var want := AdsProfileScr.target_fov(ads_active, arch, _hip_fov)
+	AdsProfileScr.target_fov(ads_active, arch, _hip_fov) # keeps AdsProfile's last-archetype default current
+	ads_blend = AdsProfileScr.step_blend(ads_blend, ads_active, _delta, arch) # §18: in over the build's ADS time
 	if camera:
-		camera.fov = lerpf(camera.fov, want, clampf(12.0 * _delta, 0.0, 1.0))
+		camera.fov = AdsProfileScr.blend_fov(ads_blend, arch, _hip_fov)
 
 
 # ------------------------------------------------------------------ Mine Lamp (Skillz §10)
@@ -1409,6 +1420,11 @@ func _apply_flashlight_cfg(c: Dictionary) -> void:
 	_flashlight.spot_attenuation = float(c.get("light_attenuation", 1.1))
 	if c.get("color") is Color:
 		_flashlight.light_color = c.color
+
+
+## 0..1 of walk speed on the ground (§18: sway widens ADS spread on the move, AdsProfile.aim_spread_mult).
+func _ads_moving() -> float:
+	return clampf(Vector2(velocity.x, velocity.z).length() / maxf(walk_speed, 0.1), 0.0, 1.0)
 
 
 ## ADS view-model pose (Skillz MAIN_HOOKS §14c): sights on the screen centre while aiming (not mid-reload).

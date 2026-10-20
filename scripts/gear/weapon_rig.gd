@@ -18,6 +18,12 @@ extends RefCounted
 ##   rig.skipped   [slots]          equipped slots the gun has no socket for (revolver: grip/stock; launcher: barrel/stock)
 ##   rig.barrel_scale float         per-gun barrel X scale s = (Muzzle.x - Barrel.x) / BARREL_REF (applied to a fitted barrel)
 ##   rig.cylinder / rig.rocket / rig.launcher / rig.heartbeat / rig.glow   animated or data-driven parts (art pass 2)
+##   rig.optic      {id, status, sight}  optics pass: status "fitted" | "pending" (no GLB yet: default sight picture) |
+##                  "procedural" (Witchlight dots) | "procedural_skipped" (no visible IronSights to paint) | "skipped" |
+##                  "none"; sight "optic" | "builtin_scope" | "irons" (what the ADS eye line goes through)
+##   rig.reticle    MeshInstance3D | null  the optic's emissive "Reticle" surface (glow from the optic block)
+##   rig.front_post Node3D | null  an iron-sight set's FrontPost, slid to the gun's front-sight x (stem to the bore top)
+##   rig.glow_dots  [MeshInstance3D]  Witchlight Dabs: three emissive dots on the factory IronSights
 ## WeaponRig.clear(model) undoes it (frees the attachments, shows the defaults again) so the same model can be re-fitted.
 ##
 ## Art pass 2 (Desi batch 2, 2026-10-19): revolver (Cylinder spins 60 deg on local X per shot), rocket launcher (Rocket
@@ -96,18 +102,22 @@ static func plan(loadout: Dictionary, arch: String = "") -> Dictionary:
 	var attach := {}
 	var hide: Array = []
 	var missing: Array = []
+	var procedural: Array = []
 	for slot in ORDER:
 		var id := str(loadout.get(slot, ""))
 		if id == "":
 			continue
 		if not has_model(id):
-			missing.append(id)
+			if str(ARMORY.attachment(id).get("procedural", "")) != "":
+				procedural.append(id) # no GLB by design (Witchlight Dabs): built in code by apply()
+			else:
+				missing.append(id)
 			continue
 		attach[slot] = {"id": id, "socket": socket_name(slot), "model": model_path(id)}
 		for h in hides_for(id, slot, arch):
 			if not hide.has(h):
 				hide.append(h)
-	return {"attach": attach, "hide": hide, "missing": missing}
+	return {"attach": attach, "hide": hide, "missing": missing, "procedural": procedural}
 
 
 static func find_node(root: Node, name: String) -> Node3D:
@@ -137,7 +147,8 @@ static func clear(model: Node3D) -> void:
 static func apply(model: Node3D, arch: String, loadout = null, shadows: bool = false) -> Dictionary:
 	var out := {"attached": {}, "hidden": [], "missing": [], "muzzle": null, "sight": null, "lamp": null,
 		"skipped": [], "barrel_scale": 1.0, "model": model, "arch": arch, "cylinder": null, "rocket": null,
-		"launcher": null, "heartbeat": null, "glow": [], "anim": {}}
+		"launcher": null, "heartbeat": null, "glow": [], "anim": {}, "optic": {}, "reticle": null, "front_post": null,
+		"glow_dots": []}
 	if model == null:
 		return out
 	clear(model)
@@ -235,6 +246,7 @@ static func apply(model: Node3D, arch: String, loadout = null, shadows: bool = f
 	out.muzzle = mz
 	var sp: Node3D = find_node(out.attached.optic, "SightPoint") if out.attached.has("optic") else null
 	out.sight = sp if sp else find_node(model, "SightPoint")
+	_fit_optic(model, out, lo, p, arch, mz)
 	return out
 
 
@@ -480,3 +492,135 @@ static func visible_parts(model: Node3D) -> Array:
 		if node and node.visible:
 			out.append(n)
 	return out
+
+
+# ------------------------------------------------------------------ optics (optics pass, DESIGN.md §19, DESI_OPTICS.md)
+## Iron-sight sets ride the Rail with their rear aperture/notch; their FrontPost is moved forward to where the gun's
+## own front sight was (IronSights front end), never past the bore exit, and its PostStem is stretched down to the bore top.
+const FRONT_POST_MIN := 0.04 ## m ahead of the Rail
+const FRONT_POST_MAX := 0.70
+const FRONT_POST_MUZZLE_GAP := 0.015 ## stays this far behind the effective bore exit (Sawn Stub, short barrels)
+const BORE_TOP := 0.012 ## barrel top above the Muzzle socket (bore axis), for PostStem
+const STEM_REF := 0.01 ## PostStem is authored 10 mm tall, origin at its top, hanging down (-Y)
+const GLOW_DOT_R := 0.0011 ## Witchlight dot radius (m, gun space)
+const GLOW_DOT_REAR_Z := 0.0045 ## rear dots each side of the sight line
+
+
+static func _optic_block(att_id: String) -> Dictionary:
+	return ARMORY.attachment(att_id).get("optic", {})
+
+
+static func _fit_optic(model: Node3D, out: Dictionary, lo: Dictionary, p: Dictionary, arch: String, bore: Node3D) -> void:
+	var id := str(lo.get("optic", ""))
+	var info := {"id": id, "status": "none", "sight": "irons"}
+	if id != "":
+		if out.attached.has("optic"):
+			info.status = "fitted"
+		elif (p.get("procedural", []) as Array).has(id):
+			info.status = "procedural"
+		elif out.skipped.has("optic"):
+			info.status = "skipped"
+		else:
+			info.status = "pending"
+	var ob := _optic_block(id)
+	var glow: Dictionary = ob.get("glow", {})
+	if info.status == "fitted":
+		var inst: Node3D = out.attached.optic
+		var ret := find_node(inst, "Reticle")
+		if ret is MeshInstance3D and str(glow.get("mode", "none")) != "none":
+			_emissive(ret as MeshInstance3D, Color.html(str(glow.get("color", "#ffffff"))), float(glow.get("energy", 1.0)))
+			out.reticle = ret
+		elif ret is MeshInstance3D:
+			out.reticle = ret
+		var fp := find_node(inst, "FrontPost")
+		if fp:
+			out.front_post = _place_front_post(model, fp, bore)
+	elif info.status == "procedural" and str(ARMORY.attachment(id).get("procedural", "")) == "glow_dots":
+		out.glow_dots = _add_glow_dots(model, out, glow)
+		if (out.glow_dots as Array).is_empty():
+			info.status = "procedural_skipped"
+	# What the ADS eye line goes through (sight_line rules).
+	if out.sight and out.attached.has("optic") and (out.attached.optic as Node3D).is_ancestor_of(out.sight):
+		info.sight = "optic"
+	else:
+		var osp := find_node(model, "OpticSightPoint")
+		var dopt := find_node(model, "DefaultOptic")
+		info.sight = "builtin_scope" if osp and dopt and dopt.visible else "irons"
+	out.optic = info
+
+
+## Emission on every surface of a reticle mesh (materials duplicated per instance).
+static func _emissive(mi: MeshInstance3D, color: Color, energy: float) -> void:
+	var n: int = mi.mesh.get_surface_count() if mi.mesh else 0
+	for i in n:
+		var base := mi.get_active_material(i) as StandardMaterial3D
+		var m: StandardMaterial3D = base.duplicate() as StandardMaterial3D if base else StandardMaterial3D.new()
+		m.emission_enabled = true
+		m.emission = color
+		m.emission_energy_multiplier = energy
+		mi.set_surface_override_material(i, m)
+
+
+## Gun-space x of the factory front sight: the front end of IronSights (even when hidden), else Muzzle - 0.03.
+static func front_sight_x(model: Node3D) -> float:
+	var irons := find_node(model, "IronSights")
+	if irons is MeshInstance3D:
+		return (gun_xform(model, irons) * (irons as MeshInstance3D).get_aabb()).end.x
+	var mz := find_node(model, "Muzzle")
+	return gun_point(model, mz).x - 0.03 if mz else 0.3
+
+
+static func _place_front_post(model: Node3D, fp: Node3D, bore: Node3D) -> Node3D:
+	_rest(fp)
+	var rail := find_node(model, socket_name("optic"))
+	var rail_x := gun_point(model, rail).x if rail else 0.0
+	var x := front_sight_x(model)
+	if bore:
+		x = minf(x, gun_point(model, bore).x - FRONT_POST_MUZZLE_GAP)
+	x = clampf(x, rail_x + FRONT_POST_MIN, rail_x + FRONT_POST_MAX)
+	var cur := gun_point(model, fp)
+	var parent_xf := gun_xform(model, fp.get_parent() as Node3D) if fp.get_parent() is Node3D else Transform3D.IDENTITY
+	fp.position = parent_xf.affine_inverse() * Vector3(x, cur.y, cur.z)
+	var stem := find_node(fp, "PostStem")
+	var mz := find_node(model, socket_name("muzzle"))
+	if stem and mz:
+		_rest(stem)
+		var drop := gun_point(model, stem).y - (gun_point(model, mz).y + BORE_TOP)
+		stem.scale.y = clampf(drop / STEM_REF, 0.1, 12.0)
+	return fp
+
+
+## Witchlight Dabs: two rear dots either side of the sight line + one on the front post tip, parented to IronSights
+## (so a Sawn Stub that hides the irons takes the paint with it; nothing is added when IronSights is hidden or absent).
+static func _add_glow_dots(model: Node3D, out: Dictionary, glow: Dictionary) -> Array:
+	var irons := find_node(model, "IronSights")
+	if not (irons is MeshInstance3D) or not irons.visible or out.get("sight") == null:
+		return []
+	var line := sight_line(out)
+	var front := Vector3(front_sight_x(model) - 0.003, line.y, 0.0)
+	var pts := [line + Vector3(0, -0.0015, GLOW_DOT_REAR_Z), line + Vector3(0, -0.0015, -GLOW_DOT_REAR_Z), front]
+	var col := Color.html(str(glow.get("color", "#B8F5A0")))
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = col
+	mat.emission_enabled = true
+	mat.emission = col
+	mat.emission_energy_multiplier = float(glow.get("energy", 1.2))
+	var sph := SphereMesh.new()
+	sph.radius = GLOW_DOT_R
+	sph.height = GLOW_DOT_R * 2.0
+	sph.radial_segments = 8
+	sph.rings = 4
+	var inv := gun_xform(model, irons).affine_inverse()
+	var dots := []
+	for i in pts.size():
+		var d := MeshInstance3D.new()
+		d.name = "GlowDot%d" % i
+		d.mesh = sph
+		d.material_override = mat
+		d.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		d.set_meta(META_ATT, "witchlight_dabs")
+		irons.add_child(d)
+		d.position = inv * pts[i]
+		dots.append(d)
+	return dots

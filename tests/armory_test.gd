@@ -288,8 +288,9 @@ func _run() -> void:
 		"other archetypes untouched")
 	check(bool(A.flag("auto_rifle", "tracer_hidden")) and is_equal_approx(float(A.flag("auto_rifle", "flash_mult", 1.0)), 0.2),
 		"Hush Can flags: tracer hidden, flash x0.2")
-	check(is_equal_approx(Ads.ads_fov("auto_rifle"), 40.0) and is_equal_approx(Ads.target_fov(true, "auto_rifle", 75.0), 40.0),
-		"Crow's Eye: Auto Rifle ADS FOV 55 -> 40")
+	# optics pass: magnified glass uses its true magnification vs the 75 deg hip view (Crow's Eye 3x = 28.7, was 40)
+	check(is_equal_approx(Ads.ads_fov("auto_rifle"), 28.7) and is_equal_approx(Ads.target_fov(true, "auto_rifle", 75.0), 28.7),
+		"Crow's Eye 3x: Auto Rifle ADS FOV 55 -> 28.7 (true 3x)")
 	check(is_equal_approx(Ads.ads_fov("smg"), 65.0), "no optic: family FOV")
 	check(is_equal_approx(Ads.move_speed_mult(true, "auto_rifle"), 1.0 - 0.3 / (0.85 * 1.3)), "ADS move: Crow's Eye x0.85, Lean Grip x1.3 on the penalty")
 	check(is_equal_approx(Ads.spread_mult(true, "auto_rifle"), 0.45 * 0.9) and is_equal_approx(Ads.spread_mult(false, "auto_rifle"), 1.0),
@@ -311,7 +312,7 @@ func _run() -> void:
 	for i in 4:
 		api.purchase("upg_scout_rifle")
 	check(api.purchase("longwatch_6x") and api.equip_attachment("scout_rifle", "optic", "longwatch_6x") and Ads.wants_scope_overlay("scout_rifle")
-		and is_equal_approx(Ads.ads_fov("scout_rifle"), 22.0), "Longwatch (tier 3, Rework IV): Scout ADS 22 FOV + scope overlay")
+		and is_equal_approx(Ads.ads_fov("scout_rifle"), 14.6), "Longwatch 6x (tier 3, Rework IV): Scout ADS 14.6 FOV (true 6x) + scope overlay")
 	var sc = gdb.roll_weapon("scout_rifle", 1, 3)
 	check(is_equal_approx(sc.headshot_mult(), float(sc.arch.get("headshot_multiplier", 2.0)) + 0.4), "Longwatch precision +0.4")
 
@@ -388,7 +389,7 @@ func _run() -> void:
 		prev_c = c
 	check(curve_ok and A.tier_cost("auto_rifle", 5) == 36 and A.upgrade_total_cost("auto_rifle") == 76,
 		"upgrade cost curve still 3/6/11/20/36 after Mine Lamp")
-	check(A.attachment_ids().size() == 38, "38 attachments including Mine Lamp")
+	check(A.attachment_ids().size() == 44, "44 attachments: 38 + the 6 new optics (optics pass)")
 
 	await _art_pass2b(prog, A)
 	await _art_pass3(prog, A)

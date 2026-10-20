@@ -387,25 +387,33 @@ static func _entry(arch: String) -> Dictionary:
 
 
 static func _compute(arch: String) -> Dictionary:
+	return _compute_lo(arch, loadout(arch))
+
+
+## Same as _compute for any {slot: id} loadout (optic previews: Armory.optic_profile(weapon, candidate)).
+## ads (optics pass): fov (0 = no optic override; the narrowest wins), fov_mult / move_mult / spread_mult / ads_time_mult /
+## sway_mult (multiplied over the parts), optic (equipped optic id or ""), scope_replaced (an optic hides the built-in
+## DefaultOptic scope, i.e. the sniper aims through it instead), overlay (Gooey's 2D scope overlay while ADS).
+static func _compute_lo(arch: String, lo: Dictionary) -> Dictionary:
 	var mods := {}
 	for k in MULT_KEYS:
 		mods[k] = 1.0
 	for k in ADD_KEYS:
 		mods[k] = 0.0
-	var ads := {"fov": 0.0, "move_mult": 1.0, "spread_mult": 1.0}
+	var ads := {"fov": 0.0, "move_mult": 1.0, "spread_mult": 1.0, "fov_mult": 1.0, "ads_time_mult": 1.0, "sway_mult": 1.0,
+		"optic": str(lo.get("optic", "")), "scope_replaced": false, "overlay": false}
 	var flg := {}
 	var parts: Array = []
 	for t in range(1, upgrade_tier(arch) + 1):
 		parts.append(tiers()[t - 1].get("mods", {}))
-	var lo := loadout(arch)
 	for slot in lo:
 		var a := attachment(lo[slot])
 		parts.append(a.get("mods", {}))
 		var ad: Dictionary = a.get("ads", {})
 		if float(ad.get("fov", 0.0)) > 0.0:
 			ads.fov = float(ad.fov) if ads.fov <= 0.0 else minf(ads.fov, float(ad.fov))
-		ads.move_mult *= float(ad.get("move_mult", 1.0))
-		ads.spread_mult *= float(ad.get("spread_mult", 1.0))
+		for k in ["move_mult", "spread_mult", "fov_mult", "ads_time_mult", "sway_mult"]:
+			ads[k] *= float(ad.get(k, 1.0))
 		var fl: Dictionary = a.get("flags", {})
 		for k in fl:
 			if k == "flash_mult":
@@ -419,6 +427,9 @@ static func _compute(arch: String) -> Dictionary:
 			elif k in ADD_KEYS:
 				mods[k] += float(m[k])
 	mods["item_power_bonus"] = power_bonus(arch)
+	var oid := str(ads.optic)
+	ads.scope_replaced = oid != "" and has_builtin_scope(arch) and _optic_hides(oid, arch).has("DefaultOptic")
+	ads.overlay = bool(flg.get("scope_overlay", false)) or (has_builtin_scope(arch) and not ads.scope_replaced)
 	return {"mods": mods, "ads": ads, "flags": flg}
 
 
@@ -431,7 +442,8 @@ static func mod(arch: String, key: String, fallback: float = 1.0) -> float:
 	return float(_entry(arch).mods.get(key, fallback))
 
 
-## {fov (0 = no optic override), move_mult, spread_mult} for AdsProfile.
+## {fov (0 = no optic override), move_mult, spread_mult, fov_mult, ads_time_mult, sway_mult, optic, scope_replaced,
+## overlay} for AdsProfile.
 static func ads_mods(arch: String) -> Dictionary:
 	return _entry(arch).ads
 
@@ -455,6 +467,151 @@ static func has_mine_lamp(arch: String) -> bool:
 ## Any equipped part with flags.flashlight (Mine Lamp, Lantern Rail).
 static func has_flashlight(arch: String) -> bool:
 	return bool(flag(arch, "flashlight", false)) or bool(flag(arch, "mine_lamp", false))
+
+
+# ================================================================== optics lineup (optics pass, DESIGN.md §19)
+## Data: attachments.json -> optics {hip_fov, overlay_min_mag, lineup, price_bands, factory} + each optic-slot part's
+## "optic" block {type, label, magnification, reticle_id, reticle{shape,color,size_moa}, overlay, glow{mode,energy,color},
+## night, replaces_irons, rarity, tradeoff}. The ADS numbers come from AdsProfile (class profile x optic), so the Armory
+## card, the HUD and the live player read the same values. Gooey: optic_profile() / optic_choices() (GOOEY_OPTICS.md).
+const ADS_SCRIPT := "res://scripts/combat/ads_profile.gd"
+
+
+static func optics_cfg() -> Dictionary:
+	return data().get("optics", {})
+
+
+## Archetypes whose factory sight is a built-in scope (DefaultOptic + OpticSightPoint): the sniper family.
+static func has_builtin_scope(arch: String) -> bool:
+	var ads = load(ADS_SCRIPT)
+	return ads != null and ads.family_for_archetype(arch) == "sniper"
+
+
+## Equipped optic id on `weapon_id` ("" = factory sights).
+static func optic_id(weapon_id: String) -> String:
+	return str(loadout(resolve_weapon(weapon_id)).get("optic", ""))
+
+
+static func _optic_hides(att_id: String, arch: String) -> Array:
+	var a := attachment(att_id)
+	var h = a.get("hides", null)
+	if h == null:
+		for s in slots():
+			if str(s.get("id", "")) == str(a.get("slot", "")):
+				h = s.get("hides", [])
+	var by_class = a.get("hides_by_class", {})
+	if by_class is Dictionary and (by_class as Dictionary).has(arch):
+		h = by_class[arch]
+	if typeof(h) == TYPE_STRING:
+		return [h] if str(h) != "" else []
+	return Array(h) if h is Array else []
+
+
+## The no-attachment choice for `arch`: the factory irons, or the sniper's built-in scope.
+static func factory_optic(arch: String) -> Dictionary:
+	var f: Dictionary = optics_cfg().get("factory", {})
+	return f.get("scope" if has_builtin_scope(arch) else "irons", {})
+
+
+## Art status of an optic part: "shipped" (GLB in the project), "pending" (GLB not delivered yet: WeaponRig shows the
+## default sight picture), "procedural" (no GLB by design: Witchlight Dabs), "none" (factory / unknown).
+static func optic_art_status(att_id: String) -> String:
+	var a := attachment(att_id)
+	if att_id == "" or a.is_empty():
+		return "none"
+	var m := str(a.get("model", ""))
+	if m == "":
+		return "procedural" if str(a.get("procedural", "")) != "" else "none"
+	return "shipped" if ResourceLoader.exists(m) else "pending"
+
+
+## Lineup ids that fit `weapon_id`, in data order, factory ("") first. Uniques included.
+static func optic_lineup(weapon_id: String) -> Array:
+	var arch := resolve_weapon(weapon_id)
+	var out: Array = [""]
+	for id in optics_cfg().get("lineup", []):
+		if is_compatible(str(id), arch):
+			out.append(str(id))
+	return out
+
+
+## Everything the Armory card / HUD / scope overlay needs about the sight on `weapon_id` (archetype or gear item_id).
+## optic = null: the equipped optic. optic = "" : the factory sights. optic = "<id>": preview that optic in the loadout
+## (the rest of the loadout stays, so grips/stocks that touch ADS are counted). Keys:
+##   weapon_id, arch, optic_id, name, type, label ("2x"), magnification (nominal), true_magnification (vs the 75 hip view),
+##   ads_fov, class_fov, fov_mult, ads_time (s), ads_time_mult, sway_mult, ads_spread_mult (x the ADS spread, 1 = class),
+##   ads_move_mult (move speed while aiming), overlay (2D scope overlay), sight_picture ("overlay" | "3d"),
+##   reticle_id, reticle {shape, color, size_moa}, glow {mode, energy, color}, night ("poor" | "fair" | "good"),
+##   replaces_irons, hides, rarity, tier, cost, owned, equipped, compatible, art_status, fallback (equipped/previewed
+##   optic without a GLB: the default sight picture shows), tradeoff, summary, description, drawback, icon.
+static func optic_profile(weapon_id: String, optic = null) -> Dictionary:
+	var arch := resolve_weapon(weapon_id)
+	var lo: Dictionary = loadout(arch).duplicate()
+	var oid := str(lo.get("optic", "")) if optic == null else str(optic)
+	if oid != "" and not (is_attachment(oid) and str(attachment(oid).get("slot", "")) == "optic"):
+		oid = ""
+	if oid == "":
+		lo.erase("optic")
+	else:
+		lo["optic"] = oid
+	var c := _compute_lo(arch, lo) if optic != null else _entry(arch)
+	var ad: Dictionary = c.ads
+	var A = load(ADS_SCRIPT)
+	var a := attachment(oid)
+	var fac := factory_optic(arch)
+	var ob: Dictionary = a.get("optic", fac.get("optic", {})) if oid != "" else fac.get("optic", {})
+	# A part that keeps the factory sights (Heartbeat Counter) on a scoped gun: the built-in scope is still the sight.
+	if oid != "" and not bool(ob.get("replaces_irons", true)) and not bool(ad.scope_replaced) and has_builtin_scope(arch) \
+			and str(ob.get("reticle_id", "")) == "factory_irons":
+		ob = (fac.get("optic", {}) as Dictionary).duplicate(true)
+	var fov: float = A.merge_fov(arch, ad) if A else 55.0
+	var art := optic_art_status(oid)
+	var p := {"weapon_id": weapon_id, "arch": arch, "optic_id": oid,
+		"name": str(a.get("name", fac.get("name", "Factory Irons"))) if oid != "" else str(fac.get("name", "Factory Irons")),
+		"type": str(ob.get("type", "irons")), "label": str(ob.get("label", "Irons")),
+		"magnification": float(ob.get("magnification", 0.0)),
+		"true_magnification": A.true_magnification(fov) if A else 1.0,
+		"ads_fov": fov, "class_fov": A.class_fov(arch, ad) if A else fov, "fov_mult": float(ad.fov_mult),
+		"ads_time": A.ads_time_for(arch, ad) if A else 0.25, "ads_time_mult": float(ad.ads_time_mult),
+		"sway_mult": float(ad.sway_mult), "ads_spread_mult": float(ad.spread_mult),
+		"ads_move_mult": A.move_mult_for(ad) if A else 0.7,
+		"overlay": bool(ad.overlay), "sight_picture": "overlay" if bool(ad.overlay) else "3d",
+		"reticle_id": str(ob.get("reticle_id", "factory_irons")), "reticle": (ob.get("reticle", {}) as Dictionary).duplicate(true),
+		"glow": (ob.get("glow", {}) as Dictionary).duplicate(true), "night": str(ob.get("night", "poor")),
+		"replaces_irons": bool(ob.get("replaces_irons", false)) if oid != "" else false,
+		"hides": _optic_hides(oid, arch) if oid != "" else [],
+		"rarity": str(ob.get("rarity", "common")), "tier": int(a.get("tier", 0)), "cost": int(a.get("cost", 0)),
+		"owned": oid == "" or owned(oid), "equipped": str(loadout(arch).get("optic", "")) == oid,
+		"compatible": oid == "" or is_compatible(oid, arch), "art_status": art,
+		"fallback": art == "pending", "tradeoff": str(ob.get("tradeoff", "")),
+		"summary": str(a.get("summary", fac.get("summary", ""))), "description": str(a.get("description", "")),
+		"drawback": str(a.get("drawback", "")), "icon": str(a.get("icon", "")) if oid != "" else ""}
+	return p
+
+
+## The whole lineup for one weapon, for a comparison view: optic_profile(weapon, id) for the factory sights and every
+## optic that fits, each with the Armory state of that part (state / requirements / purchase_requirements / can_afford,
+## same rules as list_attachments; the factory row is always "equipped" or "owned").
+static func optic_choices(weapon_id: String) -> Array:
+	var arch := resolve_weapon(weapon_id)
+	var out := []
+	for id in optic_lineup(arch):
+		var p := optic_profile(arch, id)
+		if id == "":
+			p["state"] = "equipped" if p.equipped else "owned"
+			p["requirements"] = []
+			p["purchase_requirements"] = []
+			p["can_afford"] = false
+		else:
+			var req := equip_requirements(id, arch)
+			var preq := purchase_requirements(id)
+			p["requirements"] = req
+			p["purchase_requirements"] = preq
+			p["can_afford"] = can_afford_id(id)
+			p["state"] = "equipped" if p.equipped else ("owned" if p.owned and req.is_empty() else
+				("locked" if not req.is_empty() or (not p.owned and not preq.is_empty()) else ("owned" if p.owned else "available")))
+		out.append(p)
+	return out
 
 
 ## SkillRunner: [{arch, id, def}] for every effect of every equipped attachment (gated to that archetype in hand).
@@ -965,7 +1122,8 @@ func list_upgrades(weapon_id: String = "") -> Array:
 ## Parts that fit `weapon_id` (optionally one slot). Entry: id, name, summary, description, drawback, cost, owned,
 ## equipped (on this weapon), slot, tier, unique, icon, model, requirements (unmet, to equip here: tier gates and
 ## exclusion text), conflict (Armory.exclusion_conflict: {} or {rule, with, with_name, reason}),
-## purchase_requirements (unmet, to buy), can_afford, state: "equipped" | "owned" | "locked" (requirements) | "available".
+## purchase_requirements (unmet, to buy), can_afford, state: "equipped" | "owned" | "locked" (requirements) | "available",
+## optic (optic-slot parts only: Armory.optic_profile(weapon, id), the zoom / ADS time / reticle preview; {} otherwise).
 func list_attachments(weapon_id: String, slot: String = "") -> Array:
 	var arch := resolve_weapon(weapon_id)
 	var out := []
@@ -983,6 +1141,7 @@ func list_attachments(weapon_id: String, slot: String = "") -> Array:
 			"icon": str(a.get("icon", id)), "model": str(a.get("model", "")), "weapon_id": arch,
 			"requirements": req, "purchase_requirements": preq, "can_afford": can_afford_id(id),
 			"conflict": exclusion_conflict(id, arch),
+			"optic": optic_profile(arch, id) if str(a.slot) == "optic" else {},
 			"state": "equipped" if eq else ("owned" if own and req.is_empty() else ("locked" if not req.is_empty() or (not own and not preq.is_empty()) else ("owned" if own else "available")))})
 	return out
 
@@ -1023,3 +1182,8 @@ func equip_attachment(weapon_id: String, slot: String, id: String) -> bool:
 
 func unequip(weapon_id: String, slot: String) -> bool:
 	return unequip_slot(resolve_weapon(weapon_id), slot)
+
+
+## Optics pass: the lineup for Gooey's optic picker (same as the static optic_choices).
+func list_optics(weapon_id: String) -> Array:
+	return optic_choices(weapon_id)

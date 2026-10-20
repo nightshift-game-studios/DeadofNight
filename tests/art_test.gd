@@ -188,10 +188,13 @@ func _run() -> void:
 
 	# ------------------------------------------------------------ attachments: models + show/hide
 	var shipped := 0
+	var expect := 0 # optics pass: new optics flagged art_pending ["model", ...] (GLB not delivered) or without a model by design
 	for a in A.data().attachments:
 		if Rig.has_model(str(a.id)):
 			shipped += 1
-	check(shipped == 38 and A.data().attachments.size() == 38, "38/38 attachment GLBs wired (batch 2 complete), got %d" % shipped)
+		if str(a.get("model", "")) != "" and not (a.get("art_pending", []) as Array).has("model"):
+			expect += 1
+	check(shipped == expect and shipped >= 38, "%d/%d attachment GLBs wired (38 from batch 2 + optics as they land), got %d" % [expect, A.data().attachments.size(), shipped])
 	check(ResourceLoader.exists("res://assets/icons/att_mine_lamp.png"), "att_mine_lamp.png copied to assets/icons")
 	check(Rig.hides_for("crows_eye_3x") == ["IronSights", "DefaultOptic"] and Rig.hides_for("hush_can") == ["DefaultMuzzle"]
 		and Rig.hides_for("fence_post") == ["DefaultGrip"] and Rig.hides_for("mine_lamp") == [], "slot hides (Mine Lamp hides nothing)")
@@ -349,13 +352,19 @@ func _art_pass2(A, Rig, prog: Node, world: Node3D, holder: Node3D, by_arch: Dict
 	# ------------------------------------------------------------ every referenced asset path exists
 	var refs := _scan_asset_refs()
 	var missing: Array = []
+	var pending := {} # optics pass: model paths of attachments whose GLB is still art_pending (WeaponRig fallback)
+	for a in A.data().attachments:
+		if (a.get("art_pending", []) as Array).has("model"):
+			pending[str(a.get("model", ""))] = true
 	for pth in refs:
-		if not FileAccess.file_exists(pth) and not ResourceLoader.exists(pth):
+		if not FileAccess.file_exists(pth) and not ResourceLoader.exists(pth) and not pending.has(pth):
 			missing.append("%s (%s)" % [pth, refs[pth]])
 	check(refs.size() >= 80 and missing.is_empty(), "every res://assets path in data/*.json + scripts exists (%d refs, missing %s)" % [refs.size(), missing])
 	var no_import: Array = []
 	for a in A.data().attachments:
 		var mp := str(a.model)
+		if (mp == "" and str(a.get("procedural", "")) != "") or (a.get("art_pending", []) as Array).has("model"):
+			continue # optics pass: no GLB by design (Witchlight Dabs) / GLB not delivered yet (checked again once it lands)
 		if mp != "res://assets/models/attachments/%s/%s.glb" % [a.slot, a.id] or not FileAccess.file_exists(mp + ".import"):
 			no_import.append(a.id)
 	for g in ["weapon_hand_cannon", "weapon_rocket_launcher", "rocket_projectile"]:
