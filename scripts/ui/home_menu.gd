@@ -6,6 +6,7 @@ extends Control
 ## Buttons: Play → map select → MapRegistry.select + change_scene to main.tscn
 ##          Kit → character_screen on a KitProxy (persistent stash)
 ##          Armory → placeholder ArmoryAPI shell (COMING SOON)
+##          Merchant → merchant_menu (hourly gun stock; Skillz Merchant or the merchant_api.gd stub)
 ##          Settings → settings_menu
 ##          Quit → Progress.save_stash() then quit
 ## Header: rare-currency chip (hidden until a real currency_balance API exists).
@@ -15,6 +16,7 @@ const MapPickerScript := preload("res://scripts/ui/map_picker.gd")
 const SettingsMenuScript := preload("res://scripts/ui/settings_menu.gd")
 const ArmoryMenuScript := preload("res://scripts/ui/armory_menu.gd")
 const ArmoryNoticeScript := preload("res://scripts/ui/armory_notice.gd")
+const MerchantMenuScript := preload("res://scripts/ui/merchant_menu.gd")
 const KitProxyScript := preload("res://scripts/ui/kit_proxy.gd")
 const ArmoryScr := preload("res://scripts/armory/armory.gd")
 const MAIN_SCENE := "res://scenes/main.tscn"
@@ -34,6 +36,7 @@ var _currency_label: Label
 var _map_picker: MenuBase
 var _settings: MenuBase
 var _armory: MenuBase
+var _merchant: MenuBase
 var _kit_screen: MenuBase
 var _kit_proxy: Node
 var _armory_api: RefCounted ## Armory instance for live Gravemark balance
@@ -122,6 +125,7 @@ func _build() -> void:
 		["play", "PLAY"],
 		["kit", "KIT / INVENTORY"],
 		["armory", "ARMORY"],
+		["merchant", "MERCHANT"],
 		["settings", "SETTINGS"],
 		["quit", "QUIT"],
 	]:
@@ -172,6 +176,11 @@ func _build() -> void:
 	_armory = ArmoryMenuScript.new()
 	_armory.name = "HomeArmory"
 	add_child(_armory)
+
+	_merchant = MerchantMenuScript.new()
+	_merchant.name = "HomeMerchant"
+	_merchant.closed.connect(_on_merchant_closed)
+	add_child(_merchant)
 
 	_armory_api = ArmoryScr.new()
 	if _armory_api.has_signal("currency_changed"):
@@ -233,10 +242,25 @@ func _on_btn(id: String) -> void:
 			_open_kit()
 		"armory":
 			_armory.open()
+		"merchant":
+			open_merchant()
 		"settings":
 			_settings.open()
 		"quit":
 			request_quit()
+
+
+## Merchant: bought guns land in the kit stash (same Inventory the Kit screen edits), saved by the API.
+func open_merchant() -> void:
+	if _kit_proxy.has_method("ensure"):
+		_kit_proxy.ensure()
+	_merchant.set_inventory(_kit_proxy.get("inventory"))
+	_merchant.open()
+
+
+func _on_merchant_closed() -> void:
+	if _btns.has("merchant"):
+		(_btns["merchant"] as Button).grab_focus()
 
 
 func _open_map_select() -> void:
