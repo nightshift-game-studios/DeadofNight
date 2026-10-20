@@ -36,6 +36,7 @@ const HITBOX_LAYER := 32 ## physics layer 6: head hitboxes (weapon rays only)
 
 var health: float
 var target: Node3D
+var _net_retarget_t := 0.0 ## NET E1: co-op host re-picks the nearest player about once a second
 var knockback: Vector3 = Vector3.ZERO
 var _attack_cd: float = 0.0
 var _dead: bool = false
@@ -92,7 +93,7 @@ func in_attack_reach(dist_h: float, dy: float, extra: float = 0.0) -> bool:
 func _ready() -> void:
 	add_to_group("enemies")
 	health = max_health
-	target = get_tree().get_first_node_in_group("player") as Node3D
+	target = NetGate.pick_target(self) # NET E1: nearest alive player (solo: the "player" group's first node, as before)
 	_spawn_model()
 	_setup_audio()
 	health_bar = ZombieHealthBar.make(model_height - 0.14) # sits just above the hunched head
@@ -103,10 +104,11 @@ func _ready() -> void:
 func _spawn_model() -> void:
 	if models.is_empty():
 		return
-	var m: Node3D = models.pick_random().instantiate()
+	var rng := NetGate.rng_for(self) # NET E4: co-op spawn seed -> same model / size on every peer; null in solo (global RNG as before)
+	var m: Node3D = (models[rng.randi() % models.size()] if rng else models.pick_random()).instantiate()
 	model_root.add_child(m)
 	var a := ModelUtil.get_aabb(m)
-	var s: float = model_height / max(a.size.y, 0.01) * randf_range(1.0 - size_variety, 1.0 + size_variety) # slight size variety
+	var s: float = model_height / max(a.size.y, 0.01) * (rng.randf_range(1.0 - size_variety, 1.0 + size_variety) if rng else randf_range(1.0 - size_variety, 1.0 + size_variety)) # slight size variety
 	m.scale = Vector3.ONE * s
 	m.position.y = -a.position.y * s
 	if model_faces_plus_z:
@@ -223,6 +225,14 @@ func _play(key: String, blend: float = 0.2) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if not is_multiplayer_authority(): # NET E2: client puppet - no AI / nav / attacks; Net animates it (solo: always authority)
+		NetGate.zombie_puppet_tick(self, delta)
+		return
+	if NetGate.is_networked(): # NET E1: co-op retarget (solo never runs this)
+		_net_retarget_t -= delta
+		if _net_retarget_t <= 0.0:
+			_net_retarget_t = 1.0
+			target = NetGate.pick_target(self)
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
 	if _dead:
@@ -320,6 +330,8 @@ func apply_knockback(v: Vector3) -> void:
 
 ## Returns true if this hit killed the zombie.
 func take_damage(amount: float, _hit_pos: Vector3 = Vector3.ZERO, _crit: bool = false, _source: Node = null) -> bool:
+	if not is_multiplayer_authority(): # NET E3: client hit -> claim to the host; returns the predicted kill
+		return NetGate.forward_zombie_damage(self, amount, _hit_pos, _crit, _source)
 	if _dead:
 		return false
 	amount *= damage_taken_mult()
@@ -344,6 +356,9 @@ func take_damage(amount: float, _hit_pos: Vector3 = Vector3.ZERO, _crit: bool = 
 
 ## Reapplying refreshes the duration (never shortens it) and keeps the stronger amp / dps.
 func apply_status(id: String, p: Dictionary) -> void:
+	if not is_multiplayer_authority(): # NET E3: client status (burn / slow / mark / rot) -> host
+		NetGate.forward_zombie_status(self, id, p)
+		return
 	if _dead:
 		return
 	var cur: Dictionary = _statuses.get(id, {})
@@ -400,19 +415,38 @@ func tick_statuses(delta: float) -> void:
 
 func _die() -> void:
 	_dead = true
+	_death_fx_start() # NET E5: same order as before, split so client puppets can play the visual without died / free
+	remove_from_group("enemies")
+	collision_layer = 0
+	collision_mask = 1
+	died.emit(self)
+	_death_fx_end(true)
+
+
+## NET E5: a client puppet's death (replicated _dead): bar / head hitbox / voice / anim / sink, no died signal and
+## no free (the host's despawn removes it).
+func play_death_visual() -> void:
+	_death_fx_start()
+	remove_from_group("enemies")
+	collision_layer = 0
+	collision_mask = 1
+	_death_fx_end(false)
+
+
+func _death_fx_start() -> void:
 	if health_bar:
 		health_bar.hide_now()
 	if head_hitbox:
 		head_hitbox.collision_layer = 0
 	_say("zombie_death", 3)
-	remove_from_group("enemies")
-	collision_layer = 0
-	collision_mask = 1
-	died.emit(self)
+
+
+func _death_fx_end(free_after: bool) -> void:
 	if _anim and _anims.has("death"):
 		_anim.speed_scale = 1.0
 		_anim.play(_anims["death"], 0.1)
 	var tween := create_tween()
 	tween.tween_interval(1.6)
 	tween.tween_property(model_root, "position:y", -1.2, 0.8)
-	tween.tween_callback(queue_free)
+	if free_after:
+		tween.tween_callback(queue_free)

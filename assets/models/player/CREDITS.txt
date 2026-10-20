@@ -1,0 +1,17 @@
+player/ — Gravecrew third-person co-op player body ("night-shift worker") — by Desi, released CC0 1.0
+Base mesh: MakeHuman hm08 base mesh via MPFB 2 for Blender (MakeHuman system assets, CC0 1.0), "game_engine" rig + weights (CC0).
+  Phenotype set in MPFB (male, 0.55 age, 0.62 muscle, 0.55 weight); body decimated/cut, new deformation-safe cuffs.
+Clothing/accessories (MakeHuman system assets, each .mhclo/.mhmat states "explicitly released as CC0 in september 2020"):
+  male_casualsuit05 (jacket/shirt/trousers geometry + its diffuse/normal/AO as detail sources), shoes03 (boots),
+  low-poly eyes (+ brown_eye texture), eyebrow001 (alpha projected into the skin texture; mesh dropped),
+  skin middleage_caucasian_male (diffuse, regraded).
+New, procedural, CC0: beanie + headlamp strap + headlamp geometry, gloves (ported from fp_arms, same zones/values),
+  sleeve cuffs/rim lips, hi-vis band/reflective strip cuts, TintBand surface, all colour/roughness/AO/normal bakes
+  (Blender 4.5 Cycles, look values from fp_arms/_work/scripts/look.py — itself procedural CC0).
+Animation: Quaternius Universal Animation Library (UAL1) CC0 1.0 and Universal Animation Library 2 (UAL2) CC0 1.0,
+  retargeted onto the MPFB skeleton (bones renamed to UAL2 names). Clips: Idle, Walk, Run, Sprint, Crouch, CrouchWalk,
+  Jump, Fall, Land, Death, HitReact, Revive/ReviveStart/ReviveEnd (UAL1); Throw (UAL2 OverhandThrow, spine softened).
+  Procedural (Blender 4.5, own IK/bake + bosslib port): Hold_Rifle, ADS_Aim, Fire, Reload, Downed.
+Preview HDRI: Poly Haven "Abandoned Tank Farm 05" (CC0) — previews only, not shipped in the GLB.
+Preview prop: weapons/weapon_assault_rifle.glb (Desi, CC0) — previews only.
+No Mixamo, no Tripo, no non-CC0 sources.

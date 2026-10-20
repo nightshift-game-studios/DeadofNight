@@ -307,6 +307,10 @@ func _test_driver() -> void:
 	var real_callouts = root.get_node_or_null("Callouts")
 	if real_callouts:
 		real_callouts.name = "CalloutsAutoloadParked"
+	# Netz: the real Net autoload owns /root/Net too: park it so the "no Net" and fake-Net cases below see what they expect.
+	var real_net = root.get_node_or_null("Net")
+	if real_net:
+		real_net.name = "NetAutoloadParked"
 	var callouts = CP.new()
 	callouts.name = "Callouts"
 	callouts.configure(cfg)
@@ -391,3 +395,5 @@ func broadcast_callout(event_id: String, peer_id: int) -> void: calls.append([ev
 	if real_callouts:
 		real_callouts.name = "Callouts"
 	await process_frame
+	if real_net:
+		real_net.name = "Net"

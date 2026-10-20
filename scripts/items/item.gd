@@ -20,3 +20,11 @@ func get_summary() -> String:
 ## Serialise for saving (e.g. a future vault). Subclasses extend this.
 func to_dict() -> Dictionary:
 	return {"kind": "consumable", "id": id}
+
+
+## Inverse of to_dict() for every item class (weapon / armor / consumable), via GearDB.item_from_dict.
+## Netz: co-op loot grants send item.to_dict() over the wire and rebuild it here. null if unknown / no GearDB.
+static func from_dict(d: Dictionary) -> Item:
+	var ml := Engine.get_main_loop()
+	var gdb = (ml as SceneTree).root.get_node_or_null("GearDB") if ml is SceneTree else null
+	return gdb.item_from_dict(d) if gdb and d is Dictionary else null

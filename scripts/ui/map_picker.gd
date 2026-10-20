@@ -29,6 +29,8 @@ var restart_calls: Array = [] ## ids passed to restart (tests read this; set dry
 var dry_run: bool = false
 ## Home title screen: always openable, sorts Easy→Hard, difficulty badges, emits map_chosen.
 var home_mode: bool = false
+var pick_label: String = "" ## home_mode button text, e.g. "PICK %s" (co-op lobby); "" = "DEPLOY ON %s"
+var gate_text: String = "" ## home_mode header, "" = "CHOOSE YOUR DROP"
 signal map_chosen(map_id: String)
 var _diff_note: Label
 
@@ -187,7 +189,7 @@ func refresh() -> void:
 		b.focus_neighbor_top = b.get_path_to(_rows[keys[(i - 1 + keys.size()) % keys.size()]])
 		b.focus_neighbor_bottom = b.get_path_to(_rows[keys[(i + 1) % keys.size()]])
 	if home_mode:
-		_gate_label.text = "CHOOSE YOUR DROP"
+		_gate_label.text = gate_text if gate_text != "" else "CHOOSE YOUR DROP"
 		_play_btn.text = "DEPLOY"
 	elif main:
 		_gate_label.text = "GAME OVER // PICK THE NEXT MAP" if bool(main.get("_game_over")) else "BEFORE ROUND 1"
@@ -266,7 +268,7 @@ func select_row(id: String) -> void:
 		l.custom_minimum_size.x = 600
 		_hint.add_child(l)
 	if home_mode:
-		_play_btn.text = "DEPLOY ON %s" % _name.text
+		_play_btn.text = (pick_label if pick_label != "" else "DEPLOY ON %s") % _name.text
 	else:
 		_play_btn.text = ("RESTART ON %s" if cur else "LOAD %s") % _name.text
 	_play_btn.disabled = not MapRegistry.is_valid(id)

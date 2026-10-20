@@ -62,6 +62,14 @@ var fov: float = 75.0
 var ads_mode: String = "hold"
 ## Master switch for any future motion-blur camera / post effect. Default off; nothing reads it yet.
 var motion_blur: bool = false
+## Co-op profile name (lobby, party HUD, name tags). "" = never set -> home shows the first-launch name prompt.
+## Netz's Net.set_local_profile reads / persists this key ("player_name"). Not touched by reset_to_defaults.
+var player_name: String = ""
+const NAME_MIN := 2
+const NAME_MAX := 16
+const NAME_ALLOWED := "letters, numbers, spaces and _ - ."
+## settings.cfg location; tests point this at their own file.
+var save_path: String = SAVE_PATH
 
 var _defaults_events: Dictionary = {} ## action -> Array[InputEvent] captured at first apply
 var _ready_done: bool = false
@@ -111,7 +119,7 @@ func _snapshot_default_binds() -> void:
 
 func load_from_disk() -> void:
 	var cfg := ConfigFile.new()
-	if cfg.load(SAVE_PATH) != OK:
+	if cfg.load(save_path) != OK:
 		_reset_values_only()
 		return
 	fullscreen = bool(cfg.get_value(SECTION, "fullscreen", DEFAULTS.fullscreen))
@@ -124,6 +132,8 @@ func load_from_disk() -> void:
 	var am := str(cfg.get_value(SECTION, "ads_mode", DEFAULTS.ads_mode))
 	ads_mode = am if am in ["hold", "toggle"] else "hold"
 	motion_blur = bool(cfg.get_value(SECTION, "motion_blur", DEFAULTS.motion_blur))
+	var pn := str(cfg.get_value(SECTION, "player_name", ""))
+	player_name = str(validate_player_name(pn).name) if bool(validate_player_name(pn).ok) else ""
 	_load_bindings(cfg)
 
 
@@ -138,8 +148,10 @@ func save_to_disk() -> void:
 	cfg.set_value(SECTION, "fov", fov)
 	cfg.set_value(SECTION, "ads_mode", ads_mode)
 	cfg.set_value(SECTION, "motion_blur", motion_blur)
+	if player_name != "":
+		cfg.set_value(SECTION, "player_name", player_name)
 	_save_bindings(cfg)
-	cfg.save(SAVE_PATH)
+	cfg.save(save_path)
 
 
 func _save_bindings(cfg: ConfigFile) -> void:
@@ -157,10 +169,10 @@ func _load_bindings(cfg: ConfigFile) -> void:
 	if cfg.has_section_key(BIND_SECTION, "aim") and not cfg.has_section_key(BIND_SECTION, "ads"):
 		cfg.set_value(BIND_SECTION, "ads", cfg.get_value(BIND_SECTION, "aim"))
 		cfg.erase_section_key(BIND_SECTION, "aim")
-		cfg.save(SAVE_PATH)
+		cfg.save(save_path)
 	elif cfg.has_section_key(BIND_SECTION, "aim"):
 		cfg.erase_section_key(BIND_SECTION, "aim")
-		cfg.save(SAVE_PATH)
+		cfg.save(save_path)
 	for a in BINDABLE:
 		if not InputMap.has_action(a) or not cfg.has_section_key(BIND_SECTION, a):
 			continue
@@ -282,6 +294,60 @@ func get_ads_mode() -> String:
 func set_motion_blur(v: bool) -> void:
 	motion_blur = v
 	_commit("motion_blur")
+
+
+# ---------------------------------------------------------------- co-op profile name
+
+## {ok, name (trimmed, inner spaces collapsed), reason}. 2-16 chars of letters, digits, space, _ - . and at least one
+## letter or digit. The ONE validator is Netz's NetNames (scripts/net/net_names.gd, = Net.validate_name /
+## is_valid_name / sanitize_name): used whenever it's installed. The rules below are only the fallback for builds
+## without scripts/net (solo / the lobby stub); they're byte-identical (Netz net_ui_api_test checks both).
+const NET_NAMES_PATH := "res://scripts/net/net_names.gd"
+static var _net_names: Variant = null ## GDScript once loaded, false when absent
+
+
+static func _net_validator():
+	if _net_names == null:
+		_net_names = load(NET_NAMES_PATH) if ResourceLoader.exists(NET_NAMES_PATH) else false
+	return _net_names if _net_names is GDScript else null
+
+
+static func validate_player_name(raw: String) -> Dictionary:
+	var nn = _net_validator()
+	if nn:
+		var v = nn.validate(raw)
+		if v is Dictionary and v.has("ok"):
+			return v
+	return _validate_fallback(raw)
+
+
+static func _validate_fallback(raw: String) -> Dictionary:
+	var n := raw.strip_edges()
+	while n.contains("  "):
+		n = n.replace("  ", " ")
+	if n.length() < NAME_MIN:
+		return {"ok": false, "name": n, "reason": "Name needs at least %d characters." % NAME_MIN}
+	if n.length() > NAME_MAX:
+		return {"ok": false, "name": n, "reason": "Name can be at most %d characters." % NAME_MAX}
+	var re := RegEx.create_from_string("^[A-Za-z0-9 _.\\-]+$")
+	if re.search(n) == null:
+		return {"ok": false, "name": n, "reason": "Use only %s" % NAME_ALLOWED}
+	if RegEx.create_from_string("[A-Za-z0-9]").search(n) == null:
+		return {"ok": false, "name": n, "reason": "Name needs a letter or a number."}
+	return {"ok": true, "name": n, "reason": ""}
+
+
+func has_player_name() -> bool:
+	return player_name != ""
+
+
+## Validates, stores and saves. Returns validate_player_name()'s dict (name not changed when !ok).
+func set_player_name(raw: String) -> Dictionary:
+	var v := validate_player_name(raw)
+	if v.ok:
+		player_name = str(v.name)
+		_commit("player_name")
+	return v
 
 
 func _commit(key: String) -> void:

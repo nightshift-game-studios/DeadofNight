@@ -167,6 +167,7 @@ func _build_audio() -> void:
 
 
 func _build_gameplay() -> void:
+	_build_profile()
 	_body.add_child(_section("LOOK"))
 	var sens_ui: float = settings.mouse_sensitivity / 0.0025 # 1.0 = default
 	_body.add_child(_slider_row("Mouse Sensitivity", sens_ui, 0.2, 4.0, 0.05, "%.2f×",
@@ -179,6 +180,70 @@ func _build_gameplay() -> void:
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	note.custom_minimum_size.x = 700
 	_body.add_child(note)
+
+
+## PROFILE: co-op display name (Settings.player_name, validated by Settings.validate_player_name).
+var name_edit: LineEdit
+var name_error: Label
+
+func _build_profile() -> void:
+	_body.add_child(_section("PROFILE"))
+	var row := HBoxContainer.new()
+	row.name = "ProfileRow"
+	row.add_theme_constant_override("separation", 12)
+	_body.add_child(row)
+	var lab := UIStyle.label("Player Name", 15, UIStyle.BONE)
+	lab.custom_minimum_size.x = 260
+	row.add_child(lab)
+	name_edit = LineEdit.new()
+	name_edit.name = "ProfileName"
+	name_edit.text = str(settings.get("player_name")) if "player_name" in settings else ""
+	name_edit.placeholder_text = "Survivor"
+	name_edit.max_length = SettingsScript.NAME_MAX + 4
+	name_edit.custom_minimum_size = Vector2(260, 34)
+	name_edit.add_theme_font_override("font", UIStyle.FONT_STENCIL)
+	name_edit.add_theme_font_size_override("font_size", 16)
+	name_edit.add_theme_color_override("font_color", UIStyle.BONE)
+	name_edit.add_theme_stylebox_override("normal", UIStyle.cut_box(Color(UIStyle.INK, 0.95), UIStyle.BONE_DIM, 2, 6))
+	name_edit.add_theme_stylebox_override("focus", UIStyle.cut_box(Color(UIStyle.INK, 0.95), UIStyle.RUST, 2, 6))
+	name_edit.text_changed.connect(func(_t): _validate_profile_name())
+	name_edit.text_submitted.connect(func(_t): save_profile_name())
+	row.add_child(name_edit)
+	var save := _btn("SAVE NAME", save_profile_name)
+	save.name = "ProfileSave"
+	row.add_child(save)
+	name_error = UIStyle.label("%d-%d characters: %s" % [SettingsScript.NAME_MIN, SettingsScript.NAME_MAX, SettingsScript.NAME_ALLOWED], 12, UIStyle.BONE_DIM)
+	name_error.name = "ProfileNameError"
+	_body.add_child(name_error)
+
+
+func _validate_profile_name() -> Dictionary:
+	var r: Dictionary = SettingsScript.validate_player_name(name_edit.text)
+	if bool(r.ok):
+		name_error.text = "Shown in co-op lobbies and on the party HUD."
+		name_error.add_theme_color_override("font_color", UIStyle.BONE_DIM)
+	else:
+		name_error.text = str(r.reason)
+		name_error.add_theme_color_override("font_color", UIStyle.BAD)
+	return r
+
+
+## Returns true when saved.
+func save_profile_name() -> bool:
+	var r := _validate_profile_name()
+	if not bool(r.ok) or not settings.has_method("set_player_name"):
+		_ui_snd("menu_close")
+		return false
+	settings.set_player_name(name_edit.text)
+	name_edit.text = str(settings.player_name)
+	var net := preload("res://scripts/ui/lobby_api.gd").existing(self)
+	if net and net.has_method("set_local_profile"):
+		var prog := get_node_or_null("/root/Progress")
+		net.set_local_profile(str(settings.player_name), str(prog.selected_class) if prog and "selected_class" in prog else "")
+	name_error.text = "Saved."
+	name_error.add_theme_color_override("font_color", UIStyle.GOOD)
+	_ui_snd("ui_equip")
+	return true
 
 
 func _build_controls() -> void:

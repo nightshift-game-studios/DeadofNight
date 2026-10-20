@@ -1,0 +1,71 @@
+Gravecrew — player/player.glb — wiring notes for Netz (netcode/anim) and G4M3N (gameplay)
+===========================================================================================
+File: /workspace/desi-models/player/player.glb   helper script: /workspace/desi-models/player/godot/player_rig.gd
+Units metres, faces -Z, feet at y=0, 24 fps source. All clips are IN PLACE (no root motion; root bone is static,
+pelvis has only bob/sway). Drive translation from the CharacterBody3D, and scale Walk/Run playback by speed:
+  foot-contact speed measured in Blender: Walk 1.16 m/s, CrouchWalk 0.77 m/s (reliable); Run ~6.2 m/s and Sprint ~9.5 m/s
+  (few contact frames, low confidence). If game speeds are lower, set AnimationPlayer speed_scale = game_speed / clip_speed
+  (e.g. Run at 4.5 m/s -> 0.72) and tune by eye for foot slide.
+
+CLIPS (exact names; Godot length in s; loop flag to set — glTF carries no loop flag, player_rig.gd setup_loops() sets them)
+  name         len    loop  body       source
+  Idle         2.500  yes   full       UAL1 Idle_Loop (retarget)
+  Walk         1.333  yes   full       UAL1 Walk_Loop
+  Run          0.917  yes   full       UAL1 Jog_Fwd_Loop
+  Sprint       0.667  yes   full       UAL1 Sprint_Loop  (extra)
+  Crouch       2.917  yes   full       UAL1 Crouch_Idle_Loop
+  CrouchWalk   2.000  yes   full       UAL1 Crouch_Fwd_Loop
+  Hold_Rifle   2.000  yes   upper      procedural (low-ready rifle carry, IK on the AR grip + handguard)  (extra)
+  ADS_Aim      2.000  yes   upper      procedural (AR sight line 0.115 m in front of the right eye)
+  Fire         0.333  no    upper      procedural (one shot: kick peak at 0.04 s, settled by 0.33 s; play per shot or
+                                       additive on ADS_Aim/Hold_Rifle; restart on each shot for auto fire)
+  Reload       2.167  no    upper      procedural (AR: mag out 0.28-0.65 s, pouch 0.95-1.17 s, mag in 1.71 s, slap 1.82 s,
+                                       hand back on the handguard 2.17 s) — hide/show the mag mesh at those times
+  Jump         1.333  no    full       UAL1 Jump_Start (crouch, take-off ~0.30 s, rises into the air pose)
+  Fall         2.500  yes   full       UAL1 Jump_Loop (airborne)
+  Land         1.250  no    full       UAL1 Jump_Land  (extra)
+  Throw        1.333  no    full*      UAL2 OverhandThrow (release ~0.33 s / frame 8, spawn the grenade at GrenadeR;
+                                       follow-through lunge; *can be masked to upper body while moving)
+  Downed       2.000  yes   full       procedural prone forearm crawl (head 0.34-0.39 m, highest point 0.56 m)
+  Revive       2.000  yes   full       UAL1 Fixing_Kneeling middle section, kneeling "work on teammate" loop (blended)
+  ReviveStart  1.583  no    full       UAL1 Fixing_Kneeling start (stand -> kneel)   (extra)
+  ReviveEnd    1.583  no    full       UAL1 Fixing_Kneeling end (kneel -> stand)     (extra)
+  Death        2.375  no    full       UAL1 Death01 (ends lying on the floor: lowest point 0, highest 0.50 m) — hold last frame
+  HitReact     0.333  no    upper/full UAL1 Hit_Chest  (extra; best additive/upper-body)
+Loop clips have matching first/last poses; with LOOP_LINEAR the duplicated end key costs one frame (invisible at 24 fps).
+
+SUGGESTED AnimationTree (AnimationNodeBlendTree)
+  Locomotion  = BlendSpace1D/2D on speed: Idle / Walk / Run / Sprint ; Crouch / CrouchWalk under a crouch Blend2.
+  Air         = Jump (one-shot) -> Fall (loop) -> Land (one-shot) via a StateMachine fed by is_on_floor().
+  UpperBody   = StateMachine: Hold_Rifle (default with a gun) <-> ADS_Aim (xfade 0.12 s); Fire as a OneShot (fadein 0,
+                fadeout 0.05) on top; Reload as a OneShot; Throw as a OneShot (fadein 0.1).
+  Combine     = Blend2 with a bone filter = spine_02, spine_03, neck_01, Head, clavicle_*, upperarm_*, lowerarm_*, hand_*,
+                all finger bones (_l and _r). Locomotion feeds the base input, UpperBody the blend input (amount 1).
+                Optional: add 30-50% of spine_01 too if the rifle wobbles with the run cycle.
+  Override    = top-level Transition (no blend filter): Alive (Combine) / Downed / Reviving (ReviveStart -> Revive loop
+                -> ReviveEnd) / Dead (Death, hold last frame). Downed and Death are full body; disable the upper-body
+                layer in those states. The reviver plays Revive; the downed player stays in Downed.
+  Aim pitch   = not baked; add a SkeletonModifier3D/LookAt or rotate spine_03 (+/-) by camera pitch after the tree.
+NET SYNC: replicate only state (loco speed/dir, crouch, airborne, ads, firing tick, reload start time, throw start, downed,
+  reviving, dead, player_index). Each client plays its own AnimationTree; one-shots are triggered from replicated events.
+
+PER-PLAYER TINT API (4 co-op players)
+  The fluoro fabric of every hi-vis band (forearms, upper arms, chest, waist, shins) and the beanie knit are surface 1
+  "TintBand" on player_body. Its texture is near-white worn fabric, so albedo_color = the player colour.
+  Reflective strips, gloves, jacket etc. stay on surface 0 "Player" (never tinted).
+    var mi: MeshInstance3D = $player/player_rig/Skeleton3D/player_body
+    var m := mi.mesh.surface_get_material(1).duplicate() as StandardMaterial3D
+    m.albedo_color = Color("#C9D12B"); mi.set_surface_override_material(1, m)
+  or attach player_rig.gd to the instanced root and set player_index 0..3 (it also sets the loop flags).
+  Presets (sRGB): P1 Fluoro Orange #D9601F (= fp_arms default) | P2 Hi-Vis Yellow #C9D12B |
+                  P3 Signal Cyan #1E9FC8 | P4 Safety Magenta #C2307A
+  Glow at night (optional): m.emission_enabled = true; m.emission = colour; m.emission_energy_multiplier = 0.15-0.3.
+
+SOCKETS: WeaponR (hand_r, gun +X fwd/+Y up, parent gun with identity), WeaponL (hand_l, mirror), GrenadeR (hand_r),
+  NameTag (Head, +0.30 m), HeadLamp (Head, -Z beam), FxChest (spine_03), GroundDecal (root, y=0). Transforms in NODE_INVENTORY.
+GUN NOTES (G4M3N): Hold_Rifle/ADS_Aim/Fire/Reload were posed on weapons/weapon_assault_rifle.glb (SightPoint 0.04/0.146,
+  handguard ~0.30 m ahead of the grip). Other long guns fit the right hand exactly (WeaponR); the left hand will sit at
+  the AR handguard position, so for the LMG add a two-bone IK on the left arm (SkeletonIK3D / TwoBoneIK3D) targeting
+  the gun's Underbarrel socket, and for pistols/hand cannon use ADS_Aim with the left hand IK'd to the right hand or a
+  dedicated pistol layer (not authored). ADS sight alignment is exact for the AR only; for other sights offset the
+  camera by (gun SightPoint - AR SightPoint).

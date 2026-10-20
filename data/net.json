@@ -1,0 +1,97 @@
+{
+	"version": 1,
+	"_help": "Co-op networking config (Netz). Read by scripts/net/net_config.gd (NetConfig.get_value); every key has a constant fallback there, so a missing key or a missing file keeps the defaults. Solo play never reads the co-op sections (downed, points, drops, scaling). Values marked \"economy\" mean: use the solo value from data/economy.json via Progress.",
+	"transport": "enet",
+	"default_port": 7777,
+	"max_players": 4,
+	"proto_version": 1,
+	"connect_timeout_s": 8.0,
+	"peer_timeout_min_ms": 5000,
+	"peer_timeout_max_ms": 15000,
+	"compression": "range_coder",
+	"upnp": {
+		"enabled": true,
+		"discover_ms": 2000,
+		"discover_ttl": 2,
+		"description": "Gravecrew"
+	},
+	"join_code": {
+		"prefix": "GC"
+	},
+	"profile": {
+		"path": "user://net_profile.cfg",
+		"max_name_length": 16,
+		"default_name": "Survivor"
+	},
+	"lobby": {
+		"leader_is_host": true,
+		"leader_picks_map": true,
+		"leader_picks_difficulty": true,
+		"start_requires_all_ready": true,
+		"allow_late_join": false,
+		"scene_ready_timeout_s": 20.0,
+		"party_refresh_s": 2.0
+	},
+	"downed": {
+		"_help": "Black Ops style: a player at 0 HP goes down, a teammate holds interact for revive_time_s within revive_range_m; bleed_out_s later they die (spectate until the next round). Game over when everyone is down or dead. Solo keeps the old death = game over.",
+		"enabled": true,
+		"bleed_out_s": 30.0,
+		"revive_time_s": 3.0,
+		"revive_range_m": 2.0,
+		"revive_health_frac": 0.5,
+		"respawn_next_round": true,
+		"game_over_when_all_down": true
+	},
+	"points": {
+		"_help": "Host-authoritative per-player points (Black Ops style). Each accepted hit / kill / revive is credited host-side to the peer who did it; the host replicates every player's total. Spending is a request to the host.",
+		"host_authoritative": true,
+		"per_hit": "economy",
+		"kill_bonus": "economy",
+		"revive": 100,
+		"late_join_start": 500
+	},
+	"drops": {
+		"shared_world_drops": true,
+		"first_grab_wins": true,
+		"powerups_team_wide": true
+	},
+	"scaling": {
+		"_help": "Zombies per round x (1 + per_extra_player x (players - 1)); max_alive grows the same way, capped at max_alive_cap. Zombie HP unchanged.",
+		"per_extra_player": 0.5,
+		"max_alive_cap": 24
+	},
+	"tick": {
+		"player_state_hz": 30,
+		"zombie_sync_hz": 20,
+		"interp_delay_ms": 100,
+		"teammate_hp_hz": 5.0
+	},
+	"offers": {
+		"wait_for_all_s": 30.0
+	},
+	"spend": {
+		"_help": "M13: co-op door buys and paid Field Card rerolls are charged by the host. timeout_s = how long a client waits for the host's answer before the reroll counts as refused (a late yes is refunded); door_retry_s = min gap between door requests per door.",
+		"timeout_s": 3.0,
+		"door_retry_s": 1.0
+	},
+	"avatar": {
+		"_help": "Remote players' third-person body (scripts/net/avatar). body = \"desi\" (assets/models/player/player.glb via NetDesiBody) or \"capsule\" (placeholder). Walk/run playback is scaled by speed / clip foot speed (Desi: Walk 1.16, CrouchWalk 0.77, Run ~6.2, Sprint ~9.5 m/s).",
+		"body": "desi",
+		"scene": "res://assets/models/player/player.glb",
+		"tints": ["#D9601F", "#C9D12B", "#1E9FC8", "#C2307A"],
+		"loco_speeds": {"walk": 2.0, "run": 5.0, "sprint": 8.5, "crouch_walk": 2.8},
+		"clip_foot_speeds": {"walk": 1.16, "run": 6.2, "sprint": 9.5, "crouch_walk": 0.77},
+		"reload_marks_s": {"mag_out_start": 0.28, "mag_out_end": 0.65, "mag_in": 1.71, "slap": 1.82, "clip_len": 2.167},
+		"throw_release_s": 0.33,
+		"throw_clip_len_s": 1.333,
+		"ads_xfade_s": 0.12,
+		"name_tag_offset_m": 0.0,
+		"snap_teleport_m": 6.0
+	},
+	"validation": {
+		"range_slack": 1.1,
+		"max_damage_mult": 2.0,
+		"max_player_speed": 20.0,
+		"max_hit_damage": 5000.0
+	}
+}

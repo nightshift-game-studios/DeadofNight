@@ -18,6 +18,9 @@ const ArmoryMenuScript := preload("res://scripts/ui/armory_menu.gd")
 const ArmoryNoticeScript := preload("res://scripts/ui/armory_notice.gd")
 const MerchantMenuScript := preload("res://scripts/ui/merchant_menu.gd")
 const KitProxyScript := preload("res://scripts/ui/kit_proxy.gd")
+const LobbyMenuScript := preload("res://scripts/ui/lobby_menu.gd")
+const NamePromptScript := preload("res://scripts/ui/name_prompt.gd")
+const LobbyAPIScript := preload("res://scripts/ui/lobby_api.gd")
 const ArmoryScr := preload("res://scripts/armory/armory.gd")
 const MAIN_SCENE := "res://scenes/main.tscn"
 const HARD_NOTE := "Hard: tougher zombies, better rare-currency drops."
@@ -37,6 +40,10 @@ var _map_picker: MenuBase
 var _settings: MenuBase
 var _armory: MenuBase
 var _merchant: MenuBase
+var _lobby: MenuBase ## co-op SOLO / HOST / JOIN + lobby (built on first PLAY so Net/stub isn't touched until then)
+var name_prompt_on_launch: bool = true ## first launch asks for a player name (tests turn it off)
+var name_prompt: Node = null
+var last_coop_start: Dictionary = {} ## {map, difficulty} of the last lobby START (tests)
 var _kit_screen: MenuBase
 var _kit_proxy: Node
 var _armory_api: RefCounted ## Armory instance for live Gravemark balance
@@ -49,6 +56,8 @@ func _ready() -> void:
 	_build()
 	call_deferred("_focus_first")
 	call_deferred("show_unequip_notice")
+	call_deferred("maybe_prompt_name")
+	call_deferred("resume_lobby")
 
 
 ## One-time "parts moved back to your Armory" notice (Progress.armory_unequipped_on_load, ARMORY_HANDOFF 2b).
@@ -237,7 +246,7 @@ func _on_btn(id: String) -> void:
 	_ui_snd("ui_equip")
 	match id:
 		"play":
-			_open_map_select()
+			open_play()
 		"kit":
 			_open_kit()
 		"armory":
@@ -261,6 +270,83 @@ func open_merchant() -> void:
 func _on_merchant_closed() -> void:
 	if _btns.has("merchant"):
 		(_btns["merchant"] as Button).grab_focus()
+
+
+## PLAY → SOLO / HOST / JOIN. SOLO keeps the map-picker flow below.
+func open_play() -> MenuBase:
+	if _lobby == null:
+		_lobby = LobbyMenuScript.new()
+		_lobby.name = "HomeLobby"
+		_lobby.solo_chosen.connect(_on_solo_chosen)
+		_lobby.match_start_requested.connect(_on_coop_start)
+		_lobby.closed.connect(_on_lobby_closed)
+		add_child(_lobby)
+	_lobby.open_mode()
+	return _lobby
+
+
+func lobby() -> MenuBase:
+	return _lobby
+
+
+func _on_solo_chosen() -> void:
+	_open_map_select.call_deferred()
+
+
+func _on_lobby_closed() -> void:
+	if not (_map_picker and _map_picker.visible) and _btns.has("play"):
+		(_btns["play"] as Button).grab_focus()
+
+
+## Lobby START (Net.match_starting): every peer enters main with the leader's map + difficulty.
+func _on_coop_start(map_id: String, difficulty_id: String) -> void:
+	last_coop_start = {"map": map_id, "difficulty": difficulty_id}
+	if difficulty_id != "" and Difficulty.is_valid(difficulty_id):
+		Difficulty.set_active(difficulty_id)
+	var net: Node = _lobby.net if _lobby else null
+	if LobbyAPIScript.owns_scene_change(net):
+		# Netz already did MapRegistry.select + change_scene (its M1 attach_match applies the difficulty override)
+		last_play_map = map_id
+		play_requested.emit(map_id)
+		return
+	start_match(map_id)
+
+
+## Back from a co-op match (Netz return_to_lobby reloads home.tscn): reopen the lobby page.
+func resume_lobby() -> MenuBase:
+	if not is_inside_tree() or not is_visible_in_tree():
+		return null
+	var net := LobbyAPIScript.existing(self)
+	var st := int(LobbyAPIScript.prop(net, "state", 0))
+	if net == null or not (st in [LobbyAPIScript.HOSTING_LOBBY, LobbyAPIScript.IN_LOBBY]):
+		return null
+	var l := open_play()
+	l.show_page("lobby")
+	return l
+
+
+## First launch: ask for the player name. This is Netz's NET_HOOKS §4 hook with Gooey's UI behind it
+## (NamePromptScript.open_if_needed == NetNamePrompt.open_if_needed): Net.needs_name_prompt() decides when Net is
+## installed (Settings.player_name mirrors Net's profile), else Settings.has_player_name(). Editable later in SETTINGS.
+func maybe_prompt_name() -> Node:
+	if not name_prompt_on_launch or not is_inside_tree() or not is_visible_in_tree():
+		return null
+	var st := get_node_or_null("/root/Settings")
+	var net := LobbyAPIScript.existing(self)
+	if net and st:
+		if net.has_signal("profile_changed") and not net.is_connected("profile_changed", _on_net_profile):
+			net.connect("profile_changed", _on_net_profile)
+	if name_prompt and is_instance_valid(name_prompt):
+		return name_prompt
+	name_prompt = NamePromptScript.open_if_needed(self)
+	if name_prompt:
+		name_prompt.tree_exited.connect(_focus_first)
+	return name_prompt
+
+
+## Net.profile_changed (a name set anywhere: lobby, Settings, Netz's own prompt) → Settings mirror.
+func _on_net_profile(_n: String = "") -> void:
+	LobbyAPIScript.sync_names(get_node_or_null("/root/Settings"), LobbyAPIScript.existing(self))
 
 
 func _open_map_select() -> void:

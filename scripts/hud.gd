@@ -34,6 +34,10 @@ var _other_weapons: HBoxContainer
 var _indicators: Dictionary = {} ## "grenade"/"ability"/"melee" -> CooldownIcon
 var _loot_feed: VBoxContainer
 var _hit_marker: HitMarker
+var coop_hud: Control ## scripts/ui/coop_hud.gd: teammate list, revive bar, bleed-out (hidden in solo)
+var callout_banner: Control ## scripts/ui/callout_banner.gd: Callouts.callout_played stamp banner
+const CoopHudScript := preload("res://scripts/ui/coop_hud.gd")
+const CalloutBannerScript := preload("res://scripts/ui/callout_banner.gd")
 var _cross_parts: Array[CanvasItem] = [] ## crosshair ticks + dot (dimmed by set_scoped; the hit marker is not in here)
 var scoped: bool = false ## scope overlay up (crosshair dimmed)
 const SCOPED_CROSS_ALPHA := 0.12
@@ -170,6 +174,13 @@ func _ready() -> void:
 	if rs:
 		rs.cards_changed.connect(refresh_cards)
 	_bind_player.call_deferred()
+
+	# Co-op layer + announcer banner (both self-bind: /root/Net or the lobby stub, /root/Callouts)
+	coop_hud = CoopHudScript.new()
+	root.add_child(coop_hud)
+	callout_banner = CalloutBannerScript.new()
+	root.add_child(callout_banner)
+	callout_banner.tint_lookup = coop_hud.tint_for_name
 
 	# Bottom-left: cooldown badges above a chunky health bar
 	var bl := VBoxContainer.new()
@@ -691,6 +702,27 @@ func set_scoped(on: bool) -> void:
 	for c in _cross_parts:
 		if is_instance_valid(c):
 			c.modulate.a = SCOPED_CROSS_ALPHA if on else 1.0
+
+
+## Co-op (DESIGN §6.5): party entries [{peer_id, name, hp, state, tint?}]; the local peer is skipped.
+func set_party(entries: Array, local_peer_id: int = -1) -> void:
+	if coop_hud:
+		coop_hud.set_party(entries, local_peer_id)
+
+
+func set_revive(progress: float, role: String = "", other_name: String = "") -> void:
+	if coop_hud:
+		coop_hud.set_revive(progress, role, other_name)
+
+
+func set_local_downed(on: bool, bleed_out_s: float = 30.0) -> void:
+	if coop_hud:
+		coop_hud.set_local_downed(on, bleed_out_s)
+
+
+func show_callout(event_id: String, player_name: String = "", is_local: bool = true) -> void:
+	if callout_banner:
+		callout_banner.on_callout(event_id, player_name, is_local)
 
 
 ## player.hit_registered -> crosshair hit marker (body X / red headshot X / kill flourish).

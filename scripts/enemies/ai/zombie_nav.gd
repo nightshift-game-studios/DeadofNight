@@ -109,7 +109,8 @@ static func reload_data(forced: Dictionary = {}) -> void:
 static func players(e: Node) -> Array:
 	if e == null or not e.is_inside_tree():
 		return []
-	return e.get_tree().get_nodes_in_group("player").filter(func(p): return p is Node3D and is_instance_valid(p))
+	if NetGate.is_networked(): return NetGate.players_or_null() # NET E6: co-op = local player + remote avatars; solo: unchanged below
+	return e.get_tree().get_nodes_in_group("player").filter(func(p): return is_instance_valid(p) and p is Node3D)
 
 
 ## "boss" / "echo" / zombies.json variant id ("city", "crawler", ...).
@@ -236,7 +237,7 @@ func _watch_frame(delta: float) -> void:
 
 func _target() -> Node3D:
 	var t = enemy.get("target")
-	return t if t is Node3D and is_instance_valid(t) else null
+	return t if is_instance_valid(t) and t is Node3D else null
 
 
 func _nav_ready() -> bool:

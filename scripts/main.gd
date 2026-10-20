@@ -100,6 +100,9 @@ func _ready() -> void:
 		points_per_kill = prog.points_per_kill
 	_player_spawn = player.global_transform
 	_load_map()
+	if Net.is_networked(): # NET M12: co-op spawn slot around PlayerSpawn
+		_player_spawn = Net.spawn_slot_transform(_player_spawn)
+		player.global_transform = _player_spawn
 	# Difficulty (Skillz): scale the wave exports by the map's profile (data/difficulty.json) and make it active.
 	# Also turns on the reward scaling (XP in Progress.record_match, loot rarity bias in GearDB.roll_rarity).
 	Difficulty.apply_to_main(self)
@@ -183,6 +186,7 @@ func _ready() -> void:
 	hud.set_enemies(0)
 	hud.set_round(0)
 	_music("menu") # pre-round: menu loop; "break" between rounds, "combat" during a round
+	Net.attach_match(self) # NET M1: co-op difficulty override + scaling + replication (no-op in solo)
 
 
 func _sfx() -> Node:
@@ -214,6 +218,8 @@ func _physics_process(delta: float) -> void:
 		return
 	if player.global_position.y < kill_y:
 		_respawn_player()
+	if not Net.runs_waves(): # NET M2: only the host runs waves / stuck checks
+		return
 	if map:
 		_stuck_t -= delta
 		if _stuck_t <= 0.0:
@@ -225,6 +231,8 @@ func _physics_process(delta: float) -> void:
 				_offer_delay -= delta
 				if _offer_delay <= 0.0:
 					RunState.open_offer(current_round)
+			return
+		if not Net.all_offers_closed(): # NET M8: co-op host waits for every player's Field Card pick
 			return
 		_break_timer -= delta
 		if _break_timer <= 0.0:
@@ -255,6 +263,7 @@ func _start_round(n: int) -> void:
 	_snd("round_start_stinger")
 	_music("combat")
 	GameEvents.emit_event(&"round_started", {"player": player, "round": n})
+	Net.on_round_started(n, _to_spawn + _alive) # NET M7: round state to clients (no-op in solo)
 
 
 func _zombie_stats(n: int) -> Dictionary:
@@ -276,53 +285,83 @@ func _spawn_zombie() -> void:
 	var points := active_spawn_points()
 	if points.is_empty():
 		return
-	var candidates: Array = points.filter(func(p): return p.global_position.distance_to(player.global_position) > 8.0)
+	var candidates: Array = points.filter(func(p): return Net.min_distance_to_players(p.global_position, player) > 8.0) # NET M4
 	if candidates.is_empty():
 		candidates = points
 	var spawn: Node3D = candidates.pick_random()
 	var stats := _zombie_stats(current_round)
-	var z = ZOMBIE_SCENE.instantiate()
 	# MAIN_HOOKS §15a: pick first (specials included), then give Bloater / Crawler / Riot their behaviour script.
 	var vid := Difficulty.pick_spawn_variant(current_round) if use_zombie_variants else ""
-	ZombieVariants.apply_script(z, vid)
 	# Every few zombies is a faster "runner" (never a Bloater).
 	var spd: float = stats.speed * (1.35 if ZombieVariants.allows_runner(vid) and randf() < 0.25 else 1.0)
-	z.setup(stats.health, spd, stats.damage)
-	if vid != "":
-		var sc := ZombieVariants.scene(vid)
-		if sc:
-			z.set_variant(vid, ZombieVariants.get_variant(vid), sc)
-	z.hit.connect(_on_zombie_hit)
-	z.died.connect(_on_zombie_died)
-	zombies_root.add_child(z)
-	z.global_position = spawn.global_position + Vector3(randf_range(-0.5, 0.5), 0.0, randf_range(-0.5, 0.5))
+	# NET M3: a plain spec -> make_zombie() builds it (same on every peer); _add_zombie() adds it locally or via Net.
+	_add_zombie({"kind": "zombie", "vid": vid, "health": stats.health, "speed": spd, "damage": stats.damage}, spawn.global_position, 0.5)
 	_to_spawn -= 1
 	_alive += 1
+
+
+## NET M3: builds a zombie / boss / echo from a spec (no randomness here, so clients can build the same one).
+## spec: {kind: "zombie"|"boss"|"echo", vid, boss_id, round, difficulty, health, speed, damage, [name, seed]}
+func make_zombie(spec: Dictionary) -> Node:
+	var z = ZOMBIE_SCENE.instantiate()
+	match str(spec.get("kind", "zombie")):
+		"boss":
+			var script_path := BossCatalogScr.script_path(str(spec.boss_id))
+			if script_path != "" and ResourceLoader.exists(script_path):
+				z.set_script(load(script_path))
+			# Base wave stats first; configure_boss replaces HP with catalog formula (x Difficulty.boss_cfg.hp_mult).
+			z.setup(spec.health, spec.speed, spec.damage)
+			if z.has_method("configure_boss"):
+				z.configure_boss(str(spec.boss_id), int(spec.round), str(spec.difficulty))
+		"echo":
+			z.setup(spec.health, spec.speed, spec.damage)
+			z.set_meta("boss_echo", true)
+			BossCatalogScr.apply_echo_model(z) # Desi's echo_walker.glb at its real 1.526 m (Skillz art pass)
+		_:
+			var vid := str(spec.get("vid", ""))
+			ZombieVariants.apply_script(z, vid)
+			z.setup(spec.health, spec.speed, spec.damage)
+			if vid != "":
+				var sc := ZombieVariants.scene(vid)
+				if sc:
+					z.set_variant(vid, ZombieVariants.get_variant(vid), sc)
+	if spec.has("seed"):
+		z.set_meta("net_seed", int(spec.seed)) # E4: model pick / size variety from this seed
+	if spec.has("name"):
+		z.name = str(spec.name)
+	return z
+
+
+## NET M3: host/solo signal wiring for a built zombie.
+func wire_zombie(z: Node) -> void:
+	z.hit.connect(_on_zombie_hit)
+	z.died.connect(_on_zombie_died)
+	if z.has_signal("request_echo"):
+		z.request_echo.connect(_on_boss_request_echo)
+
+
+## NET M3: solo = exactly the old add_child + jittered position; co-op = Net replicates it to every peer.
+func _add_zombie(spec: Dictionary, base_pos: Vector3, jitter: float) -> Node:
+	if Net.is_networked():
+		return Net.spawn_zombie(self, spec, base_pos, jitter)
+	var z := make_zombie(spec)
+	wire_zombie(z)
+	zombies_root.add_child(z)
+	z.global_position = base_pos + Vector3(randf_range(-jitter, jitter), 0.0, randf_range(-jitter, jitter))
+	return z
 
 
 func _spawn_boss(boss_id: String) -> void:
 	var points := active_spawn_points()
 	if points.is_empty():
 		return
-	var candidates: Array = points.filter(func(p): return p.global_position.distance_to(player.global_position) > 10.0)
+	var candidates: Array = points.filter(func(p): return Net.min_distance_to_players(p.global_position, player) > 10.0) # NET M4
 	if candidates.is_empty():
 		candidates = points
 	var spawn: Node3D = candidates.pick_random()
 	var stats := _zombie_stats(current_round)
-	var z = ZOMBIE_SCENE.instantiate()
-	var script_path := BossCatalogScr.script_path(boss_id)
-	if script_path != "" and ResourceLoader.exists(script_path):
-		z.set_script(load(script_path))
-	# Base wave stats first; configure_boss replaces HP with catalog formula (x Difficulty.boss_cfg.hp_mult).
-	z.setup(stats.health, stats.speed, stats.damage)
-	if z.has_method("configure_boss"):
-		z.configure_boss(boss_id, current_round, Difficulty.active_id())
-	z.hit.connect(_on_zombie_hit)
-	z.died.connect(_on_zombie_died)
-	if z.has_signal("request_echo"):
-		z.request_echo.connect(_on_boss_request_echo)
-	zombies_root.add_child(z)
-	z.global_position = spawn.global_position + Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0))
+	_add_zombie({"kind": "boss", "boss_id": boss_id, "round": current_round, "difficulty": Difficulty.active_id(),
+		"health": stats.health, "speed": stats.speed, "damage": stats.damage}, spawn.global_position, 1.0) # NET M3
 	_alive += 1
 
 
@@ -334,18 +373,11 @@ func _on_boss_request_echo(host: Node, count: int) -> void:
 			return
 		var spawn: Node3D = points.pick_random()
 		var stats := _zombie_stats(current_round)
-		var z = ZOMBIE_SCENE.instantiate()
 		var ehp := BossCatalogScr.echo_hp(current_round, base_health, health_per_round)
 		var echo: Dictionary = BossCatalogScr.echo_cfg()
-		z.setup(ehp, stats.speed * float(echo.get("speed_mult", 1.1)),
-			maxi(int(round(stats.damage * float(echo.get("damage_mult", 0.7)))), 1))
-		z.set_meta("boss_echo", true)
-		BossCatalogScr.apply_echo_model(z) # Desi's echo_walker.glb at its real 1.526 m (Skillz art pass)
-		z.hit.connect(_on_zombie_hit)
-		z.died.connect(_on_zombie_died)
-		zombies_root.add_child(z)
 		var origin: Vector3 = host.global_position if host is Node3D else spawn.global_position
-		z.global_position = origin + Vector3(randf_range(-2.0, 2.0), 0.0, randf_range(-2.0, 2.0))
+		_add_zombie({"kind": "echo", "health": ehp, "speed": stats.speed * float(echo.get("speed_mult", 1.1)),
+			"damage": maxi(int(round(stats.damage * float(echo.get("damage_mult", 0.7)))), 1)}, origin, 2.0) # NET M3
 		_alive += 1
 
 
@@ -363,7 +395,10 @@ func _on_zombie_hit(zombie: Node, _amount: int) -> void:
 	_hit_paid[id] = f
 	if _hit_paid.size() > 256:
 		_hit_paid.clear()
-	player.add_points(points_per_hit, "hit")
+	if Net.is_networked(): # NET M5: credit the peer whose hit the host accepted
+		Net.on_zombie_hit_points(zombie, points_per_hit)
+	else:
+		player.add_points(points_per_hit, "hit")
 
 
 func _on_zombie_died(zombie: Node) -> void:
@@ -377,11 +412,14 @@ func _on_zombie_died(zombie: Node) -> void:
 		pay = BossCatalogScr.kill_points(bid, points_per_kill)
 	elif zombie.has_meta("boss_echo"):
 		pay = points_per_kill # echoes: normal kill, no Gravemark
-	player.add_points(int(round(pay * player.mod_stat("points_kill_mult", 1.0))), "kill")
-	# Gravemark (Skillz): bosses (first per round full, later +1), elites 20%, Soldiers 0.6%, others 0.15%; echoes 0.
-	ArmoryScr.on_zombie_died(zombie, current_round)
-	for item in GearDB.roll_table("zombie", current_round, player.mod_stat("drop_chance_add", 0.0)):
-		spawn_pickup(item, (zombie as Node3D).global_position)
+	if Net.is_networked(): # NET M5/M6: killer's points (host), Gravemark on the killer's own machine, shared drops, callouts
+		Net.on_zombie_killed(self, zombie, current_round, pay)
+	else:
+		player.add_points(int(round(pay * player.mod_stat("points_kill_mult", 1.0))), "kill")
+		# Gravemark (Skillz): bosses (first per round full, later +1), elites 20%, Soldiers 0.6%, others 0.15%; echoes 0.
+		ArmoryScr.on_zombie_died(zombie, current_round)
+		for item in GearDB.roll_table("zombie", current_round, player.mod_stat("drop_chance_add", 0.0)):
+			spawn_pickup(item, (zombie as Node3D).global_position)
 	hud.set_enemies(_to_spawn + _alive)
 	if _to_spawn == 0 and _alive == 0:
 		_break_timer = round_break
@@ -389,6 +427,7 @@ func _on_zombie_died(zombie: Node) -> void:
 		_music("break")
 		GameEvents.emit_event(&"round_cleared", {"player": player, "round": current_round})
 		ArmoryScr.on_round_cleared(current_round) # milestone: 1 Gravemark at rounds 10 / 20 / 30 (x difficulty)
+		Net.on_round_cleared(current_round) # NET M7: clients get round_cleared, milestones, their own Field Card offer
 		if field_cards_enabled and current_round >= 1:
 			_offer_pending = true
 			_offer_delay = offer_delay
@@ -398,12 +437,14 @@ func _on_zombie_died(zombie: Node) -> void:
 func _on_offer_ready(_cards: Array, _is_milestone: bool) -> void:
 	if _game_over:
 		return
-	get_tree().paused = true
+	if not Net.is_networked(): # NET M8: never pause the tree in co-op
+		get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
 ## Card chosen or offer skipped: unpause, then the normal round break (looting, chests) runs.
 func _on_offer_closed(_result: String, _id: String) -> void:
+	Net.report_offer_closed() # NET M8: tell the host this player's pick is done (no-op in solo)
 	_offer_pending = false
 	_break_timer = round_break
 	get_tree().paused = false
@@ -415,6 +456,8 @@ func _on_offer_closed(_result: String, _id: String) -> void:
 ## Drops `item` into the world. `chime` plays the loot chime for its rarity.
 func spawn_pickup(item: Item, pos: Vector3, chime: bool = true) -> void:
 	if item == null:
+		return
+	if Net.is_networked() and Net.spawn_pickup(self, item, pos, chime): # NET M6: shared first-grab world drop (host)
 		return
 	var a := _sfx()
 	if chime and a:
@@ -455,6 +498,9 @@ func _on_menu_closed() -> void:
 func _on_player_died() -> void:
 	if _game_over:
 		return
+	if Net.is_networked() and not Net.match_over(): # NET M9: co-op = downed / bleed-out; Net calls back at game over
+		Net.report_local_down(self)
+		return
 	_game_over = true
 	player.input_enabled = false
 	Progress.respec_allowed = true
@@ -489,7 +535,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		hud.visible = false
 		character_screen.open()
 		return
-	if event.is_action_pressed("map_next") and (current_round == 0 or _game_over):
+	if event.is_action_pressed("map_next") and (current_round == 0 or _game_over) and Net.is_leader(): # NET M10
 		get_viewport().set_input_as_handled()
 		if map_picker:
 			map_picker.open()
@@ -504,7 +550,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not _game_over:
 		return
 	if event.is_action_pressed("restart"):
-		get_tree().reload_current_scene()
+		if Net.is_networked(): # NET M10: leader restarts for everyone (back to the lobby); others wait
+			Net.return_to_lobby()
+		else:
+			get_tree().reload_current_scene()
 	elif event.is_action_pressed("weapon_1"):
 		_pick_class("soldier")
 	elif event.is_action_pressed("weapon_2"):
@@ -610,6 +659,8 @@ func _setup_ambience() -> int:
 
 ## Map picker API (Gooey): select a map and restart the match on it. Returns false for unknown ids.
 func restart_with_map(id: String) -> bool:
+	if Net.is_networked(): # NET M10: leader picks the map in the lobby
+		return Net.select_map(id) and Net.return_to_lobby()
 	if not MapRegistry.select(id):
 		return false
 	var a := _sfx() # switch the map ambience layer now; the reloaded scene re-attaches emitters
@@ -629,6 +680,7 @@ func return_to_home() -> void:
 	var prog := get_node_or_null("/root/Progress")
 	if prog and prog.has_method("save_stash"):
 		prog.save_stash()
+	Net.leave_party() # NET M11: leaving the match leaves the party (no-op in solo)
 	get_tree().paused = false
 	get_tree().change_scene_to_file(HOME_SCENE)
 
@@ -690,7 +742,7 @@ func respawn_zombie(z: Node3D) -> void:
 	var pts := active_spawn_points()
 	if pts.is_empty():
 		return
-	var cand: Array = pts.filter(func(p): return p.global_position.distance_to(player.global_position) > 8.0)
+	var cand: Array = pts.filter(func(p): return Net.min_distance_to_players(p.global_position, player) > 8.0) # NET M4
 	var sp: Node3D = (cand if not cand.is_empty() else pts).pick_random()
 	z.global_position = sp.global_position + Vector3(randf_range(-0.5, 0.5), 0.0, randf_range(-0.5, 0.5))
 	z.velocity = Vector3.ZERO
