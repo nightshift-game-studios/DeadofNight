@@ -1,4 +1,4 @@
-# DeadofNight
+# Gravecrew
 
 **Wave based zombie survival game** (Godot 4).
 
@@ -32,7 +32,7 @@ The game ships as a Godot project. You play it with the free Godot engine, so th
      ```
      If there are more parts, add them in order (`+fps-starter-full.zip.003` …).
 3. Right-click the zip, choose **Extract All…**, and pick a folder, e.g. `Documents\Games`.
-   You'll get a folder called **`fps-starter`** with `project.godot` inside it (the folder keeps its original name; the game itself is DeadofNight).
+   You'll get a folder called **`fps-starter`** with `project.godot` inside it (the folder keeps its original name; the game itself is Gravecrew).
 
 ### 2. Install Godot 4.7
 1. Go to **https://godotengine.org/download/windows/**.
@@ -45,7 +45,7 @@ The game ships as a Godot project. You play it with the free Godot engine, so th
 3. **The first launch takes a minute or two** while Godot imports the models, textures and sounds. This only happens once.
 4. Press **F5**, or click the ▶ **Play** button at the top right. The game opens on the **home menu**: **Play** → pick a map (Easy / Medium / Hard) → **Deploy**. **Kit / Inventory**, **Armory** and **Settings** are there too. Have fun!
 
-Next time, just open Godot, double-click **DeadofNight** in the project list, and press F5.
+Next time, just open Godot, double-click **Gravecrew** in the project list, and press F5.
 
 > **System requirements:** the game uses Godot's Forward+ renderer, so you need a GPU with Vulkan or Direct3D 12 support. Any gaming PC from the last ~8 years will do.
 
@@ -115,8 +115,8 @@ Changes apply immediately and are saved for next time.
 | **"Your video card driver does not support Vulkan / D3D12"** | Update your GPU drivers. If that doesn't fix it, start Godot with `--rendering-driver opengl3` (it will look a bit plainer). |
 | **Godot asks to upgrade or convert the project** | You're on a different Godot version. Install **4.7.x** (standard, not .NET). |
 | **Missing textures / pink models** | Make sure you extracted the *whole* zip (and joined all the parts first, if it was split). Then delete the hidden `.godot` folder inside `fps-starter` and reopen it, so Godot re-imports everything. |
-| **I want to reset my progress** | Your saves are in `%APPDATA%\Godot\app_userdata\DeadofNight\` (`progress.cfg`, `settings.cfg`). Delete them to start fresh. |
-| **My progress from before the rename is gone** | It's copied automatically: on the first launch as DeadofNight, the game copies your saves from the old `%APPDATA%\Godot\app_userdata\FPS Starter\` folder (only if the new folder has none yet). The old folder is left in place as a backup. |
+| **I want to reset my progress** | Your saves are in `%APPDATA%\Godot\app_userdata\Gravecrew\` (`progress.cfg`, `settings.cfg`). Delete them to start fresh. |
+| **My progress from before the rename is gone** | It's copied automatically: the game used to be called DeadofNight (and before that FPS Starter). On the first launch as Gravecrew, it copies your saves from the old `%APPDATA%\Godot\app_userdata\DeadofNight\` and `%APPDATA%\Godot\app_userdata\FPS Starter\` folders, newest first, but only if the Gravecrew folder has no save yet. Nothing is overwritten, and the old folders are left in place as a backup. |
 
 ---
 

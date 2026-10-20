@@ -1,4 +1,4 @@
-# DeadofNight – Developer Guide (systems, data files, extending the game)
+# Gravecrew – Developer Guide (systems, data files, extending the game)
 
 > Player install guide: see README.md. This file is the in-depth technical reference.
 
@@ -280,7 +280,7 @@ In the air you keep momentum from slides and wall jumps. The camera drops and ti
 ### Progression (save system)
 - `Progress` (`scripts/autoload/progress.gd`) saves total kills, best round, XP, games played, the selected class
   and skill ranks (`skills/ranks`, save version 2) to `user://progress.cfg`. Older saves (`skills/unlocked`) migrate automatically.
-  On Windows that's `%APPDATA%\Godot\app_userdata\DeadofNight\progress.cfg` (saves from the old `FPS Starter` folder are copied over once by the SaveMigration autoload). Delete the file to reset.
+  On Windows that's `%APPDATA%\Godot\app_userdata\Gravecrew\progress.cfg` (saves from the old `DeadofNight` and `FPS Starter` folders are copied over once, newest first, by the SaveMigration autoload). Delete the file to reset.
 - `main.gd` calls `Progress.record_match(kills, round)` at game over.
 
 ### Skill tree (meta) and Field Cards (per match)

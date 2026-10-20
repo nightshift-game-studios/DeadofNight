@@ -1,11 +1,11 @@
 ; Engine configuration file.
-; Godot 4 project - DeadofNight
+; Godot 4 project - Gravecrew
 
 config_version=5
 
 [application]
 
-config/name="DeadofNight"
+config/name="Gravecrew"
 config/description="Wave based zombie survival game"
 run/main_scene="res://scenes/ui/home.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")

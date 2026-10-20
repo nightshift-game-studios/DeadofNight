@@ -1,5 +1,5 @@
 extends Control
-## DeadofNight HOME / title screen (Pass 5, Gooey).
+## Gravecrew HOME / title screen (Pass 5, Gooey).
 ## Full-screen rugged menu (same palette as the loadout). Until G4M3N sets
 ## run/main_scene to scenes/ui/home.tscn, tests and shots instance this directly.
 ##
@@ -98,7 +98,7 @@ func _build() -> void:
 	var title_box := VBoxContainer.new()
 	title_box.add_theme_constant_override("separation", -4)
 	head.add_child(title_box)
-	title_box.add_child(UIStyle.label("DEADOFNIGHT", 52, UIStyle.BONE, true, 4))
+	title_box.add_child(UIStyle.label("GRAVECREW", 52, UIStyle.BONE, true, 4))
 	title_box.add_child(UIStyle.label("SURVIVE THE WAVE", 14, UIStyle.RUST.lightened(0.2), true))
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL

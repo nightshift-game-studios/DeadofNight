@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generates <repo>/data/attachments.json + data/armory.json (Skillz). Asserts the layout rules.
 Canonical copy: fps-starter/tools/gen_armory.py (run: python3 tools/gen_armory.py from anywhere).
-Names are the original DeadofNight names from /workspace/skillz/DESI_ATTACHMENTS.md."""
+Names are the original Gravecrew names from /workspace/skillz/DESI_ATTACHMENTS.md."""
 import json, os
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")  # repo-relative (canonical copy: <repo>/tools/gen_armory.py)
 

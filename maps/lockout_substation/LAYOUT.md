@@ -53,7 +53,7 @@ CC0 triplanar materials + dusk fog/SSAO/glow from Rustwell textures (`maps/rustw
 - **Riskier vertical:** RampDeckE removed — deck escapes are S + W only (≥2.0 m zombie width). East deck edge fully railed (no jump-off route). ControlLedge / BusGantry still have ≥2.5 m zombie ramps.
 - Buy D1 (750) for vault boss floor with perk / box / arena hooks.
 
-## DeadofNight (Hard)
+## Gravecrew (Hard)
 - Shared kit: `maps/common/night/` (HDRI dikhololo_night, flicker/spark scripts, hard preset).
 - NightKit: 4 shadowed + 22 unshadowed (sodium fence floods, deck flood, vault fill/beacons, panels, work/barrel, interactable glows, spark flashes).
 - Sparks: GPUParticles3D + brief unshadowed OmniFlash at XFMR_A/B + Cabinet (timer burst).

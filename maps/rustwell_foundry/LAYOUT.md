@@ -207,7 +207,7 @@ They're replaced by procedural walls and Fence006 alpha cards. Every asset gets 
 
 **Issues for G4M3N:** copy full `maps/` (assets + `common/map_door.gd`, `desi_lod_prop.gd`, `props_root.gd`); enable occlusion culling; Clip/ ceilings + Desi Geometry colliders are new; railings visual-only.
 
-## DeadofNight (Medium)
+## Gravecrew (Medium)
 - Relight only (no geo/col/nav edits). Shared kit `maps/common/night/`.
 - NightKit: 4 shadowed + 25 unshadowed. Strong furnace glow in Foundry Hall (emissive mouth + warm shadowed Omni + fill spot).
 - Sparks: warehouse rack + foundry panel (ties to sparking_box ambience).

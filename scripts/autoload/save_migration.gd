@@ -1,31 +1,69 @@
 extends Node
 ## Autoload "SaveMigration" (first in [autoload], so it runs before Progress/Settings load anything).
-## The game was renamed "FPS Starter" -> "DeadofNight" (application/config/name), which moves user://
-## from .../app_userdata/FPS Starter/ to .../app_userdata/DeadofNight/. On first launch after the rename,
-## if the new dir has no save/settings yet and the old sibling dir exists, copy the old files over
-## (progress, stash and settings carry across). One-time: it never overwrites, and once progress.cfg or
-## settings.cfg exists in the new dir it does nothing. The old dir is left untouched as a backup.
+## The game was renamed "FPS Starter" -> "DeadofNight" -> "Gravecrew" (application/config/name). Each rename moves user://
+## (.../app_userdata/<name>/). On first launch under a new name, if the new dir has none of SAVE_FILES yet, every older
+## sibling dir that holds a save is copied forward, newest first (the dir whose save files were modified last wins;
+## ties keep OLD_DIR_NAMES order), and an older dir only fills in files the newer one didn't have. Nothing that already
+## exists in the new dir is ever overwritten, and once progress.cfg or settings.cfg exists there it does nothing.
+## The old dirs are left untouched as backups.
 
-const OLD_DIR_NAMES := ["FPS Starter"]
+const OLD_DIR_NAMES := ["DeadofNight", "FPS Starter"] ## most recent name first
 const SAVE_FILES := ["progress.cfg", "settings.cfg"]
 
-var migrated_from: String = "" ## old dir copied from this launch ("" = nothing to do)
+var migrated_from: String = "" ## newest old dir copied from this launch ("" = nothing to do)
+var migrated_dirs: Array = [] ## every old dir that contributed at least one file, in copy order
 var files_copied: int = 0
 
 
 func _init() -> void:
 	# _init runs when the autoload is instantiated, before any autoload's _ready.
 	var dst := OS.get_user_data_dir()
+	var srcs: Array = []
 	for old_name in OLD_DIR_NAMES:
-		var src := dst.get_base_dir().path_join(old_name)
-		if src == dst:
-			continue
-		var n := migrate(src, dst)
+		srcs.append(dst.get_base_dir().path_join(old_name))
+	var r := migrate_all(srcs, dst)
+	files_copied = int(r.copied)
+	migrated_dirs = r.dirs
+	if not migrated_dirs.is_empty():
+		migrated_from = str(migrated_dirs[0])
+		print("SaveMigration: copied %d file(s) from %s" % [files_copied, ", ".join(migrated_dirs)])
+
+
+## Copies every old dir in `srcs` that holds a save into `dst`, newest first, when `dst` has none of SAVE_FILES.
+## Returns {copied: int, dirs: [src, ...]} (dirs = the ones that contributed a file, in copy order). Never overwrites.
+static func migrate_all(srcs: Array, dst: String) -> Dictionary:
+	var out := {"copied": 0, "dirs": []}
+	if dst.is_empty() or _has_save(dst):
+		return out
+	var cands: Array = []
+	for i in srcs.size():
+		var src := str(srcs[i])
+		if src != dst and DirAccess.dir_exists_absolute(src) and _has_save(src):
+			cands.append({"src": src, "t": newest_save_time(src), "i": i})
+	cands.sort_custom(func(a, b): return a.t > b.t if a.t != b.t else a.i < b.i)
+	for c in cands:
+		var n := _copy_tree(str(c.src), dst)
 		if n > 0:
-			migrated_from = src
-			files_copied = n
-			print("SaveMigration: copied %d file(s) from %s" % [n, src])
-			break
+			out.copied += n
+			out.dirs.append(str(c.src))
+	return out
+
+
+## Latest modification time (unix s) of the SAVE_FILES in `dir`, 0 if none.
+static func newest_save_time(dir: String) -> int:
+	var t := 0
+	for f in SAVE_FILES:
+		var p := dir.path_join(f)
+		if FileAccess.file_exists(p):
+			t = maxi(t, int(FileAccess.get_modified_time(p)))
+	return t
+
+
+static func _has_save(dir: String) -> bool:
+	for f in SAVE_FILES:
+		if FileAccess.file_exists(dir.path_join(f)):
+			return true
+	return false
 
 
 ## Copies everything under `src` into `dst` when `dst` has none of SAVE_FILES and `src` exists.
