@@ -106,6 +106,7 @@ geometry_collision_mask = 1
 agent_height = 2.0
 agent_max_climb = 0.5
 agent_max_slope = 40.0
+filter_baking_aabb = AABB(-200, -1.99, -200, 400, 120, 400)
 
 [sub_resource type="BoxShape3D" id="23_s"]
 size = Vector3(42, 1, 30)
@@ -212,119 +213,26 @@ size = Vector3(4, 1.2, 0.15)
 [sub_resource type="BoxShape3D" id="89_s"]
 size = Vector3(4.5, 0.3, 3.5)
 
-[sub_resource type="BoxShape3D" id="90_s"]
-size = Vector3(2, 0.42857143, 0.71428573)
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_qla6n"]
+points = PackedVector3Array(-1, 0, 4.1071424, -1, 0, -1.6071434, -1, 3, -1.6071434, -1, 3, -0.89285755, 1, 0, 4.1071424, 1, 0, -1.6071434, 1, 3, -1.6071434, 1, 3, -0.89285755)
 
-[sub_resource type="BoxShape3D" id="91_s"]
-size = Vector3(2, 0.42857143, 0.71428573)
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_7nysg"]
+points = PackedVector3Array(-4.1071424, 0, -1, 1.6071434, 0, -1, 1.6071434, 3, -1, 0.89285755, 3, -1, -4.1071424, 0, 1, 1.6071434, 0, 1, 1.6071434, 3, 1, 0.89285755, 3, 1)
 
-[sub_resource type="BoxShape3D" id="92_s"]
-size = Vector3(2, 0.42857143, 0.71428573)
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_67s58"]
+points = PackedVector3Array(-5.6388884, 0, -1.5, 2.1388893, 0, -1.5, 2.1388893, 4, -1.5, 1.3611116, 4, -1.5, -5.6388884, 0, 1.5, 2.1388893, 0, 1.5, 2.1388893, 4, 1.5, 1.3611116, 4, 1.5)
 
-[sub_resource type="BoxShape3D" id="93_s"]
-size = Vector3(2, 0.42857143, 0.71428573)
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_hawx5"]
+points = PackedVector3Array(-1.5, 0, 5.9375, -1.5, 0, -2.1875, -1.5, 5, -2.1875, -1.5, 5, -1.5625, 1.5, 0, 5.9375, 1.5, 0, -2.1875, 1.5, 5, -2.1875, 1.5, 5, -1.5625)
 
-[sub_resource type="BoxShape3D" id="94_s"]
-size = Vector3(2, 0.42857143, 0.71428573)
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_n0ert"]
+points = PackedVector3Array(-2.5, -0.2, -0.5, 2.5, -0.2, -0.5, 2.5, -0.2, 0.5, -2.5, -0.2, 0.5, -2, 0.2, 0, 2, 0.2, 0)
 
-[sub_resource type="BoxShape3D" id="95_s"]
-size = Vector3(2, 0.42857143, 0.71428573)
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_ohn0j"]
+points = PackedVector3Array(-0.5, -0.2, -2.5, 0.5, -0.2, -2.5, 0.5, -0.2, 2.5, -0.5, -0.2, 2.5, 0, 0.2, -2, 0, 0.2, 2)
 
-[sub_resource type="BoxShape3D" id="96_s"]
-size = Vector3(2, 0.42857143, 0.71428573)
-
-[sub_resource type="BoxShape3D" id="97_s"]
-size = Vector3(0.71428573, 0.42857143, 2)
-
-[sub_resource type="BoxShape3D" id="98_s"]
-size = Vector3(0.71428573, 0.42857143, 2)
-
-[sub_resource type="BoxShape3D" id="99_s"]
-size = Vector3(0.71428573, 0.42857143, 2)
-
-[sub_resource type="BoxShape3D" id="100_s"]
-size = Vector3(0.71428573, 0.42857143, 2)
-
-[sub_resource type="BoxShape3D" id="101_s"]
-size = Vector3(0.71428573, 0.42857143, 2)
-
-[sub_resource type="BoxShape3D" id="102_s"]
-size = Vector3(0.71428573, 0.42857143, 2)
-
-[sub_resource type="BoxShape3D" id="103_s"]
-size = Vector3(0.71428573, 0.42857143, 2)
-
-[sub_resource type="BoxShape3D" id="104_s"]
-size = Vector3(0.7777778, 0.44444445, 3)
-
-[sub_resource type="BoxShape3D" id="105_s"]
-size = Vector3(0.7777778, 0.44444445, 3)
-
-[sub_resource type="BoxShape3D" id="106_s"]
-size = Vector3(0.7777778, 0.44444445, 3)
-
-[sub_resource type="BoxShape3D" id="107_s"]
-size = Vector3(0.7777778, 0.44444445, 3)
-
-[sub_resource type="BoxShape3D" id="108_s"]
-size = Vector3(0.7777778, 0.44444445, 3)
-
-[sub_resource type="BoxShape3D" id="109_s"]
-size = Vector3(0.7777778, 0.44444445, 3)
-
-[sub_resource type="BoxShape3D" id="110_s"]
-size = Vector3(0.7777778, 0.44444445, 3)
-
-[sub_resource type="BoxShape3D" id="111_s"]
-size = Vector3(0.7777778, 0.44444445, 3)
-
-[sub_resource type="BoxShape3D" id="112_s"]
-size = Vector3(0.7777778, 0.44444445, 3)
-
-[sub_resource type="BoxShape3D" id="113_s"]
-size = Vector3(3, 0.41666666, 0.625)
-
-[sub_resource type="BoxShape3D" id="114_s"]
-size = Vector3(3, 0.41666666, 0.625)
-
-[sub_resource type="BoxShape3D" id="115_s"]
-size = Vector3(3, 0.41666666, 0.625)
-
-[sub_resource type="BoxShape3D" id="116_s"]
-size = Vector3(3, 0.41666666, 0.625)
-
-[sub_resource type="BoxShape3D" id="117_s"]
-size = Vector3(3, 0.41666666, 0.625)
-
-[sub_resource type="BoxShape3D" id="118_s"]
-size = Vector3(3, 0.41666666, 0.625)
-
-[sub_resource type="BoxShape3D" id="119_s"]
-size = Vector3(3, 0.41666666, 0.625)
-
-[sub_resource type="BoxShape3D" id="120_s"]
-size = Vector3(3, 0.41666666, 0.625)
-
-[sub_resource type="BoxShape3D" id="121_s"]
-size = Vector3(3, 0.41666666, 0.625)
-
-[sub_resource type="BoxShape3D" id="122_s"]
-size = Vector3(3, 0.41666666, 0.625)
-
-[sub_resource type="BoxShape3D" id="123_s"]
-size = Vector3(3, 0.41666666, 0.625)
-
-[sub_resource type="BoxShape3D" id="124_s"]
-size = Vector3(3, 0.41666666, 0.625)
-
-[sub_resource type="BoxShape3D" id="126_s"]
-size = Vector3(5, 0.4, 1)
-
-[sub_resource type="BoxShape3D" id="128_s"]
-size = Vector3(1, 0.4, 5)
-
-[sub_resource type="BoxShape3D" id="130_s"]
-size = Vector3(2, 0.45, 4)
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_qusfb"]
+points = PackedVector3Array(-1, -0.225, -2, 1, -0.225, -2, 1, -0.225, 2, -1, -0.225, 2, 0, 0.225, -1, 0, 0.225, 1)
 
 [sub_resource type="BoxShape3D" id="132_s"]
 size = Vector3(17, 2.4, 1.2)
@@ -5759,268 +5667,58 @@ metadata/surface = "metal"
 [node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/BusGantry" unique_id=954542076]
 shape = SubResource("89_s")
 
-[node name="RampDeckS_0" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=320855336]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.21428572, 13.642858)
+[node name="RampDeckS" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=371554344]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10.607143)
 metadata/surface = "metal"
+metadata/note = "stair collider: one convex wedge through the step nosings (zombies have no step-up)"
 
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampDeckS_0" unique_id=2086795912]
-shape = SubResource("90_s")
+[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampDeckS" unique_id=455904331]
+shape = SubResource("ConvexPolygonShape3D_qla6n")
 
-[node name="RampDeckS_1" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1175384431]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.64285713, 12.928572)
+[node name="RampDeckW" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=826117303]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.607143, 0, 6.75)
 metadata/surface = "metal"
+metadata/note = "stair collider: one convex wedge through the step nosings (zombies have no step-up)"
 
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampDeckS_1" unique_id=1736014888]
-shape = SubResource("91_s")
+[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampDeckW" unique_id=80571473]
+shape = SubResource("ConvexPolygonShape3D_7nysg")
 
-[node name="RampDeckS_2" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1979483306]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0714285, 12.214286)
+[node name="RampControlLedge" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1294865532]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.861111, 0, 18)
 metadata/surface = "metal"
+metadata/note = "stair collider: one convex wedge through the step nosings (zombies have no step-up)"
 
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampDeckS_2" unique_id=426865635]
-shape = SubResource("92_s")
+[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampControlLedge" unique_id=383493255]
+shape = SubResource("ConvexPolygonShape3D_67s58")
 
-[node name="RampDeckS_3" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1470137029]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 11.5)
+[node name="RampGantryS" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=927305600]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, -3.8125)
 metadata/surface = "metal"
+metadata/note = "stair collider: one convex wedge through the step nosings (zombies have no step-up)"
 
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampDeckS_3" unique_id=1451929021]
-shape = SubResource("93_s")
-
-[node name="RampDeckS_4" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1979263498]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9285715, 10.785714)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampDeckS_4" unique_id=928210193]
-shape = SubResource("94_s")
-
-[node name="RampDeckS_5" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1610736768]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.357143, 10.071428)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampDeckS_5" unique_id=1894865914]
-shape = SubResource("95_s")
-
-[node name="RampDeckS_6" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=482842829]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.7857144, 9.357142)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampDeckS_6" unique_id=356787930]
-shape = SubResource("96_s")
-
-[node name="RampDeckW_0" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1447923708]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.642858, 0.21428572, 6.75)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampDeckW_0" unique_id=430357534]
-shape = SubResource("97_s")
-
-[node name="RampDeckW_1" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1913295684]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.928572, 0.64285713, 6.75)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampDeckW_1" unique_id=1162053440]
-shape = SubResource("98_s")
-
-[node name="RampDeckW_2" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=2076161379]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.214286, 1.0714285, 6.75)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampDeckW_2" unique_id=463764615]
-shape = SubResource("99_s")
-
-[node name="RampDeckW_3" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1459171359]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.5, 1.5, 6.75)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampDeckW_3" unique_id=117721321]
-shape = SubResource("100_s")
-
-[node name="RampDeckW_4" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=21973525]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.785714, 1.9285715, 6.75)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampDeckW_4" unique_id=1517213349]
-shape = SubResource("101_s")
-
-[node name="RampDeckW_5" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=121705093]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.071428, 2.357143, 6.75)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampDeckW_5" unique_id=1278856541]
-shape = SubResource("102_s")
-
-[node name="RampDeckW_6" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=127688604]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.357143, 2.7857144, 6.75)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampDeckW_6" unique_id=1563494553]
-shape = SubResource("103_s")
-
-[node name="RampControlLedge_0" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=93930538]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.388889, 0.22222222, 18)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampControlLedge_0" unique_id=783629662]
-shape = SubResource("104_s")
-
-[node name="RampControlLedge_1" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=819586347]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.1666665, 0.6666667, 18)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampControlLedge_1" unique_id=93833798]
-shape = SubResource("105_s")
-
-[node name="RampControlLedge_2" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1833003839]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.9444447, 1.1111112, 18)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampControlLedge_2" unique_id=962482017]
-shape = SubResource("106_s")
-
-[node name="RampControlLedge_3" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1885491440]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.7222223, 1.5555556, 18)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampControlLedge_3" unique_id=627110027]
-shape = SubResource("107_s")
-
-[node name="RampControlLedge_4" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=203117980]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.5, 2, 18)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampControlLedge_4" unique_id=515116896]
-shape = SubResource("108_s")
-
-[node name="RampControlLedge_5" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=105497288]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.277778, 2.4444444, 18)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampControlLedge_5" unique_id=206101677]
-shape = SubResource("109_s")
-
-[node name="RampControlLedge_6" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=485706571]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.055555, 2.8888888, 18)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampControlLedge_6" unique_id=2109876488]
-shape = SubResource("110_s")
-
-[node name="RampControlLedge_7" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=983482770]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.833333, 3.3333333, 18)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampControlLedge_7" unique_id=724704385]
-shape = SubResource("111_s")
-
-[node name="RampControlLedge_8" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1109122365]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.611111, 3.7777777, 18)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampControlLedge_8" unique_id=2064877738]
-shape = SubResource("112_s")
-
-[node name="RampGantryS_0" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1754543047]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0.20833333, 1.1875)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampGantryS_0" unique_id=914867832]
-shape = SubResource("113_s")
-
-[node name="RampGantryS_1" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=2022106495]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0.625, 0.5625)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampGantryS_1" unique_id=2021584954]
-shape = SubResource("114_s")
-
-[node name="RampGantryS_2" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=937766156]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 1.0416666, -0.0625)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampGantryS_2" unique_id=1875409180]
-shape = SubResource("115_s")
-
-[node name="RampGantryS_3" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1637952984]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 1.4583334, -0.6875)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampGantryS_3" unique_id=706622135]
-shape = SubResource("116_s")
-
-[node name="RampGantryS_4" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=2125650633]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 1.875, -1.3125)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampGantryS_4" unique_id=1856042474]
-shape = SubResource("117_s")
-
-[node name="RampGantryS_5" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1945527724]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 2.2916667, -1.9375)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampGantryS_5" unique_id=1024284055]
-shape = SubResource("118_s")
-
-[node name="RampGantryS_6" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1615402178]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 2.7083333, -2.5625)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampGantryS_6" unique_id=1121036415]
-shape = SubResource("119_s")
-
-[node name="RampGantryS_7" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=26725056]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 3.125, -3.1875)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampGantryS_7" unique_id=190734313]
-shape = SubResource("120_s")
-
-[node name="RampGantryS_8" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1771066814]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 3.5416667, -3.8125)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampGantryS_8" unique_id=1537710449]
-shape = SubResource("121_s")
-
-[node name="RampGantryS_9" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=387840590]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 3.9583333, -4.4375)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampGantryS_9" unique_id=910194581]
-shape = SubResource("122_s")
-
-[node name="RampGantryS_10" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=953596849]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 4.375, -5.0625)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampGantryS_10" unique_id=1940614448]
-shape = SubResource("123_s")
-
-[node name="RampGantryS_11" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1320595260]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 4.7916665, -5.6875)
-metadata/surface = "metal"
-
-[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampGantryS_11" unique_id=61063260]
-shape = SubResource("124_s")
+[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/RampGantryS" unique_id=1950911386]
+shape = SubResource("ConvexPolygonShape3D_hawx5")
 
 [node name="CableDuctN" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1542236229]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, -7)
+metadata/note = "ridge collider so zombies walk over the low cover (navmesh climbs <= 0.5 m, zombies have no step-up)"
 
 [node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/CableDuctN" unique_id=1063317681]
-shape = SubResource("126_s")
+shape = SubResource("ConvexPolygonShape3D_n0ert")
 
 [node name="CableDuctE" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1891939562]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.5, 0.2, 0.5)
+metadata/note = "ridge collider so zombies walk over the low cover (navmesh climbs <= 0.5 m, zombies have no step-up)"
 
 [node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/CableDuctE" unique_id=2124830855]
-shape = SubResource("128_s")
+shape = SubResource("ConvexPolygonShape3D_ohn0j")
 
 [node name="SandbagW" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1760236579]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.5, 0.225, 0)
+metadata/note = "ridge collider so zombies walk over the low cover (navmesh climbs <= 0.5 m, zombies have no step-up)"
 
 [node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/SandbagW" unique_id=2075563958]
-shape = SubResource("130_s")
+shape = SubResource("ConvexPolygonShape3D_qusfb")
 
 [node name="BattRackN" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=1421742511]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, -20)
@@ -6354,6 +6052,210 @@ vertices = PackedVector3Array(7.5, 0, -19.5, 10, 0, -19.5, 10, 0, -11.5, 7.5, 0,
 affect_navigation_mesh = true
 carve_navigation_mesh = true
 avoidance_enabled = false
+
+[node name="Carve_Rubble_DeckS" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=842662707]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.300696
+vertices = PackedVector3Array(3.381, 0, 11.201, 3.45, 0, 10.943, 3.777, 0, 10.169, 3.967, 0, 9.98, 4.225, 0, 9.911, 4.484, 0, 9.98, 5.36, 0, 10.35, 5.55, 0, 10.54, 5.619, 0, 10.799, 5.55, 0, 11.057, 5.223, 0, 11.831, 5.033, 0, 12.02, 4.775, 0, 12.089, 4.516, 0, 12.02, 3.64, 0, 11.65, 3.45, 0, 11.46)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "Desi debris collider hull + agent radius (nav keeps 0.5 m off the pile; floor ring included)"
+
+[node name="Carve_Rubble_East" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=841648056]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.300696
+vertices = PackedVector3Array(12.904, 0, 6.26, 12.973, 0, 6.002, 13.221, 0, 5.2, 13.411, 0, 5.01, 13.67, 0, 4.941, 13.928, 0, 5.01, 14.837, 0, 5.291, 15.027, 0, 5.481, 15.096, 0, 5.74, 15.027, 0, 5.998, 14.779, 0, 6.8, 14.589, 0, 6.99, 14.33, 0, 7.059, 14.072, 0, 6.99, 13.163, 0, 6.709, 12.973, 0, 6.519)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "Desi debris collider hull + agent radius (nav keeps 0.5 m off the pile; floor ring included)"
+
+[node name="Carve_Scrap_Chimney" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1303938591]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.5570168
+vertices = PackedVector3Array(-2.462, 0, -5.617, -2.392, 0, -5.875, -2.203, 0, -6.065, -1.026, 0, -6.87, -0.767, 0, -6.94, -0.508, 0, -6.87, -0.318, 0, -6.681, 0.392, 0, -5.642, 0.462, 0, -5.383, 0.392, 0, -5.125, 0.203, 0, -4.935, -0.974, 0, -4.13, -1.233, 0, -4.06, -1.492, 0, -4.13, -1.682, 0, -4.319, -2.392, 0, -5.358)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "Desi debris collider hull + agent radius (nav keeps 0.5 m off the pile; floor ring included)"
+
+[node name="Carve_Scrap_Yard" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1853751474]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.5570168
+vertices = PackedVector3Array(6.637, 0, 13.563, 6.707, 0, 13.304, 6.896, 0, 13.115, 8.069, 0, 12.659, 8.328, 0, 12.59, 8.587, 0, 12.659, 8.776, 0, 12.848, 9.293, 0, 14.178, 9.363, 0, 14.437, 9.293, 0, 14.696, 9.104, 0, 14.885, 7.931, 0, 15.341, 7.672, 0, 15.41, 7.413, 0, 15.341, 7.224, 0, 15.152, 6.707, 0, 13.822)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "Desi debris collider hull + agent radius (nav keeps 0.5 m off the pile; floor ring included)"
+
+[node name="Carve_Slag_SE" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=818885661]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3328077
+vertices = PackedVector3Array(13.711, 0, 15.347, 13.781, 0, 15.088, 14.111, 0, 14.019, 14.301, 0, 13.83, 14.56, 0, 13.76, 14.818, 0, 13.83, 16.03, 0, 14.205, 16.219, 0, 14.394, 16.289, 0, 14.653, 16.219, 0, 14.912, 15.889, 0, 15.981, 15.699, 0, 16.17, 15.44, 0, 16.24, 15.182, 0, 16.17, 13.97, 0, 15.795, 13.781, 0, 15.606)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "Desi debris collider hull + agent radius (nav keeps 0.5 m off the pile; floor ring included)"
+
+[node name="Carve_Ingot_Yard" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1227736544]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.28528917, 0)
+height = 1.3590126
+vertices = PackedVector3Array(-11.016, 0, 10.064, -10.946, 0, 9.805, -10.399, 0, 9.241, -10.21, 0, 9.052, -9.951, 0, 8.983, -9.692, 0, 9.052, -9.243, 0, 9.488, -9.054, 0, 9.678, -8.984, 0, 9.936, -9.054, 0, 10.195, -9.601, 0, 10.759, -9.79, 0, 10.948, -10.049, 0, 11.017, -10.308, 0, 10.948, -10.757, 0, 10.512, -10.946, 0, 10.322)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "Desi debris collider hull + agent radius (nav keeps 0.5 m off the pile; floor ring included)"
+
+[node name="Carve_Slag_Yard" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1920771985]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3328077
+vertices = PackedVector3Array(-16.32, 0, 13.732, -16.25, 0, 13.473, -16.061, 0, 13.283, -14.893, 0, 12.789, -14.634, 0, 12.72, -14.375, 0, 12.789, -14.186, 0, 12.979, -13.75, 0, 14.01, -13.68, 0, 14.268, -13.75, 0, 14.527, -13.939, 0, 14.717, -15.107, 0, 15.211, -15.366, 0, 15.28, -15.625, 0, 15.211, -15.814, 0, 15.021, -16.25, 0, 13.99)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "Desi debris collider hull + agent radius (nav keeps 0.5 m off the pile; floor ring included)"
+
+[node name="Carve_RampDeckS_SideA" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1352322735]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-1.5, 0, 13.548, -0.65, 0, 13.548, -0.65, 0, 14.714, -1.5, 0, 14.714)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_RampDeckS_SideB" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=812978036]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(0.65, 0, 13.548, 1.5, 0, 13.548, 1.5, 0, 14.714, 0.65, 0, 14.714)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_RampDeckW_SideA" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=589688225]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-12.714, 0, 5.25, -11.548, 0, 5.25, -11.548, 0, 6.1, -12.714, 0, 6.1)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_RampDeckW_SideB" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1878443929]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-12.714, 0, 7.4, -11.548, 0, 7.4, -11.548, 0, 8.25, -12.714, 0, 8.25)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_RampControlLedge_SideA" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=786494517]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(3.222, 0, 16, 4.447, 0, 16, 4.447, 0, 16.85, 3.222, 0, 16.85)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_RampControlLedge_SideB" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1972100644]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(3.222, 0, 19.15, 4.447, 0, 19.15, 4.447, 0, 20, 3.222, 0, 20)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_RampGantryS_SideA" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1308663845]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-12, 0, 1.075, -11.15, 0, 1.075, -11.15, 0, 2.125, -12, 0, 2.125)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_RampGantryS_SideB" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=818376646]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-8.85, 0, 1.075, -8, 0, 1.075, -8, 0, 2.125, -8.85, 0, 2.125)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_ChestTop_Chest1" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=197091140]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.6, 0)
+vertices = PackedVector3Array(-1.2, 0, 5.92, 1.2, 0, 5.92, 1.2, 0, 7.08, -1.2, 0, 7.08)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "top of the runtime chest (main.gd puts chests under the NavigationRegion3D): stray 1 m2 nav island"
+
+[node name="Carve_ChestTop_Chest2" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=501464694]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.6, 0)
+vertices = PackedVector3Array(13.93, 0, 16.8, 13.93, 0, 19.2, 12.77, 0, 19.2, 12.77, 0, 16.8)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "top of the runtime chest (main.gd puts chests under the NavigationRegion3D): stray 1 m2 nav island"
+
+[node name="Carve_ChestTop_Chest3" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1699235234]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+vertices = PackedVector3Array(-1.2, 0, -12.58, 1.2, 0, -12.58, 1.2, 0, -11.42, -1.2, 0, -11.42)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "top of the runtime chest (main.gd puts chests under the NavigationRegion3D): stray 1 m2 nav island"
+
+[node name="Carve_RampDeckS_Under" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=2101959927]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+height = 1.5
+vertices = PackedVector3Array(-1, 0, 9, 1, 0, 9, 1, 0, 11.548, -1, 0, 11.548)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "sealed floor under the high end of the solid stair wedge (stray nav island)"
+
+[node name="Carve_RampDeckW_Under" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1294022940]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+height = 1.5
+vertices = PackedVector3Array(-9.548, 0, 5.75, -7, 0, 5.75, -7, 0, 7.75, -9.548, 0, 7.75)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "sealed floor under the high end of the solid stair wedge (stray nav island)"
+
+[node name="Carve_RampControlLedge_Under" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=337948813]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+height = 1.5
+vertices = PackedVector3Array(6.547, 0, 16.5, 11, 0, 16.5, 11, 0, 19.5, 6.547, 0, 19.5)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "sealed floor under the high end of the solid stair wedge (stray nav island)"
+
+[node name="Carve_RampGantryS_Under" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1509043636]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+height = 1.5
+vertices = PackedVector3Array(-11.5, 0, -6, -8.5, 0, -6, -8.5, 0, -0.725, -11.5, 0, -0.725)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "sealed floor under the high end of the solid stair wedge (stray nav island)"
+
+[node name="Carve_Pad_CoverCrateESE" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1963444992]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 2.0
+vertices = PackedVector3Array(11, 0, 6, 12, 0, 6, 12, 0, 7, 11, 0, 7)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "corner pad: agent advances its waypoint 0.6 m early and cuts this corner into the face"
 
 [node name="Decor" type="Node3D" parent="." unique_id=334448888]
 
@@ -10131,7 +10033,7 @@ metadata/area = &"start"
 metadata/note = "E mid pressure"
 
 [node name="Spawn5" type="Marker3D" parent="SpawnPoints" unique_id=888124487]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.5, 0.1, 1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.5, 0.1, 3.5)
 metadata/area = &"start"
 metadata/note = "NW pressure"
 
@@ -10169,7 +10071,7 @@ metadata/area = &"start"
 metadata/note = "SwitchDeck (WJ1)"
 
 [node name="Chest2" type="Marker3D" parent="Chests" unique_id=1739581665]
-transform = Transform3D(-1, 0, -1.2246469e-16, 0, 1, 0, 1.2246469e-16, 0, -1, 12.5, 4, 18)
+transform = Transform3D(1.1924881e-08, 0, -1, 0, 1, 0, 1, 0, 1.1924881e-08, 13.35, 4, 18)
 metadata/loot_table = "chest"
 metadata/area = &"start"
 metadata/note = "ControlLedge (WJ2)"

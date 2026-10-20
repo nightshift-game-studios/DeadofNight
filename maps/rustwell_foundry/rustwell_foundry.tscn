@@ -150,6 +150,7 @@ geometry_collision_mask = 1
 agent_height = 2.0
 agent_max_climb = 0.5
 agent_max_slope = 40.0
+filter_baking_aabb = AABB(-200, -1.99, -200, 400, 120, 400)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_27"]
 size = Vector3(32, 1, 28)
@@ -4849,7 +4850,7 @@ transform = Transform3D(0.453596, 0, 0.891207, 0, 1, 0, -0.891207, 0, 0.453596, 
 metadata/from_desi = true
 
 [node name="SlagHeap_C" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris" unique_id=2035187464 instance=ExtResource("9_4moic")]
-transform = Transform3D(-0.588501, 0, 0.808496, 0, 1, 0, -0.808496, 0, -0.588501, -22, 0, -4)
+transform = Transform3D(-0.588501, 0, 0.808496, 0, 1, 0, -0.808496, 0, -0.588501, -22, 0, -2.9)
 metadata/from_desi = true
 
 [node name="IngotStack_A" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris" unique_id=1001741973 instance=ExtResource("10_lpkoi")]
@@ -5360,97 +5361,112 @@ carve_navigation_mesh = true
 avoidance_enabled = false
 
 [node name="Carve_SlagHeap_A" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1830104548]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
-vertices = PackedVector3Array(-30.9, 0, -7.75, -29.1, 0, -7.75, -29.1, 0, -6.25, -30.9, 0, -6.25)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3328077
+vertices = PackedVector3Array(-31.32, 0, -7.268, -31.25, 0, -7.527, -31.061, 0, -7.717, -29.893, 0, -8.211, -29.634, 0, -8.28, -29.375, 0, -8.211, -29.186, 0, -8.021, -28.75, 0, -6.99, -28.68, 0, -6.732, -28.75, 0, -6.473, -28.939, 0, -6.283, -30.107, 0, -5.789, -30.366, 0, -5.72, -30.625, 0, -5.789, -30.814, 0, -5.979, -31.25, 0, -7.01)
 affect_navigation_mesh = true
 carve_navigation_mesh = true
 avoidance_enabled = false
+metadata/note = "Desi debris collider hull + agent radius (nav keeps 0.5 m off the pile; floor ring included)"
 
 [node name="Carve_SlagHeap_B" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=171485173]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
-vertices = PackedVector3Array(-39.4, 0, -22.75, -37.6, 0, -22.75, -37.6, 0, -21.25, -39.4, 0, -21.25)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3328077
+vertices = PackedVector3Array(-39.804, 0, -21.689, -39.735, 0, -21.947, -39.159, 0, -23.078, -38.97, 0, -23.267, -38.711, 0, -23.337, -38.452, 0, -23.267, -37.455, 0, -22.76, -37.265, 0, -22.57, -37.196, 0, -22.311, -37.265, 0, -22.053, -37.841, 0, -20.922, -38.03, 0, -20.733, -38.289, 0, -20.663, -38.548, 0, -20.733, -39.545, 0, -21.24, -39.735, 0, -21.43)
 affect_navigation_mesh = true
 carve_navigation_mesh = true
 avoidance_enabled = false
+metadata/note = "Desi debris collider hull + agent radius (nav keeps 0.5 m off the pile; floor ring included)"
 
 [node name="Carve_SlagHeap_C" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=2091844286]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
-vertices = PackedVector3Array(-22.9, 0, -4.75, -21.1, 0, -4.75, -21.1, 0, -3.25, -22.9, 0, -3.25)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3328077
+vertices = PackedVector3Array(-23.343, 0, -3.083, -23.274, 0, -3.342, -23.084, 0, -3.532, -22.18, 0, -4.19, -21.921, 0, -4.26, -21.662, 0, -4.19, -21.473, 0, -4.001, -20.726, 0, -2.975, -20.657, 0, -2.717, -20.726, 0, -2.458, -20.916, 0, -2.268, -21.82, 0, -1.61, -22.079, 0, -1.54, -22.338, 0, -1.61, -22.527, 0, -1.799, -23.274, 0, -2.825)
 affect_navigation_mesh = true
 carve_navigation_mesh = true
 avoidance_enabled = false
+metadata/note = "Desi debris collider hull + agent radius (nav keeps 0.5 m off the pile; floor ring included)"
 
 [node name="Carve_IngotStack_A" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1523944448]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
-height = 0.9
-vertices = PackedVector3Array(-35.05, 0, -19.95, -33.95, 0, -19.95, -33.95, 0, -19.05, -35.05, 0, -19.05)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.28528917, 0)
+height = 1.3590126
+vertices = PackedVector3Array(-35.465, 0, -19.729, -35.395, 0, -19.988, -35.206, 0, -20.177, -34.947, 0, -20.246, -34.177, 0, -20.402, -33.919, 0, -20.333, -33.729, 0, -20.144, -33.66, 0, -19.885, -33.535, 0, -19.271, -33.605, 0, -19.012, -33.794, 0, -18.823, -34.053, 0, -18.754, -34.823, 0, -18.598, -35.081, 0, -18.667, -35.271, 0, -18.856, -35.34, 0, -19.115)
 affect_navigation_mesh = true
 carve_navigation_mesh = true
 avoidance_enabled = false
+metadata/note = "Desi debris collider hull + agent radius (nav keeps 0.5 m off the pile; floor ring included)"
 
 [node name="Carve_IngotStack_B" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=952899242]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
-height = 0.9
-vertices = PackedVector3Array(-28.05, 0, -21.45, -26.95, 0, -21.45, -26.95, 0, -20.55, -28.05, 0, -20.55)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.28528917, 0)
+height = 1.3590126
+vertices = PackedVector3Array(-28.412, 0, -21.311, -28.342, 0, -21.57, -28.153, 0, -21.76, -27.894, 0, -21.829, -27.284, 0, -21.971, -27.026, 0, -21.902, -26.836, 0, -21.712, -26.767, 0, -21.453, -26.588, 0, -20.689, -26.658, 0, -20.43, -26.847, 0, -20.24, -27.106, 0, -20.171, -27.716, 0, -20.029, -27.974, 0, -20.098, -28.164, 0, -20.288, -28.233, 0, -20.547)
 affect_navigation_mesh = true
 carve_navigation_mesh = true
 avoidance_enabled = false
+metadata/note = "Desi debris collider hull + agent radius (nav keeps 0.5 m off the pile; floor ring included)"
 
 [node name="Carve_IngotStack_C" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1213135416]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
-height = 0.9
-vertices = PackedVector3Array(-39.55, 0, -8.45, -38.45, 0, -8.45, -38.45, 0, -7.55, -39.55, 0, -7.55)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.28528917, 0)
+height = 1.3590126
+vertices = PackedVector3Array(-40.007, 0, -7.887, -39.938, 0, -8.146, -39.449, 0, -8.761, -39.26, 0, -8.95, -39.001, 0, -9.02, -38.742, 0, -8.95, -38.252, 0, -8.561, -38.062, 0, -8.372, -37.993, 0, -8.113, -38.062, 0, -7.854, -38.551, 0, -7.239, -38.74, 0, -7.05, -38.999, 0, -6.98, -39.258, 0, -7.05, -39.748, 0, -7.439, -39.938, 0, -7.628)
 affect_navigation_mesh = true
 carve_navigation_mesh = true
 avoidance_enabled = false
+metadata/note = "Desi debris collider hull + agent radius (nav keeps 0.5 m off the pile; floor ring included)"
 
 [node name="Carve_ScrapRebar_A" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1884646564]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
-height = 1.2
-vertices = PackedVector3Array(-21.5, 0, -10, -19.5, 0, -10, -19.5, 0, -8, -21.5, 0, -8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.5570168
+vertices = PackedVector3Array(-21.962, 0, -9.117, -21.892, 0, -9.375, -21.703, 0, -9.565, -20.526, 0, -10.37, -20.267, 0, -10.44, -20.008, 0, -10.37, -19.818, 0, -10.181, -19.108, 0, -9.142, -19.038, 0, -8.883, -19.108, 0, -8.625, -19.297, 0, -8.435, -20.474, 0, -7.63, -20.733, 0, -7.56, -20.992, 0, -7.63, -21.182, 0, -7.819, -21.892, 0, -8.858)
 affect_navigation_mesh = true
 carve_navigation_mesh = true
 avoidance_enabled = false
+metadata/note = "Desi debris collider hull + agent radius (nav keeps 0.5 m off the pile; floor ring included)"
 
 [node name="Carve_ScrapRebar_B" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1223722232]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
-height = 1.2
-vertices = PackedVector3Array(-42, 0, -13, -40, 0, -13, -40, 0, -11, -42, 0, -11)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.5570168
+vertices = PackedVector3Array(-42.466, 0, -11.923, -42.396, 0, -12.181, -41.643, 0, -13.19, -41.454, 0, -13.379, -41.195, 0, -13.449, -40.936, 0, -13.379, -39.793, 0, -12.526, -39.604, 0, -12.336, -39.534, 0, -12.077, -39.604, 0, -11.819, -40.357, 0, -10.81, -40.546, 0, -10.621, -40.805, 0, -10.551, -41.064, 0, -10.621, -42.207, 0, -11.474, -42.396, 0, -11.664)
 affect_navigation_mesh = true
 carve_navigation_mesh = true
 avoidance_enabled = false
+metadata/note = "Desi debris collider hull + agent radius (nav keeps 0.5 m off the pile; floor ring included)"
 
 [node name="Carve_RubbleLarge_Foundry" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1260630728]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
-height = 1.3
-vertices = PackedVector3Array(-26.1, 0, -27.6, -23.9, 0, -27.6, -23.9, 0, -25.4, -26.1, 0, -25.4)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.7083894
+vertices = PackedVector3Array(-26.526, 0, -26.954, -26.457, 0, -27.213, -26.267, 0, -27.402, -24.683, 0, -27.893, -24.424, 0, -27.962, -24.165, 0, -27.893, -23.976, 0, -27.703, -23.543, 0, -26.305, -23.474, 0, -26.046, -23.543, 0, -25.787, -23.733, 0, -25.598, -25.317, 0, -25.107, -25.576, 0, -25.038, -25.835, 0, -25.107, -26.024, 0, -25.297, -26.457, 0, -26.695)
 affect_navigation_mesh = true
 carve_navigation_mesh = true
 avoidance_enabled = false
+metadata/note = "Desi debris collider hull + agent radius (nav keeps 0.5 m off the pile; floor ring included)"
 
 [node name="Carve_RubbleMed_Yard" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1502506139]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
-height = 0.9
-vertices = PackedVector3Array(9.8, 0, 27.8, 11.2, 0, 27.8, 11.2, 0, 29.2, 9.8, 0, 29.2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.300696
+vertices = PackedVector3Array(9.372, 0, 28.673, 9.442, 0, 28.415, 9.956, 0, 27.614, 10.145, 0, 27.425, 10.404, 0, 27.355, 10.663, 0, 27.425, 11.369, 0, 27.878, 11.558, 0, 28.068, 11.628, 0, 28.327, 11.558, 0, 28.585, 11.044, 0, 29.386, 10.855, 0, 29.575, 10.596, 0, 29.645, 10.337, 0, 29.575, 9.631, 0, 29.122, 9.442, 0, 28.932)
 affect_navigation_mesh = true
 carve_navigation_mesh = true
 avoidance_enabled = false
+metadata/note = "Desi debris collider hull + agent radius (nav keeps 0.5 m off the pile; floor ring included)"
 
 [node name="Carve_RubbleMed_Rail" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=40178796]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
-height = 0.9
-vertices = PackedVector3Array(-37.2, 0, 27.3, -35.8, 0, 27.3, -35.8, 0, 28.7, -37.2, 0, 28.7)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.300696
+vertices = PackedVector3Array(-37.636, 0, 27.86, -37.567, 0, 27.601, -37.377, 0, 27.411, -36.543, 0, 26.955, -36.284, 0, 26.886, -36.025, 0, 26.955, -35.836, 0, 27.145, -35.433, 0, 27.881, -35.364, 0, 28.14, -35.433, 0, 28.399, -35.623, 0, 28.589, -36.457, 0, 29.045, -36.716, 0, 29.114, -36.975, 0, 29.045, -37.164, 0, 28.855, -37.567, 0, 28.119)
 affect_navigation_mesh = true
 carve_navigation_mesh = true
 avoidance_enabled = false
+metadata/note = "Desi debris collider hull + agent radius (nav keeps 0.5 m off the pile; floor ring included)"
 
 [node name="Carve_RubbleMed_Tank" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=548579545]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
-height = 0.9
-vertices = PackedVector3Array(35.3, 0, 17.3, 36.7, 0, 17.3, 36.7, 0, 18.7, 35.3, 0, 18.7)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.300696
+vertices = PackedVector3Array(34.903, 0, 17.742, 34.972, 0, 17.483, 35.162, 0, 17.294, 35.925, 0, 16.945, 36.184, 0, 16.875, 36.442, 0, 16.945, 36.632, 0, 17.134, 37.028, 0, 17.999, 37.097, 0, 18.258, 37.028, 0, 18.517, 36.838, 0, 18.706, 36.075, 0, 19.055, 35.816, 0, 19.125, 35.558, 0, 19.055, 35.368, 0, 18.866, 34.972, 0, 18.001)
 affect_navigation_mesh = true
 carve_navigation_mesh = true
 avoidance_enabled = false
+metadata/note = "Desi debris collider hull + agent radius (nav keeps 0.5 m off the pile; floor ring included)"
 
 [node name="Carve_DesiOriginGhost" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=159240232]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
@@ -5459,6 +5475,505 @@ vertices = PackedVector3Array(-0.9, 0, -2.2, 0.8, 0, -2.2, 0.8, 0, 2.3, -0.9, 0,
 affect_navigation_mesh = true
 carve_navigation_mesh = true
 avoidance_enabled = false
+
+[node name="Carve_RampC2Roof_SideA" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=45611342]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-12, 0, 25.9, -10.385, 0, 25.9, -10.385, 0, 26.75, -12, 0, 26.75)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_RampC2Roof_SideB" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1221743140]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-12, 0, 28.55, -10.385, 0, 28.55, -10.385, 0, 29.4, -12, 0, 29.4)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_RampDockS_SideA" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=740431841]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-40.1, 0, 35.65, -38, 0, 35.65, -38, 0, 36.5, -40.1, 0, 36.5)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_RampDockS_SideB" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=212138509]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-40.1, 0, 33, -38, 0, 33, -38, 0, 33.85, -40.1, 0, 33.85)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_RampDockN_SideA" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1959444137]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-40.1, 0, 8.15, -38, 0, 8.15, -38, 0, 9, -40.1, 0, 9)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_RampDockN_SideB" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1377270419]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-40.1, 0, 4.1, -38, 0, 4.1, -38, 0, 4.95, -40.1, 0, 4.95)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_RampBX2_SideA" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=382204690]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-31.066, 0, 29.65, -29.5, 0, 29.65, -29.5, 0, 30.5, -31.066, 0, 30.5)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_RampBX2_SideB" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=304937343]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-31.066, 0, 27, -29.5, 0, 27, -29.5, 0, 27.85, -31.066, 0, 27.85)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_StairFootbridge_SideA" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1960171822]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-19, 0, 15.5, -18.15, 0, 15.5, -18.15, 0, 17, -19, 0, 17)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_StairFootbridge_SideB" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1365863689]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-16.35, 0, 15.5, -15.5, 0, 15.5, -15.5, 0, 17, -16.35, 0, 17)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_StairFoundryW_SideA" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=957585922]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-44.5, 0, -0.667, -43.65, 0, -0.667, -43.65, 0, 1, -44.5, 0, 1)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_StairFoundryW_SideB" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=946301948]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-41.35, 0, -0.667, -40.5, 0, -0.667, -40.5, 0, 1, -41.35, 0, 1)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_StairFoundryE_SideA" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1187477603]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-19.5, 0, -0.667, -18.65, 0, -0.667, -18.65, 0, 1, -19.5, 0, 1)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_StairFoundryE_SideB" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1116808966]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-16.35, 0, -0.667, -15.5, 0, -0.667, -15.5, 0, 1, -16.35, 0, 1)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_RampPitW_SideA" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1487582832]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-30.8, 0, -7.35, -28, 0, -7.35, -28, 0, -6.5, -30.8, 0, -6.5)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_RampPitW_SideB" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1417295709]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-30.8, 0, -11.5, -28, 0, -11.5, -28, 0, -10.65, -30.8, 0, -10.65)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_RampPitE_SideA" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1670047009]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-24, 0, -10.5, -21.2, 0, -10.5, -21.2, 0, -9.65, -24, 0, -9.65)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_RampPitE_SideB" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=389253764]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-24, 0, -6.35, -21.2, 0, -6.35, -21.2, 0, -5.5, -24, 0, -5.5)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_StairMezzanine_SideA" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1080588397]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(2, 0, -4.5, 4.139, 0, -4.5, 4.139, 0, -3.65, 2, 0, -3.65)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_StairMezzanine_SideB" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=90106090]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(2, 0, -1.85, 4.139, 0, -1.85, 4.139, 0, -1, 2, 0, -1)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_StairPipeRack_SideA" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=237750598]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(39.5, 0, 20.483, 40.35, 0, 20.483, 40.35, 0, 22, 39.5, 0, 22)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_StairPipeRack_SideB" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1469441065]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(42.15, 0, 20.483, 43, 0, 20.483, 43, 0, 22, 42.15, 0, 22)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_StairPumpRoof_SideA" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=403447115]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(29.5, 0, -8.575, 30.35, 0, -8.575, 30.35, 0, -7, 29.5, 0, -7)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_StairPumpRoof_SideB" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=694838910]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(32.15, 0, -8.575, 33, 0, -8.575, 33, 0, -7, 32.15, 0, -7)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "no side entry on the low end of the ramp (side face < agent_max_climb but the capsule can't step it)"
+
+[node name="Carve_ChestTop_Chest1" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=887233817]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.1999998, 0)
+vertices = PackedVector3Array(1.8, 0, 27.02, 4.2, 0, 27.02, 4.2, 0, 28.18, 1.8, 0, 28.18)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "top of the runtime chest (main.gd puts chests under the NavigationRegion3D): stray 1 m2 nav island"
+
+[node name="Carve_ChestTop_Chest2" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=773066394]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+vertices = PackedVector3Array(7.8, 0, -28.98, 10.2, 0, -28.98, 10.2, 0, -27.82, 7.8, 0, -27.82)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "top of the runtime chest (main.gd puts chests under the NavigationRegion3D): stray 1 m2 nav island"
+
+[node name="Carve_ChestTop_Chest3" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=877148101]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.4, 0)
+vertices = PackedVector3Array(-27.7, 0, -13.93, -25.3, 0, -13.93, -25.3, 0, -12.77, -27.7, 0, -12.77)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "top of the runtime chest (main.gd puts chests under the NavigationRegion3D): stray 1 m2 nav island"
+
+[node name="Carve_ChestTop_Chest4" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1473616187]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+vertices = PackedVector3Array(37.8, 0, -29.08, 40.2, 0, -29.08, 40.2, 0, -27.92, 37.8, 0, -27.92)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "top of the runtime chest (main.gd puts chests under the NavigationRegion3D): stray 1 m2 nav island"
+
+[node name="Carve_ChestTop_Chest5" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=516941997]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+vertices = PackedVector3Array(-40.7, 0, 20.92, -38.3, 0, 20.92, -38.3, 0, 22.08, -40.7, 0, 22.08)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "top of the runtime chest (main.gd puts chests under the NavigationRegion3D): stray 1 m2 nav island"
+
+[node name="Carve_RampC2Roof_SideAFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=975544724]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-12.6, 0, 25.9, -12, 0, 25.9, -12, 0, 26.4, -12.6, 0, 26.4)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_RampC2Roof_SideBFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=592650664]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-12.6, 0, 28.9, -12, 0, 28.9, -12, 0, 29.4, -12.6, 0, 29.4)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_RampDockS_SideAFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1330870560]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-38, 0, 36, -37.4, 0, 36, -37.4, 0, 36.5, -38, 0, 36.5)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_RampDockS_SideBFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1456252227]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-38, 0, 33, -37.4, 0, 33, -37.4, 0, 33.5, -38, 0, 33.5)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_RampDockN_SideAFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=817134951]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-38, 0, 8.5, -37.4, 0, 8.5, -37.4, 0, 9, -38, 0, 9)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_RampDockN_SideBFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1057477823]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-38, 0, 4.1, -37.4, 0, 4.1, -37.4, 0, 4.6, -38, 0, 4.6)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_RampBX2_SideAFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1913697397]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-29.5, 0, 30, -28.9, 0, 30, -28.9, 0, 30.5, -29.5, 0, 30.5)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_RampBX2_SideBFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=416066575]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-29.5, 0, 27, -28.9, 0, 27, -28.9, 0, 27.5, -29.5, 0, 27.5)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_StairFootbridge_SideAFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1839040848]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-19, 0, 17, -18.5, 0, 17, -18.5, 0, 17.6, -19, 0, 17.6)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_StairFootbridge_SideBFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1724715526]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-16, 0, 17, -15.5, 0, 17, -15.5, 0, 17.6, -16, 0, 17.6)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_StairFoundryW_SideAFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=417639450]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-44.5, 0, 1, -44, 0, 1, -44, 0, 1.6, -44.5, 0, 1.6)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_StairFoundryW_SideBFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=969633597]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-41, 0, 1, -40.5, 0, 1, -40.5, 0, 1.6, -41, 0, 1.6)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_StairFoundryE_SideAFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=80191008]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-19.5, 0, 1, -19, 0, 1, -19, 0, 1.6, -19.5, 0, 1.6)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_StairFoundryE_SideBFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1890280973]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-16, 0, 1, -15.5, 0, 1, -15.5, 0, 1.6, -16, 0, 1.6)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_RampPitW_SideAFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1701921508]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-28, 0, -7, -27.4, 0, -7, -27.4, 0, -6.5, -28, 0, -6.5)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_RampPitW_SideBFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1621513379]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-28, 0, -11.5, -27.4, 0, -11.5, -27.4, 0, -11, -28, 0, -11)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_RampPitE_SideAFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=2104103595]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-24.6, 0, -10.5, -24, 0, -10.5, -24, 0, -10, -24.6, 0, -10)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_RampPitE_SideBFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=267972858]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.3, 0)
+height = 1.3
+vertices = PackedVector3Array(-24.6, 0, -6, -24, 0, -6, -24, 0, -5.5, -24.6, 0, -5.5)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_StairMezzanine_SideAFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1732445718]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(1.4, 0, -4.5, 2, 0, -4.5, 2, 0, -4, 1.4, 0, -4)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_StairMezzanine_SideBFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=990804258]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(1.4, 0, -1.5, 2, 0, -1.5, 2, 0, -1, 1.4, 0, -1)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_StairPipeRack_SideAFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1094664771]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(39.5, 0, 22, 40, 0, 22, 40, 0, 22.6, 39.5, 0, 22.6)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_StairPipeRack_SideBFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1484584367]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(42.5, 0, 22, 43, 0, 22, 43, 0, 22.6, 42.5, 0, 22.6)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_StairPumpRoof_SideAFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1027657445]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(29.5, 0, -7, 30, 0, -7, 30, 0, -6.4, 29.5, 0, -6.4)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_StairPumpRoof_SideBFront" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1309528609]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 1.3
+vertices = PackedVector3Array(32.5, 0, -7, 33, 0, -7, 33, 0, -6.4, 32.5, 0, -6.4)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "outer corner in front of the ramp foot (paths cut diagonally across the wedge's side edge)"
+
+[node name="Carve_Pad_HopperCarNW" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=1670897914]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 2.0
+vertices = PackedVector3Array(-33.2, 0, 24, -32, 0, 24, -32, 0, 25.2, -33.2, 0, 25.2)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "corner pad: agent advances its waypoint 0.6 m early and cuts this corner into the face"
+
+[node name="Carve_Pad_RackR2NW" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=643764586]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 2.0
+vertices = PackedVector3Array(-7.6, 0, -22.8, -6.8, 0, -22.8, -6.8, 0, -22, -7.6, 0, -22)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "corner pad: agent advances its waypoint 0.6 m early and cuts this corner into the face"
+
+[node name="Carve_Pad_RackR1NE" type="NavigationObstacle3D" parent="NavigationRegion3D/NavCarves" unique_id=18623669]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+height = 2.0
+vertices = PackedVector3Array(-10, 0, -22.8, -9.2, 0, -22.8, -9.2, 0, -22, -10, 0, -22)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
+avoidance_enabled = false
+metadata/note = "corner pad: agent advances its waypoint 0.6 m early and cuts this corner into the face"
 
 [node name="Decor" type="Node3D" parent="." unique_id=742004724]
 
@@ -6611,7 +7126,7 @@ metadata/area = &"warehouse"
 metadata/note = "inside the office"
 
 [node name="Chest3" type="Marker3D" parent="Chests" unique_id=317740715]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26.5, -1, -12)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26.5, -1, -13.35)
 metadata/loot_table = "chest"
 metadata/area = &"foundry"
 metadata/note = "casting pit floor"
