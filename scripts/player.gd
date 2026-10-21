@@ -36,6 +36,7 @@ enum Move { NORMAL, CROUCH, SLIDE }
 # ADS (Skillz MAIN_HOOKS §8): AdsProfile tables, Settings.ads_mode hold|toggle, RMB action "ads".
 const AdsProfileScr := preload("res://scripts/combat/ads_profile.gd")
 const PlayerStatusScr := preload("res://scripts/combat/player_status.gd") ## MAIN_HOOKS §15b: Crawler root, Bloater bile slow
+const StatEffectsScr := preload("res://scripts/combat/stat_effects.gd") ## MAIN_HOOKS §21b: armor stat effects (data/stats.json)
 signal ads_changed(active: bool) ## Gooey sniper scope overlay listens when AdsProfile.wants_scope_overlay(archetype)
 var ads_active: bool = false
 ## Optics pass (Skillz MAIN_HOOKS §18): 0 = hip .. 1 = fully aimed, stepped over the build's ADS time
@@ -282,32 +283,31 @@ func mod_stat(stat: String, base: float, ctx: Dictionary = {}) -> float:
 	return skill_runner.modify(stat, base, ctx) if skill_runner else base
 
 
-## Armor stats -> gameplay. Called whenever armor changes.
+## Armor stats -> gameplay. Called whenever armor changes. MAIN_HOOKS §21b: the numbers come from StatEffects
+## (data/stats.json, ease-out curve so a typical 15-25 point total is felt); crouch speed now follows Agility too.
 func recalc_stats() -> void:
 	armor_stats = inventory.total_armor_stats()
-	var mob: float = armor_stats.get("agility", 0)
-	var res: float = armor_stats.get("toughness", 0)
-	var rec: float = armor_stats.get("vitality", 0)
-	var dis: float = armor_stats.get("ordnance", 0)
-	var intl: float = armor_stats.get("focus", 0)
-	var stre: float = armor_stats.get("brawn", 0)
+	var fx: Dictionary = StatEffectsScr.effects(armor_stats)
+	if _base_crouch < 0.0:
+		_base_crouch = crouch_speed
 	# skills: meta tree + Field Cards (stat names: see GOOEY_HANDOFF.md "Stats")
 	max_health = maxi(int(round(mod_stat("max_health_mult", 1.0) * mod_stat("max_health", float(_base_max_health)))), 1)
 	health = mini(health, max_health)
 	var move := 1.0 + mod_stat("move_speed", 0.0)
-	walk_speed = _base_walk * move * (1.0 + mob * 0.002) # 100 Agility = +20% speed
-	sprint_speed = _base_sprint * move * (1.0 + mob * 0.002)
-	damage_reduction = res * 0.003 # 100 Toughness = 30% damage reduction
-	regen_delay = max(4.0 - rec * 0.02 + mod_stat("regen_delay_add", 0.0), 1.5) # 100 Vitality = regen after 2s
-	regen_rate = 6.0 + rec * 0.2 + mod_stat("regen_rate_add", 0.0) # ... at 26 HP/s
+	walk_speed = _base_walk * move * float(fx.move_mult) # Agility (data/stats.json)
+	sprint_speed = _base_sprint * move * float(fx.move_mult)
+	crouch_speed = _base_crouch * move * float(fx.move_mult)
+	damage_reduction = float(fx.damage_reduction) # Toughness
+	regen_delay = max(4.0 - float(fx.regen_delay_cut) + mod_stat("regen_delay_add", 0.0), 1.5) # Vitality
+	regen_rate = 6.0 + float(fx.regen_rate_add) + mod_stat("regen_rate_add", 0.0)
 	regen_disabled = mod_stat("regen_disabled", 0.0) > 0.0
 	reload_multiplier = maxf((1.0 - mod_stat("reload_speed", 0.0)) * mod_stat("reload_time_mult", 1.0), 0.2)
-	grenade_cooldown = float(grenade_data.get("cooldown", 20.0)) * (1.0 - dis * 0.005) * mod_stat("grenade_cd_mult", 1.0) # 100 = half cooldown
+	grenade_cooldown = float(grenade_data.get("cooldown", 20.0)) * float(fx.grenade_cd_mult) * mod_stat("grenade_cd_mult", 1.0) # Ordnance
 	if ability:
 		var cd := (_ability_base_cd + mod_stat("ability_cooldown_add", 0.0)) * maxf(1.0 - mod_stat("ability_cooldown", 0.0), 0.2)
-		ability.cooldown = maxf(cd * (1.0 - intl * 0.004) * mod_stat("ability_cd_mult", 1.0), 1.0) # 100 Focus = -40%, floor 1 s
-	melee_damage = 70.0 * (1.0 + stre * 0.006) * mod_stat("melee_damage_mult", 1.0) # 100 Brawn = +60% melee damage
-	melee_cooldown = 1.6 * (1.0 - stre * 0.004) # ... and -40% melee cooldown
+		ability.cooldown = maxf(cd * float(fx.ability_cd_mult) * mod_stat("ability_cd_mult", 1.0), 1.0) # Focus, floor 1 s
+	melee_damage = 70.0 * float(fx.melee_damage_mult) * mod_stat("melee_damage_mult", 1.0) # Brawn
+	melee_cooldown = 1.6 * float(fx.melee_cd_mult)
 	var jm := mod_stat("jump_mult", 1.0)
 	jump_velocity = _base_jump_velocity * jm
 	wall_jump_up = _base_wall_jump_up * jm
@@ -326,6 +326,15 @@ func recalc_stats() -> void:
 		ability_charges_max = amax
 	stats_changed.emit()
 	_emit_status()
+
+
+var _base_crouch: float = -1.0 ## MAIN_HOOKS §21b: crouch_speed before Agility (captured on the first recalc)
+
+
+## MAIN_HOOKS §21b (STATS_API.md): the live numeric effects of armor stats + skills + Field Cards on this player
+## (move speed %, damage taken %, regen, cooldowns, melee). preview {stat: delta} / {"totals": {..}} adds "next".
+func get_stat_effects(preview: Dictionary = {}) -> Dictionary:
+	return StatEffectsScr.for_player(self, preview)
 
 
 func _emit_status() -> void:

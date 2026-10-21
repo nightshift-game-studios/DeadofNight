@@ -1,10 +1,13 @@
 class_name StatPreview
 extends RefCounted
 ## Gooey (playtest #34): what the six armor stats actually do, as numbers, for the character screen.
-## derived() mirrors player.gd recalc_stats() line for line (same constants, same skill mod_stat folds), so the UI
+## derived() mirrors player.gd recalc_stats() (armor part: StatEffects.effects, Skillz §21b) (same constants, same skill mod_stat folds), so the UI
 ## can show "current -> with these points" without touching the player. tests/stat_preview_test.gd re-runs the real
 ## recalc_stats() and fails if these drift apart, so a formula change in player.gd shows up as a red test.
 ## Formula owner: player.gd (Skillz / G4M3N). If Skillz moves stats to spendable points, only the input totals change.
+
+const StatEffectsScr := preload("res://scripts/combat/stat_effects.gd")
+
 
 static func _mod(p: Object, stat: String, base: float) -> float:
 	return float(p.call("mod_stat", stat, base)) if p and p.has_method("mod_stat") else base
@@ -19,35 +22,32 @@ static func _num(p: Object, prop: String, fallback: float) -> float:
 
 ## Derived gameplay values for armor-stat totals `st` (agility ... brawn), using `p`'s class bases and skills.
 static func derived(p: Object, st: Dictionary) -> Dictionary:
-	var mob := float(st.get("agility", 0))
-	var res := float(st.get("toughness", 0))
-	var rec := float(st.get("vitality", 0))
-	var dis := float(st.get("ordnance", 0))
-	var intl := float(st.get("focus", 0))
-	var stre := float(st.get("brawn", 0))
+	# Skillz Economy v2 (MAIN_HOOKS §21b): the armor-stat part comes from StatEffects (data/stats.json, ease-out curve),
+	# the same call player.gd recalc_stats() makes; the skill mod_stat folds stay here as before.
+	var fx: Dictionary = StatEffectsScr.effects(st)
 	var move := 1.0 + _mod(p, "move_speed", 0.0)
 	var base_walk := _num(p, "_base_walk", 5.0)
 	var base_sprint := _num(p, "_base_sprint", 8.0)
 	var out := {}
-	out["walk_speed"] = base_walk * move * (1.0 + mob * 0.002)
-	out["sprint_speed"] = base_sprint * move * (1.0 + mob * 0.002)
-	out["move_pct"] = mob * 0.002 * 100.0 # vs the class base (skills apply on top)
-	out["damage_reduction"] = res * 0.003
-	out["damage_taken_pct"] = (1.0 - res * 0.003) * 100.0
-	out["regen_delay"] = maxf(4.0 - rec * 0.02 + _mod(p, "regen_delay_add", 0.0), 1.5)
-	out["regen_rate"] = 6.0 + rec * 0.2 + _mod(p, "regen_rate_add", 0.0)
+	out["walk_speed"] = base_walk * move * float(fx.move_mult)
+	out["sprint_speed"] = base_sprint * move * float(fx.move_mult)
+	out["move_pct"] = (float(fx.move_mult) - 1.0) * 100.0 # vs the class base (skills apply on top)
+	out["damage_reduction"] = float(fx.damage_reduction)
+	out["damage_taken_pct"] = (1.0 - float(fx.damage_reduction)) * 100.0
+	out["regen_delay"] = maxf(4.0 - float(fx.regen_delay_cut) + _mod(p, "regen_delay_add", 0.0), 1.5)
+	out["regen_rate"] = 6.0 + float(fx.regen_rate_add) + _mod(p, "regen_rate_add", 0.0)
 	var gd = p.get("grenade_data") if p else null
 	var g_cd := float(gd.get("cooldown", 20.0)) if gd is Dictionary else 20.0
-	out["grenade_cooldown"] = g_cd * (1.0 - dis * 0.005) * _mod(p, "grenade_cd_mult", 1.0)
+	out["grenade_cooldown"] = g_cd * float(fx.grenade_cd_mult) * _mod(p, "grenade_cd_mult", 1.0)
 	var ab = p.get("ability") if p else null
 	if ab != null:
 		var base_cd := _num(p, "_ability_base_cd", 5.0)
 		var cd := (base_cd + _mod(p, "ability_cooldown_add", 0.0)) * maxf(1.0 - _mod(p, "ability_cooldown", 0.0), 0.2)
-		out["ability_cooldown"] = maxf(cd * (1.0 - intl * 0.004) * _mod(p, "ability_cd_mult", 1.0), 1.0)
+		out["ability_cooldown"] = maxf(cd * float(fx.ability_cd_mult) * _mod(p, "ability_cd_mult", 1.0), 1.0)
 	else:
 		out["ability_cooldown"] = -1.0
-	out["melee_damage"] = 70.0 * (1.0 + stre * 0.006) * _mod(p, "melee_damage_mult", 1.0)
-	out["melee_cooldown"] = 1.6 * (1.0 - stre * 0.004)
+	out["melee_damage"] = 70.0 * float(fx.melee_damage_mult) * _mod(p, "melee_damage_mult", 1.0)
+	out["melee_cooldown"] = 1.6 * float(fx.melee_cd_mult)
 	return out
 
 

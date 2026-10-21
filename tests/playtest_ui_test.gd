@@ -253,9 +253,10 @@ func _skill_tree() -> void:
 func _stat_formulas_static() -> void:
 	var d0: Dictionary = StatPreviewScr.derived(null, {})
 	var d1: Dictionary = StatPreviewScr.derived(null, {"agility": 100, "toughness": 100, "vitality": 100, "ordnance": 100, "focus": 100, "brawn": 100})
-	check(is_equal_approx(d1.walk_speed / d0.walk_speed, 1.2), "#34 100 Agility = +20% move speed")
-	check(is_equal_approx(d1.damage_taken_pct, 70.0), "#34 100 Toughness = 70% damage taken")
-	check(is_equal_approx(d1.regen_delay, 2.0) and is_equal_approx(d1.regen_rate, 26.0), "#34 100 Vitality = regen after 2 s at 26 HP/s")
+	# Skillz Economy v2: data/stats.json maxima at 100 (ease-out curve; early points count most)
+	check(is_equal_approx(d1.walk_speed / d0.walk_speed, 1.25), "#34 100 Agility = +25% move speed")
+	check(is_equal_approx(d1.damage_taken_pct, 60.0), "#34 100 Toughness = 60% damage taken")
+	check(is_equal_approx(d1.regen_delay, 1.5) and is_equal_approx(d1.regen_rate, 26.0), "#34 100 Vitality = regen after 1.5 s at 26 HP/s")
 	check(is_equal_approx(d1.grenade_cooldown / d0.grenade_cooldown, 0.5), "#34 100 Ordnance = half grenade cooldown")
 	check(is_equal_approx(d1.melee_damage, 112.0) and is_equal_approx(d1.melee_cooldown, 0.96), "#34 100 Brawn = +60% melee, -40% melee cooldown")
 	var rows: Array = StatPreviewScr.rows(null, {"agility": 10})
@@ -263,7 +264,7 @@ func _stat_formulas_static() -> void:
 	check(ag.stat == "agility" and ag.next_value == 11 and ag.lines[0].better == 1 and str(ag.lines[0].delta_text).begins_with("+"),
 		"#34 rows(): next-point delta for Agility is a gain (%s)" % str(ag.lines[0].get("delta_text")))
 	var tough: Dictionary = rows[1]
-	check(tough.lines[0].better == 1 and str(tough.lines[0].delta_text) == "-0.3%", "#34 a Toughness point = -0.3%% damage taken (%s)" % tough.lines[0].delta_text)
+	check(tough.lines[0].better == 1 and str(tough.lines[0].delta_text) == "-0.8%", "#34 the first Toughness point = -0.8%% damage taken (%s)" % tough.lines[0].delta_text)
 	var pv: Array = StatPreviewScr.rows(null, {"agility": 10}, {"agility": 4})
 	check(pv[0].previewing and pv[0].next_value == 4 and pv[0].lines[0].better == -1, "#34 preview of fewer points reads as a loss")
 	var focus_row: Dictionary = StatPreviewScr.rows(null, {})[4]
@@ -369,6 +370,10 @@ func _in_match() -> void:
 			if not is_equal_approx(float(d[pair[0]]), float(pair[1])):
 				mismatch.append("%s %.3f vs %.3f (+%d)" % [pair[0], d[pair[0]], pair[1], bump])
 	check(mismatch.is_empty(), "#34 StatPreview.derived == player.gd recalc_stats() (3 stat sets) %s" % str(mismatch.slice(0, 3)))
+	if piece: # undo the +85 / +42 bumps: at the 100 cap (Economy v2 caps totals) a stat point has no gain left to show
+		for s in STAT_ORDER:
+			piece.stats[s] = int(piece.stats.get(s, 0)) - (85 if s in ["agility", "toughness", "focus"] else 42)
+		p.recalc_stats()
 	var cs = m.character_screen
 	cs.open()
 	await frames(4)
