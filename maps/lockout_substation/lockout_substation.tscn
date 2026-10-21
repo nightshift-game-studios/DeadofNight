@@ -243,6 +243,12 @@ size = Vector3(1.2, 2.4, 8)
 [sub_resource type="BoxShape3D" id="136_s"]
 size = Vector3(1.2, 2.4, 8)
 
+[sub_resource type="BoxShape3D" id="BoxShape3D_qla6n"]
+size = Vector3(11, 1, 12)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_7nysg"]
+size = Vector3(11, 1, 12)
+
 [sub_resource type="ORMMaterial3D" id="9_s"]
 albedo_color = Color(1, 0.82, 0.6, 1)
 albedo_texture = ExtResource("11_p4r7s")
@@ -2188,33 +2194,33 @@ uv1_triplanar = true
 uv1_triplanar_sharpness = 4.0
 uv1_world_triplanar = true
 
-[sub_resource type="BoxMesh" id="262_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_67s58"]
 material = SubResource("8_s")
-size = Vector3(1.92, 0.06, 0.6942857)
+size = Vector3(1.92, 0.06, 0.7442857)
 
-[sub_resource type="BoxMesh" id="263_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_hawx5"]
 material = SubResource("8_s")
-size = Vector3(1.92, 0.06, 0.6942857)
+size = Vector3(1.92, 0.06, 0.7442857)
 
-[sub_resource type="BoxMesh" id="264_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_n0ert"]
 material = SubResource("8_s")
-size = Vector3(1.92, 0.06, 0.6942857)
+size = Vector3(1.92, 0.06, 0.7442857)
 
-[sub_resource type="BoxMesh" id="265_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_ohn0j"]
 material = SubResource("8_s")
-size = Vector3(1.92, 0.06, 0.6942857)
+size = Vector3(1.92, 0.06, 0.7442857)
 
-[sub_resource type="BoxMesh" id="266_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_qusfb"]
 material = SubResource("8_s")
-size = Vector3(1.92, 0.06, 0.6942857)
+size = Vector3(1.92, 0.06, 0.7442857)
 
-[sub_resource type="BoxMesh" id="267_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_l13i4"]
 material = SubResource("8_s")
-size = Vector3(1.92, 0.06, 0.6942857)
+size = Vector3(1.92, 0.06, 0.7442857)
 
-[sub_resource type="BoxMesh" id="268_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_cvxyv"]
 material = SubResource("8_s")
-size = Vector3(1.92, 0.06, 0.6942857)
+size = Vector3(1.92, 0.06, 0.7442857)
 
 [sub_resource type="BoxMesh" id="269_s"]
 material = SubResource("12_s")
@@ -2288,33 +2294,33 @@ size = Vector3(0.05, 1, 0.05)
 material = SubResource("12_s")
 size = Vector3(0.05, 1, 0.05)
 
-[sub_resource type="BoxMesh" id="287_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_4fboe"]
 material = SubResource("8_s")
-size = Vector3(0.6942857, 0.06, 1.92)
+size = Vector3(0.7442857, 0.06, 1.92)
 
-[sub_resource type="BoxMesh" id="288_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_5w7cr"]
 material = SubResource("8_s")
-size = Vector3(0.6942857, 0.06, 1.92)
+size = Vector3(0.7442857, 0.06, 1.92)
 
-[sub_resource type="BoxMesh" id="289_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_wdx6m"]
 material = SubResource("8_s")
-size = Vector3(0.6942857, 0.06, 1.92)
+size = Vector3(0.7442857, 0.06, 1.92)
 
-[sub_resource type="BoxMesh" id="290_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_3jh7x"]
 material = SubResource("8_s")
-size = Vector3(0.6942857, 0.06, 1.92)
+size = Vector3(0.7442857, 0.06, 1.92)
 
-[sub_resource type="BoxMesh" id="291_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_jf313"]
 material = SubResource("8_s")
-size = Vector3(0.6942857, 0.06, 1.92)
+size = Vector3(0.7442857, 0.06, 1.92)
 
-[sub_resource type="BoxMesh" id="292_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_i8vsw"]
 material = SubResource("8_s")
-size = Vector3(0.6942857, 0.06, 1.92)
+size = Vector3(0.7442857, 0.06, 1.92)
 
-[sub_resource type="BoxMesh" id="293_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_jjtxo"]
 material = SubResource("8_s")
-size = Vector3(0.6942857, 0.06, 1.92)
+size = Vector3(0.7442857, 0.06, 1.92)
 
 [sub_resource type="BoxMesh" id="294_s"]
 material = SubResource("12_s")
@@ -2444,41 +2450,41 @@ size = Vector3(0.83299315, 0.05, 0.05)
 material = SubResource("12_s")
 size = Vector3(0.83299315, 0.05, 0.05)
 
-[sub_resource type="BoxMesh" id="334_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_rjw6u"]
 material = SubResource("8_s")
-size = Vector3(0.75777775, 0.06, 2.92)
+size = Vector3(0.80777776, 0.06, 2.92)
 
-[sub_resource type="BoxMesh" id="335_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_k0jak"]
 material = SubResource("8_s")
-size = Vector3(0.75777775, 0.06, 2.92)
+size = Vector3(0.80777776, 0.06, 2.92)
 
-[sub_resource type="BoxMesh" id="336_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_y8lc8"]
 material = SubResource("8_s")
-size = Vector3(0.75777775, 0.06, 2.92)
+size = Vector3(0.80777776, 0.06, 2.92)
 
-[sub_resource type="BoxMesh" id="337_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_x30ck"]
 material = SubResource("8_s")
-size = Vector3(0.75777775, 0.06, 2.92)
+size = Vector3(0.80777776, 0.06, 2.92)
 
-[sub_resource type="BoxMesh" id="338_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_y3rvi"]
 material = SubResource("8_s")
-size = Vector3(0.75777775, 0.06, 2.92)
+size = Vector3(0.80777776, 0.06, 2.92)
 
-[sub_resource type="BoxMesh" id="339_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_kmral"]
 material = SubResource("8_s")
-size = Vector3(0.75777775, 0.06, 2.92)
+size = Vector3(0.80777776, 0.06, 2.92)
 
-[sub_resource type="BoxMesh" id="340_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_u1w2h"]
 material = SubResource("8_s")
-size = Vector3(0.75777775, 0.06, 2.92)
+size = Vector3(0.80777776, 0.06, 2.92)
 
-[sub_resource type="BoxMesh" id="341_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_2ly1h"]
 material = SubResource("8_s")
-size = Vector3(0.75777775, 0.06, 2.92)
+size = Vector3(0.80777776, 0.06, 2.92)
 
-[sub_resource type="BoxMesh" id="342_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_mmsih"]
 material = SubResource("8_s")
-size = Vector3(0.75777775, 0.06, 2.92)
+size = Vector3(0.80777776, 0.06, 2.92)
 
 [sub_resource type="BoxMesh" id="343_s"]
 material = SubResource("12_s")
@@ -2640,53 +2646,53 @@ size = Vector3(0.89580643, 0.05, 0.05)
 material = SubResource("12_s")
 size = Vector3(0.89580643, 0.05, 0.05)
 
-[sub_resource type="BoxMesh" id="392_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_11fuq"]
 material = SubResource("8_s")
-size = Vector3(2.92, 0.06, 0.605)
+size = Vector3(2.92, 0.06, 0.65500003)
 
-[sub_resource type="BoxMesh" id="393_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_nohjn"]
 material = SubResource("8_s")
-size = Vector3(2.92, 0.06, 0.605)
+size = Vector3(2.92, 0.06, 0.65500003)
 
-[sub_resource type="BoxMesh" id="394_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_h3ald"]
 material = SubResource("8_s")
-size = Vector3(2.92, 0.06, 0.605)
+size = Vector3(2.92, 0.06, 0.65500003)
 
-[sub_resource type="BoxMesh" id="395_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_280md"]
 material = SubResource("8_s")
-size = Vector3(2.92, 0.06, 0.605)
+size = Vector3(2.92, 0.06, 0.65500003)
 
-[sub_resource type="BoxMesh" id="396_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_vblbp"]
 material = SubResource("8_s")
-size = Vector3(2.92, 0.06, 0.605)
+size = Vector3(2.92, 0.06, 0.65500003)
 
-[sub_resource type="BoxMesh" id="397_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_asni2"]
 material = SubResource("8_s")
-size = Vector3(2.92, 0.06, 0.605)
+size = Vector3(2.92, 0.06, 0.65500003)
 
-[sub_resource type="BoxMesh" id="398_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_3v1rf"]
 material = SubResource("8_s")
-size = Vector3(2.92, 0.06, 0.605)
+size = Vector3(2.92, 0.06, 0.65500003)
 
-[sub_resource type="BoxMesh" id="399_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_xf3i3"]
 material = SubResource("8_s")
-size = Vector3(2.92, 0.06, 0.605)
+size = Vector3(2.92, 0.06, 0.65500003)
 
-[sub_resource type="BoxMesh" id="400_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_yk61o"]
 material = SubResource("8_s")
-size = Vector3(2.92, 0.06, 0.605)
+size = Vector3(2.92, 0.06, 0.65500003)
 
-[sub_resource type="BoxMesh" id="401_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_ouuku"]
 material = SubResource("8_s")
-size = Vector3(2.92, 0.06, 0.605)
+size = Vector3(2.92, 0.06, 0.65500003)
 
-[sub_resource type="BoxMesh" id="402_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_01qdi"]
 material = SubResource("8_s")
-size = Vector3(2.92, 0.06, 0.605)
+size = Vector3(2.92, 0.06, 0.65500003)
 
-[sub_resource type="BoxMesh" id="403_s"]
+[sub_resource type="BoxMesh" id="BoxMesh_lvi7i"]
 material = SubResource("8_s")
-size = Vector3(2.92, 0.06, 0.605)
+size = Vector3(2.92, 0.06, 0.65500003)
 
 [sub_resource type="BoxMesh" id="404_s"]
 material = SubResource("12_s")
@@ -4951,6 +4957,14 @@ _surfaces = [{
 "vertex_data": PackedByteArray("AAAwwWZmxkBnZhbBAADgwGZmxkDNzBjBAADgwGZmxkBnZhbBAAAwwWZmxkDNzBjBAAAwwQAAoEBnZhbBAADgwAAAoEDNzBjBAADgwAAAoEBnZhbBAAAwwQAAoEDNzBjBAADgwGZmxkBnZhbBAAAwwWZmxkDNzBjBAADgwGZmxkDNzBjBAAAwwWZmxkBnZhbBAADgwAAAoEBnZhbBAAAwwQAAoEDNzBjBAADgwAAAoEDNzBjBAAAwwQAAoEBnZhbBAADgwGZmxkBnZhbBAAAwwQAAoEBnZhbBAAAwwWZmxkBnZhbBAADgwAAAoEBnZhbBAADgwGZmxkDNzBjBAAAwwQAAoEDNzBjBAAAwwWZmxkDNzBjBAADgwAAAoEDNzBjBAAAIwZqZGUAzM5vBAAAIQZqZGUDNzKTBAAAIQZqZGUAzM5vBAAAIwZqZGUDNzKTBAAAIwQAAAAAzM5vBAAAIQQAAAADNzKTBAAAIQQAAAAAzM5vBAAAIwQAAAADNzKTBAAAIQZqZGUAzM5vBAAAIwZqZGUDNzKTBAAAIQZqZGUDNzKTBAAAIwZqZGUAzM5vBAAAIQQAAAAAzM5vBAAAIwQAAAADNzKTBAAAIQQAAAADNzKTBAAAIwQAAAAAzM5vBAAAIQZqZGUAzM5vBAAAIwQAAAAAzM5vBAAAIwZqZGUAzM5vBAAAIQQAAAAAzM5vBAAAIQZqZGUDNzKTBAAAIwQAAAADNzKTBAAAIwZqZGUDNzKTBAAAIQQAAAADNzKTBmpkZwZqZGUAAADDBZmYGwZqZGUAAAJjBZmYGwZqZGUAAADDBmpkZwZqZGUAAAJjBmpkZwQAAAAAAADDBZmYGwQAAAAAAAJjBZmYGwQAAAAAAADDBmpkZwQAAAAAAAJjBZmYGwZqZGUAAADDBmpkZwZqZGUAAAJjBZmYGwZqZGUAAAJjBmpkZwZqZGUAAADDBZmYGwQAAAAAAADDBmpkZwQAAAAAAAJjBZmYGwQAAAAAAAJjBmpkZwQAAAAAAADDBZmYGwZqZGUAAADDBmpkZwQAAAAAAADDBmpkZwZqZGUAAADDBZmYGwQAAAAAAADDBZmYGwZqZGUAAAJjBmpkZwQAAAAAAAJjBmpkZwZqZGUAAAJjBZmYGwQAAAAAAAJjBZmYGQZqZGUAAADDBmpkZQZqZGUAAAJjBmpkZQZqZGUAAADDBZmYGQZqZGUAAAJjBZmYGQQAAAAAAADDBmpkZQQAAAAAAAJjBmpkZQQAAAAAAADDBZmYGQQAAAAAAAJjBmpkZQZqZGUAAADDBZmYGQZqZGUAAAJjBmpkZQZqZGUAAAJjBZmYGQZqZGUAAADDBmpkZQQAAAAAAADDBZmYGQQAAAAAAAJjBmpkZQQAAAAAAAJjBZmYGQQAAAAAAADDBmpkZQZqZGUAAADDBZmYGQQAAAAAAADDBZmYGQZqZGUAAADDBmpkZQQAAAAAAADDBmpkZQZqZGUAAAJjBZmYGQQAAAAAAAJjBZmYGQZqZGUAAAJjBmpkZQQAAAAAAAJjB/3//f////7//////AAD/v/9//3////+//////wAA/7//f/9/////v/////8AAP+//3//f////7//////AAD/v///AID/////AAAAgP9//7///wCA/////wAAAID/f/+///8AgP////8AAACA/3//v///AID/////AAAAgP9//78AgP//AAD/vwCAAAD///+/AID//wAA/78AgAAA////vwCA//8AAP+/AIAAAP///78AgP//AAD/vwCAAAD///+//3//f////7//////AAD/v/9//3////+//////wAA/7//f/9/////v/////8AAP+//3//f////7//////AAD/v///AID/////AAAAgP9//7///wCA/////wAAAID/f/+///8AgP////8AAACA/3//v///AID/////AAAAgP9//78AgP//AAD/vwCAAAD///+/AID//wAA/78AgAAA////vwCA//8AAP+/AIAAAP///78AgP//AAD/vwCAAAD///+//3//f////7//////AAD/v/9//3////+//////wAA/7//f/9/////v/////8AAP+//3//f////7//////AAD/v///AID/////AAAAgP9//7///wCA/////wAAAID/f/+///8AgP////8AAACA/3//v///AID/////AAAAgP9//78AgP//AAD/vwCAAAD///+/AID//wAA/78AgAAA////vwCA//8AAP+/AIAAAP///78AgP//AAD/vwCAAAD///+//3//f////7//////AAD/v/9//3////+//////wAA/7//f/9/////v/////8AAP+//3//f////7//////AAD/v///AID/////AAAAgP9//7///wCA/////wAAAID/f/+///8AgP////8AAACA/3//v///AID/////AAAAgP9//78AgP//AAD/vwCAAAD///+/AID//wAA/78AgAAA////vwCA//8AAP+/AIAAAP///78AgP//AAD/vwCAAAD///+/")
 }]
 
+[sub_resource type="BoxMesh" id="BoxMesh_2fr61"]
+material = SubResource("1_s")
+size = Vector3(11, 1, 12)
+
+[sub_resource type="BoxMesh" id="BoxMesh_efxs0"]
+material = SubResource("1_s")
+size = Vector3(11, 1, 12)
+
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_01qdi"]
 albedo_color = Color(0.6, 0.43200004, 0.21000001, 1)
 emission_enabled = true
@@ -5287,7 +5301,7 @@ metadata/map_id = "lockout_substation"
 metadata/display_name = "Lockout Substation"
 metadata/kill_y = -25.0
 metadata/start_area = &"start"
-metadata/contract_version = "0.3"
+metadata/contract_version = "0.4"
 metadata/bounds = AABB(-21, -2, -21, 42, 16, 42)
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1477415626]
@@ -5812,6 +5826,20 @@ script = ExtResource("8_qla6n")
 [node name="Hero" type="Node3D" parent="NavigationRegion3D/Geometry/DesiCars/CarWreckS" unique_id=578658464 instance=ExtResource("8_kmdtc")]
 
 [node name="Lod" type="Node3D" parent="NavigationRegion3D/Geometry/DesiCars/CarWreckS" unique_id=2039633971 instance=ExtResource("9_8lrrx")]
+
+[node name="Floor_startNW" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=86122919]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.5, -0.5, -15)
+metadata/playtest_v061_fill = true
+
+[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/Floor_startNW" unique_id=1887100244]
+shape = SubResource("BoxShape3D_qla6n")
+
+[node name="Floor_startNE" type="StaticBody3D" parent="NavigationRegion3D/Geometry" unique_id=427277741]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.5, -0.5, -15)
+metadata/playtest_v061_fill = true
+
+[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/Floor_startNE" unique_id=1647693179]
+shape = SubResource("BoxShape3D_7nysg")
 
 [node name="Doors" type="Node3D" parent="NavigationRegion3D" unique_id=2107606268]
 
@@ -7926,31 +7954,38 @@ mesh = SubResource("543_s")
 
 [node name="Box_92" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=111243215]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.40857142, 13.642858)
-mesh = SubResource("262_s")
+mesh = SubResource("BoxMesh_67s58")
+metadata/tread_overlap = true
 
 [node name="Box_93" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=191011858]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8371429, 12.928572)
-mesh = SubResource("263_s")
+mesh = SubResource("BoxMesh_hawx5")
+metadata/tread_overlap = true
 
 [node name="Box_94" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=1914557863]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2657143, 12.214286)
-mesh = SubResource("264_s")
+mesh = SubResource("BoxMesh_n0ert")
+metadata/tread_overlap = true
 
 [node name="Box_95" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=1328354076]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6942858, 11.5)
-mesh = SubResource("265_s")
+mesh = SubResource("BoxMesh_ohn0j")
+metadata/tread_overlap = true
 
 [node name="Box_96" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=455718040]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.122857, 10.785714)
-mesh = SubResource("266_s")
+mesh = SubResource("BoxMesh_qusfb")
+metadata/tread_overlap = true
 
 [node name="Box_97" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=451549890]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5514286, 10.071428)
-mesh = SubResource("267_s")
+mesh = SubResource("BoxMesh_l13i4")
+metadata/tread_overlap = true
 
 [node name="Box_98" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=1629563028]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.98, 9.357142)
-mesh = SubResource("268_s")
+mesh = SubResource("BoxMesh_cvxyv")
+metadata/tread_overlap = true
 
 [node name="Box_99" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=797648686]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.94, 1.5, 11.5)
@@ -8026,31 +8061,38 @@ mesh = SubResource("286_s")
 
 [node name="Box_117" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=1602125472]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.642858, 0.40857142, 6.75)
-mesh = SubResource("287_s")
+mesh = SubResource("BoxMesh_4fboe")
+metadata/tread_overlap = true
 
 [node name="Box_118" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=1287638218]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.928572, 0.8371429, 6.75)
-mesh = SubResource("288_s")
+mesh = SubResource("BoxMesh_5w7cr")
+metadata/tread_overlap = true
 
 [node name="Box_119" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=224145543]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.214286, 1.2657143, 6.75)
-mesh = SubResource("289_s")
+mesh = SubResource("BoxMesh_wdx6m")
+metadata/tread_overlap = true
 
 [node name="Box_120" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=1202599626]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.5, 1.6942858, 6.75)
-mesh = SubResource("290_s")
+mesh = SubResource("BoxMesh_3jh7x")
+metadata/tread_overlap = true
 
 [node name="Box_121" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=993303697]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.785714, 2.122857, 6.75)
-mesh = SubResource("291_s")
+mesh = SubResource("BoxMesh_jf313")
+metadata/tread_overlap = true
 
 [node name="Box_122" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=1591592714]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.071428, 2.5514286, 6.75)
-mesh = SubResource("292_s")
+mesh = SubResource("BoxMesh_i8vsw")
+metadata/tread_overlap = true
 
 [node name="Box_123" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=2021374653]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.357143, 2.98, 6.75)
-mesh = SubResource("293_s")
+mesh = SubResource("BoxMesh_jjtxo")
+metadata/tread_overlap = true
 
 [node name="Box_124" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=2042311064]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.5, 1.5, 5.81)
@@ -8182,39 +8224,48 @@ mesh = SubResource("333_s")
 
 [node name="Box_164" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=1474428743]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.388889, 0.42444444, 18)
-mesh = SubResource("334_s")
+mesh = SubResource("BoxMesh_rjw6u")
+metadata/tread_overlap = true
 
 [node name="Box_165" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=6118167]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.1666665, 0.8688889, 18)
-mesh = SubResource("335_s")
+mesh = SubResource("BoxMesh_k0jak")
+metadata/tread_overlap = true
 
 [node name="Box_166" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=759935926]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.9444447, 1.3133334, 18)
-mesh = SubResource("336_s")
+mesh = SubResource("BoxMesh_y8lc8")
+metadata/tread_overlap = true
 
 [node name="Box_167" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=456779046]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.7222223, 1.7577778, 18)
-mesh = SubResource("337_s")
+mesh = SubResource("BoxMesh_x30ck")
+metadata/tread_overlap = true
 
 [node name="Box_168" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=246535243]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.5, 2.202222, 18)
-mesh = SubResource("338_s")
+mesh = SubResource("BoxMesh_y3rvi")
+metadata/tread_overlap = true
 
 [node name="Box_169" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=356252718]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.277778, 2.6466668, 18)
-mesh = SubResource("339_s")
+mesh = SubResource("BoxMesh_kmral")
+metadata/tread_overlap = true
 
 [node name="Box_170" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=476050462]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.055555, 3.0911112, 18)
-mesh = SubResource("340_s")
+mesh = SubResource("BoxMesh_u1w2h")
+metadata/tread_overlap = true
 
 [node name="Box_171" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=1996394963]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.833333, 3.5355556, 18)
-mesh = SubResource("341_s")
+mesh = SubResource("BoxMesh_2ly1h")
+metadata/tread_overlap = true
 
 [node name="Box_172" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=1950103520]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.611111, 3.98, 18)
-mesh = SubResource("342_s")
+mesh = SubResource("BoxMesh_mmsih")
+metadata/tread_overlap = true
 
 [node name="Box_173" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=1631363003]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.5, 2, 16.56)
@@ -8378,51 +8429,63 @@ mesh = SubResource("391_s")
 
 [node name="Box_222" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=68463754]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0.39666668, 1.1875)
-mesh = SubResource("392_s")
+mesh = SubResource("BoxMesh_11fuq")
+metadata/tread_overlap = true
 
 [node name="Box_223" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=96792227]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0.81333333, 0.5625)
-mesh = SubResource("393_s")
+mesh = SubResource("BoxMesh_nohjn")
+metadata/tread_overlap = true
 
 [node name="Box_224" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=1406908690]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 1.23, -0.0625)
-mesh = SubResource("394_s")
+mesh = SubResource("BoxMesh_h3ald")
+metadata/tread_overlap = true
 
 [node name="Box_225" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=1580003609]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 1.6466666, -0.6875)
-mesh = SubResource("395_s")
+mesh = SubResource("BoxMesh_280md")
+metadata/tread_overlap = true
 
 [node name="Box_226" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=1676605595]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 2.0633333, -1.3125)
-mesh = SubResource("396_s")
+mesh = SubResource("BoxMesh_vblbp")
+metadata/tread_overlap = true
 
 [node name="Box_227" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=58743109]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 2.48, -1.9375)
-mesh = SubResource("397_s")
+mesh = SubResource("BoxMesh_asni2")
+metadata/tread_overlap = true
 
 [node name="Box_228" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=6924344]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 2.8966668, -2.5625)
-mesh = SubResource("398_s")
+mesh = SubResource("BoxMesh_3v1rf")
+metadata/tread_overlap = true
 
 [node name="Box_229" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=1912451600]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 3.3133333, -3.1875)
-mesh = SubResource("399_s")
+mesh = SubResource("BoxMesh_xf3i3")
+metadata/tread_overlap = true
 
 [node name="Box_230" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=1910023991]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 3.73, -3.8125)
-mesh = SubResource("400_s")
+mesh = SubResource("BoxMesh_yk61o")
+metadata/tread_overlap = true
 
 [node name="Box_231" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=1290146591]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 4.1466665, -4.4375)
-mesh = SubResource("401_s")
+mesh = SubResource("BoxMesh_ouuku")
+metadata/tread_overlap = true
 
 [node name="Box_232" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=1704223383]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 4.5633335, -5.0625)
-mesh = SubResource("402_s")
+mesh = SubResource("BoxMesh_01qdi")
+metadata/tread_overlap = true
 
 [node name="Box_233" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=1610273306]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 4.98, -5.6875)
-mesh = SubResource("403_s")
+mesh = SubResource("BoxMesh_lvi7i")
+metadata/tread_overlap = true
 
 [node name="Box_234" type="MeshInstance3D" parent="Decor/ArtPass/Stairs" unique_id=965609656]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.44, 2.5, -2.25)
@@ -10082,6 +10145,88 @@ metadata/loot_table = "chest"
 metadata/area = &"vault"
 metadata/note = "Battery vault"
 
+[node name="ChestSpots" type="Node3D" parent="." unique_id=1711958816]
+
+[node name="ChestSpot1" type="Marker3D" parent="ChestSpots" unique_id=207620313 groups=["chest_spot"]]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 3, 6.5)
+metadata/area = &"start"
+metadata/hidden = false
+metadata/initial = true
+metadata/weight = 1
+metadata/note = "SwitchDeck (WJ1)"
+
+[node name="ChestSpot2" type="Marker3D" parent="ChestSpots" unique_id=1923136681 groups=["chest_spot"]]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 13.35, 4, 18)
+metadata/area = &"start"
+metadata/hidden = false
+metadata/initial = true
+metadata/weight = 1
+metadata/note = "ControlLedge (WJ2), against the control-house wall"
+
+[node name="ChestSpot3" type="Marker3D" parent="ChestSpots" unique_id=1425433076 groups=["chest_spot"]]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, -12)
+metadata/area = &"vault"
+metadata/hidden = false
+metadata/initial = true
+metadata/weight = 1
+metadata/note = "Battery vault"
+
+[node name="ChestSpot4" type="Marker3D" parent="ChestSpots" unique_id=2005160755 groups=["chest_spot"]]
+transform = Transform3D(1.1924881e-08, 0, -1, 0, 1, 0, 1, 0, 1.1924881e-08, -9, 0, -10)
+metadata/area = &"vault"
+metadata/hidden = true
+metadata/initial = false
+metadata/weight = 1
+metadata/note = "backed by a wall, faces E (+x)"
+
+[node name="ChestSpot5" type="Marker3D" parent="ChestSpots" unique_id=1299793535 groups=["chest_spot"]]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 9, 0, -10)
+metadata/area = &"vault"
+metadata/hidden = true
+metadata/initial = false
+metadata/weight = 1
+metadata/note = "backed by a wall, faces W (-x)"
+
+[node name="ChestSpot6" type="Marker3D" parent="ChestSpots" unique_id=408169990 groups=["chest_spot"]]
+transform = Transform3D(1.1924881e-08, 0, -1, 0, 1, 0, 1, 0, 1.1924881e-08, -20, 0, 20)
+metadata/area = &"start"
+metadata/hidden = true
+metadata/initial = false
+metadata/weight = 1
+metadata/note = "backed by a wall, faces E (+x)"
+
+[node name="ChestSpot7" type="Marker3D" parent="ChestSpots" unique_id=1656701924 groups=["chest_spot"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0, -7)
+metadata/area = &"start"
+metadata/hidden = true
+metadata/initial = false
+metadata/weight = 1
+metadata/note = "backed by a wall, faces N (-z)"
+
+[node name="ChestSpot8" type="Marker3D" parent="ChestSpots" unique_id=1858332592 groups=["chest_spot"]]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 20, 0, 8.5)
+metadata/area = &"start"
+metadata/hidden = true
+metadata/initial = false
+metadata/weight = 1
+metadata/note = "backed by a wall, faces W (-x)"
+
+[node name="ChestSpot9" type="Marker3D" parent="ChestSpots" unique_id=465608609 groups=["chest_spot"]]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 20, 0, -4)
+metadata/area = &"start"
+metadata/hidden = true
+metadata/initial = false
+metadata/weight = 1
+metadata/note = "backed by a wall, faces W (-x)"
+
+[node name="ChestSpot10" type="Marker3D" parent="ChestSpots" unique_id=628763655 groups=["chest_spot"]]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -19.5, 0, -20)
+metadata/area = &"start"
+metadata/hidden = true
+metadata/initial = false
+metadata/weight = 1
+metadata/note = "backed by a wall, faces S (+z)"
+
 [node name="PickupSpots" type="Node3D" parent="." unique_id=674767301]
 
 [node name="HP_Yard" type="Marker3D" parent="PickupSpots" unique_id=765912313]
@@ -10159,6 +10304,16 @@ mesh = SubResource("ArrayMesh_ouuku")
 
 [node name="vault_rusty_painted_metal" type="MeshInstance3D" parent="Merged" unique_id=2060023204]
 mesh = SubResource("ArrayMesh_01qdi")
+
+[node name="start_fill_Floor_startNW" type="MeshInstance3D" parent="Merged" unique_id=1779338641]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.5, -0.5, -15)
+mesh = SubResource("BoxMesh_2fr61")
+metadata/playtest_v061_fill = true
+
+[node name="start_fill_Floor_startNE" type="MeshInstance3D" parent="Merged" unique_id=1346311324]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.5, -0.5, -15)
+mesh = SubResource("BoxMesh_efxs0")
+metadata/playtest_v061_fill = true
 
 [node name="NightKit" type="Node3D" parent="." unique_id=594108887]
 

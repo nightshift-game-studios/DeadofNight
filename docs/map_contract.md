@@ -1,6 +1,10 @@
-# Map contract v0.3 (Mapz → G4M3N)
+# Map contract v0.4 (Mapz → G4M3N)
 
-Implemented by Rustwell Foundry (v0.2) and Lockout Substation (v0.3 optional hooks).
+Implemented by Rustwell Foundry (v0.2), Lockout Substation (v0.3 optional hooks) and both maps' v0.6.1 playtest pass (v0.4).
+
+Changes since v0.3 (v0.6.1 playtest, #15 #16 #27): large maps may have 2–3 spawns per area instead of 6–10 in total; optional `ChestSpots/` relocation markers (Skillz format, below); no void holes,
+checked by `tools/godot/test_void_gaps.gd` (the meta `intended_pit` marks deliberate pits); stair railings with collision
+(`RailCol_*`, Rustwell); the `fix_playtest_v061.gd` pipeline step.
 
 Changes since v0.2 (Lockout Substation): optional `PerkMachineSpot`, `MysteryBoxSpot`, and `BossArenaHook` markers for Skillz perk / mystery-box / boss-arena wiring. Vault-scale boss floors should be ≥ 10×10 m clear nav.
 Changes since v0.3 night: optional `AmbienceEmitters/` (Marker3D children at ~1.6 m with meta `ambience_key`) for Audi-0 3D ambience loops. Night maps place 6–12 emitters, ≥8 m apart; G4M3N attaches loops (max_distance 12–18 m). Keys: `ambience_emitter_sodium_buzz_loop`, `ambience_emitter_sparking_box_loop`, `ambience_emitter_drip_pipe_loop`.
@@ -11,7 +15,7 @@ Occluders are now a real deliverable. Root metadata gained `contract_version` an
 Goal: a map is **one self-contained scene** (`res://maps/<map_id>/<map_id>.tscn` plus its own folder). `main.gd` can
 instance it in place of the built-in arena with about 30 lines of changes, and the default arena keeps working (smoke test untouched).
 
-Required names are exactly the ones G4M3N confirmed: **`SpawnPoints` (6–10 Marker3D children), `PlayerSpawn`, chest markers (3+),
+Required names are exactly the ones G4M3N confirmed: **`SpawnPoints` (6–10 Marker3D children; large maps 2–3 per area, see below), `PlayerSpawn`, chest markers (3+),
 world collision on layer 1, navmesh baked from colliders.** Everything marked *optional* can be ignored by the engine and the map still works.
 
 ## Node tree
@@ -40,9 +44,23 @@ world collision on layer 1, navmesh baked from colliders.** Everything marked *o
 ├─ Occluders/            OccluderInstance3D (BoxOccluder3D) for big walls, buildings and roofs
 ├─ PlayerSpawn           REQUIRED Marker3D. Feet position (y = floor + 0.1), −Z of the marker = facing
 ├─ SpawnPoints/          REQUIRED Node3D with 6–10 Marker3D (Spawn1..N) at floor + 0.1
+│     Count (v0.4): small / medium maps 6–10 in total. Large maps (> 5000 m² walkable navmesh, or ≥ 6 areas) take 2–3 per
+│     area and no total cap (Ironside Depot: 23 across 10 areas). Checked by verify_map.gd after the bake.
 │     metadata/area: StringName  (EVERY spawn is tagged). The area whose unlock activates this spawn
 ├─ Chests/               REQUIRED Node3D with ≥ 3 Marker3D (Chest1..N). Engine instances scenes/chest.tscn at each one
 │     metadata/loot_table: String ("chest"), metadata/area: StringName (the area it sits in)
+├─ ChestSpots/           optional (v0.4) Node3D, placed after Chests/. 8–12 EMPTY Marker3D children ChestSpot1..N, every one in the
+│                        persistent group `chest_spot` (saved in the .tscn). Origin on the floor; **−Z of the marker faces the
+│                        walkway** (Chests/ markers face +Z, so a spot at a chest has yaw = chest yaw + 180°).
+│     metadata/area: StringName (the SpawnPoints area tags), or Array[StringName] for a spot on an area boundary
+│     metadata/hidden: bool   (tucked: side rooms, behind cover, upper levels. Relocation prefers hidden spots)
+│     metadata/initial: bool  (true exactly for the spots at the Chests/ markers; Chests/ stays as the fallback)
+│     metadata/weight: int    optional, default 1 (all spots ship with 1)
+│     metadata/note: String   optional, human description
+│     Rules: ≥ 6 m apart, ≥ 6 m from PlayerSpawn, ≥ 2 per area, a 1.2 × 0.8 m footprint on floor plus 1.2 m (1.8 m tall) clear in
+│     front, front on the navmesh and reachable from PlayerSpawn by players and zombies (no perches), never in the void or inside
+│     geometry, and still valid with a 1.2 × 0.8 m NavigationObstacle3D carve at every spot at once (all SpawnPoints still path).
+│     Checked by `tools/godot/test_chest_spots.gd -- <map.tscn…>` (exits 1 on any failure).
 ├─ PickupSpots/          optional Marker3D. metadata/item: "health_pack" | "heavy_ammo" | "primary_ammo"
 ├─ PowerWeaponSpot       optional Marker3D (same meaning as in main.tscn), metadata/area
 ├─ PerkMachineSpot       optional Marker3D. metadata/area, metadata/kind = "perk_machine"
@@ -57,7 +75,7 @@ world collision on layer 1, navmesh baked from colliders.** Everything marked *o
 ```
 MapRoot exports: `map_id`, `display_name`, `start_area` (&"start"), `kill_y` (−25), `rebake_on_door_open` (true), `debug_all_doors_open` (false).
 Root metadata (mirrors the exports for engines that don't use the script): `map_id`, `display_name`, `kill_y`, `start_area`,
-`contract_version` ("0.2" or "0.3"), `bounds` (AABB of the playable space, for minimap / out-of-bounds checks).
+`contract_version` ("0.2", "0.3" or "0.4"), `stair_rails_v061` (bool, Rustwell: the rail pass ran), `bounds` (AABB of the playable space, for minimap / out-of-bounds checks).
 
 ### Rules
 - Units are metres, +Y is up, the floor of the start area is y = 0. The map fits inside ±60 m (the Sun shadow distance is 70 m in map 1).
@@ -78,6 +96,15 @@ Root metadata (mirrors the exports for engines that don't use the script): `map_
 - Every spawn marker sits on the navmesh and is reachable from PlayerSpawn once its `area` is unlocked, and not before (verified).
 - **No zombie-proof perches:** every surface a player can reach has a zombie route (stairs, ramp, or a ≥ 2 m connection).
   At most one dead end per map (map 1: the ContainerC2 roof).
+- **No void (v0.4):** inside the play area (the navmesh, doors open, plus 1 m) every point has a layer-1 floor collider and a visual
+  surface at that floor, with no gaps or slits at collider / mesh seams. Deliberate pits are bodies with meta `intended_pit = true`
+  (optional `pit_size: Vector3`, else the body's AABB). Run
+  `godot --headless --path <project> -s res://tools/godot/test_void_gaps.gd -- <map.tscn…> [--step=0.25] [--margin=1.0] [--depth=3.0]
+  [--json=path] [--no-visual] [--skip=Chests,Pickups]` (no maps = Rustwell + Lockout). It prints VOID_HOLE lines (kinds VOID,
+  NAV_NO_FLOOR, VISUAL_HOLE, SEAM), VOID_RESULT JSON and VOID_SUITE PASS/FAIL, and exits 1 on any hole. Clip/ is ignored; a
+  non-MapRoot root script is stripped, so `scenes/main.tscn` can be checked read-only.
+- Stairs and raised walkways with a rise ≥ 1.5 m and an open side get railings (two bars + posts ≤ 2 m apart, rising with the stair)
+  plus a thin layer-1 `RailCol_<ramp>_<side>` convex collider from the stair surface to +1.05 m. Low-rise walkways (< 1.5 m) have none.
 - The map does **not** contain Player, HUD, Zombies or Pickups containers (Main keeps those).
 
 ## Doors and areas
@@ -180,6 +207,12 @@ listing `res://maps/*/<id>.tscn`.
   - add the `NAV_CORNER_PADS` carves;
   - set the bake AABB.
   It then saves door costs explicitly.
+- **v0.6.1 playtest step (after fix_nav_ramps.gd, both maps):** `godot --headless --path <project> -s res://mapz_tools/fix_playtest_v061.gd --
+  res://maps/<m>/<m>.tscn=res://maps/<m>/build/nav_layout.json`. Idempotent. It adds the `FLOOR_FILL` slabs from layout_data (collider +
+  visual; Lockout's start-yard corners beside the vault), overlaps the Lockout stair treads by 5 cm (no see-through slits), rebuilds
+  the Rustwell stair rails with RailCol_* colliders (once; root meta `stair_rails_v061`), and rebuilds `ChestSpots/` from layout_data
+  `CHEST_SPOTS`. Then run test_void_gaps.gd and test_chest_spots.gd.
+  Note: `gen_lockout.py` writes `maps/lockout_substation/lockout_substation.tscn` directly, so rerun the whole pipeline after it.
 - Clip/ colliders are on layer 1, so bullets / thrown items hit them too. They sit ≥ 8 m up (above wall tops) or outside the bounds, so
   normal play never touches them. A dedicated player-only clip layer would be cleaner if the engine adds one.
 - `enemy.gd` attack range uses horizontal distance only (`to_player.y = 0`), so a zombie standing **under** a deck (3–4 m below) still
