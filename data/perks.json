@@ -1,156 +1,28 @@
 {
-	"_help": "Weapon perks. 'effect' selects the code path in scripts/gear/perk_system.gd; the other fields are its parameters. 'glyph' + 'icon_color' draw the perk badge in the UI. 'playstyle': true marks perks that change how you play (detonating hits, kill-reload rhythm, grenade loop, kill sustain, crouch/slide fighting) as opposed to plain on-kill stat buffs (false); the Merchant guarantees at least one playstyle perk on Legendary / Mythic offers (data/merchant.json playstyle_perks_min). 'signature': true = a Mythic-only signature perk: never in random rolls (GearDB.roll_weapon skips it, MAIN_HOOKS §19c); the Merchant gives each Mythic offer one (data/merchant.json mythic_signature_perks). Signatures reuse stateless effect paths, so they stack safely with pool perks.",
+	"_help": "Weapon perks. 'effect' selects the code path in scripts/gear/perk_system.gd; the other fields are its parameters. 'glyph' + 'icon_color' draw the perk badge in the UI. 'playstyle': true marks perks that change how you play (detonating hits, kill-reload rhythm, grenade loop, kill sustain, crouch/slide fighting) as opposed to plain on-kill stat buffs (false); the Merchant guarantees at least one playstyle perk on Legendary / Mythic offers (data/merchant.json playstyle_perks_min). 'signature': true = a Mythic-only signature perk: never in random rolls (GearDB.roll_weapon skips it, MAIN_HOOKS §19c); the Merchant gives each Mythic offer one (data/merchant.json mythic_signature_perks). Signatures reuse stateless effect paths, so they stack safely with pool perks. 'tag' groups attributes by how they play (mag_rhythm, reload_rhythm, kill_streak, movement, stance, status, detonation, sustain, grenade_loop) for the UI and Merchant. attribute_counts (playtest #33): Common 0, Uncommon 1, Rare 2, Legendary 3 (>= 1 playstyle), Mythic 3 + its signature; rolls use the weapon's attr_seed (GearDB.roll_attributes) so a host-rolled gun is the same everywhere.",
+	"attribute_counts": {"_help": "Named attributes (= perks) rolled per rarity, playtest #33 (Skillz, WEAPON_ATTRS.md). A Mythic also carries its archetype's signature perk (weapons.json mythic.perk) on top. playstyle_min: rolled attributes that must be playstyle (Legendary / Mythic 1).", "common": 0, "uncommon": 1, "rare": 2, "legendary": 3, "mythic": 3, "playstyle_min": {"legendary": 1, "mythic": 1}},
 	"perks": [
-		{
-			"id": "bloodrush",
-			"name": "Bloodrush",
-			"effect": "damage_stack",
-			"description": "Kills grant +12% damage for 4s. Stacks 3x.",
-			"amount": 0.12,
-			"max_stacks": 3,
-			"duration": 4.0,
-			"glyph": "BR",
-			"icon_color": [
-				0.85,
-				0.15,
-				0.12
-			],
-			"playstyle": false
-		},
-		{
-			"id": "fever_hands",
-			"name": "Fever Hands",
-			"effect": "reload_buff",
-			"description": "Kills greatly increase reload speed for 6s.",
-			"amount": 0.5,
-			"duration": 6.0,
-			"glyph": "FH",
-			"icon_color": [
-				0.95,
-				0.6,
-				0.15
-			],
-			"playstyle": false
-		},
-		{
-			"id": "shrapnel_tips",
-			"name": "Shrapnel Tips",
-			"effect": "explode",
-			"description": "25% chance for hits to explode for 50% bonus area damage.",
-			"chance": 0.25,
-			"amount": 0.5,
-			"radius": 2.2,
-			"glyph": "ST",
-			"icon_color": [
-				1.0,
-				0.45,
-				0.1
-			],
-			"playstyle": true
-		},
-		{
-			"id": "hot_brass",
-			"name": "Hot Brass",
-			"effect": "reload_after_kill",
-			"description": "Reloading after a kill grants +25% damage for 5s.",
-			"amount": 0.25,
-			"duration": 5.0,
-			"glyph": "HB",
-			"icon_color": [
-				0.95,
-				0.8,
-				0.2
-			],
-			"playstyle": true
-		},
-		{
-			"id": "pin_puller",
-			"name": "Pin Puller",
-			"effect": "grenade_refund",
-			"description": "Kills refund 15% of your grenade cooldown.",
-			"amount": 0.15,
-			"glyph": "PP",
-			"icon_color": [
-				0.55,
-				0.75,
-				0.25
-			],
-			"playstyle": true
-		},
-		{
-			"id": "marrow_tap",
-			"name": "Marrow Tap",
-			"effect": "heal_on_kill",
-			"description": "Kills restore 12 health.",
-			"amount": 12,
-			"glyph": "MT",
-			"icon_color": [
-				0.75,
-				0.2,
-				0.35
-			],
-			"playstyle": true
-		},
-		{
-			"id": "low_stance",
-			"name": "Low Stance",
-			"effect": "crouch_stability",
-			"description": "Much less spread while crouched or sliding.",
-			"amount": 0.5,
-			"glyph": "LS",
-			"icon_color": [
-				0.4,
-				0.65,
-				0.85
-			],
-			"playstyle": true
-		},
-		{
-			"id": "choirfall",
-			"name": "Choirfall",
-			"effect": "explode",
-			"description": "Signature. 40% of hits burst for 80% bonus damage in a wide ring. Built to hold a doorway alone.",
-			"chance": 0.4,
-			"amount": 0.8,
-			"radius": 3.4,
-			"glyph": "CF",
-			"icon_color": [
-				1.0,
-				0.62,
-				0.05
-			],
-			"playstyle": true,
-			"signature": true
-		},
-		{
-			"id": "lantern_tithe",
-			"name": "Lantern Tithe",
-			"effect": "heal_on_kill",
-			"description": "Signature. Every kill restores 28 health. Fight from inside the horde.",
-			"amount": 28,
-			"glyph": "LT",
-			"icon_color": [
-				1.0,
-				0.62,
-				0.05
-			],
-			"playstyle": true,
-			"signature": true
-		},
-		{
-			"id": "bellrope_return",
-			"name": "Bellrope Return",
-			"effect": "grenade_refund",
-			"description": "Signature. Kills refund 35% of your grenade cooldown. Throw, clear, throw again.",
-			"amount": 0.35,
-			"glyph": "BR",
-			"icon_color": [
-				1.0,
-				0.62,
-				0.05
-			],
-			"playstyle": true,
-			"signature": true
-		}
+		{"id": "bloodrush", "name": "Bloodrush", "effect": "damage_stack", "description": "Kills grant +12% damage for 4s. Stacks 3x.", "amount": 0.12, "max_stacks": 3, "duration": 4.0, "glyph": "BR", "icon_color": [0.85, 0.15, 0.12], "playstyle": false, "tag": "kill_streak"},
+		{"id": "fever_hands", "name": "Fever Hands", "effect": "reload_buff", "description": "Kills greatly increase reload speed for 6s.", "amount": 0.5, "duration": 6.0, "glyph": "FH", "icon_color": [0.95, 0.6, 0.15], "playstyle": false, "tag": "kill_streak"},
+		{"id": "shrapnel_tips", "name": "Shrapnel Tips", "effect": "explode", "description": "25% chance for hits to explode for 50% bonus area damage.", "chance": 0.25, "amount": 0.5, "radius": 2.2, "glyph": "ST", "icon_color": [1.0, 0.45, 0.1], "playstyle": true, "tag": "detonation"},
+		{"id": "hot_brass", "name": "Hot Brass", "effect": "reload_after_kill", "description": "Reloading after a kill grants +25% damage for 5s.", "amount": 0.25, "duration": 5.0, "glyph": "HB", "icon_color": [0.95, 0.8, 0.2], "playstyle": true, "tag": "reload_rhythm"},
+		{"id": "pin_puller", "name": "Pin Puller", "effect": "grenade_refund", "description": "Kills refund 15% of your grenade cooldown.", "amount": 0.15, "glyph": "PP", "icon_color": [0.55, 0.75, 0.25], "playstyle": true, "tag": "grenade_loop"},
+		{"id": "marrow_tap", "name": "Marrow Tap", "effect": "heal_on_kill", "description": "Kills restore 12 health.", "amount": 12, "glyph": "MT", "icon_color": [0.75, 0.2, 0.35], "playstyle": true, "tag": "sustain"},
+		{"id": "low_stance", "name": "Low Stance", "effect": "crouch_stability", "description": "Much less spread while crouched or sliding.", "amount": 0.5, "glyph": "LS", "icon_color": [0.4, 0.65, 0.85], "playstyle": true, "tag": "stance"},
+		{"id": "tail_rounds", "name": "Tail Rounds", "effect": "mag_tail_damage", "description": "The last 30% of the magazine deals +30% damage. Run it dry on purpose.", "fraction": 0.3, "amount": 0.3, "glyph": "TR", "icon_color": [0.9, 0.55, 0.2], "playstyle": true, "tag": "mag_rhythm"},
+		{"id": "opening_hymn", "name": "Opening Hymn", "effect": "mag_head_damage", "description": "The first 3 rounds of a full magazine deal +35% damage. Reload early, open hard.", "count": 3, "amount": 0.35, "glyph": "OH", "icon_color": [0.95, 0.85, 0.45], "playstyle": true, "tag": "mag_rhythm"},
+		{"id": "graveside_calm", "name": "Graveside Calm", "effect": "still_damage", "description": "+20% damage after standing still or crouching for half a second.", "delay": 0.5, "amount": 0.2, "glyph": "GC", "icon_color": [0.55, 0.7, 0.85], "playstyle": true, "tag": "stance"},
+		{"id": "runaway_fire", "name": "Runaway Fire", "effect": "moving_damage", "description": "While sprinting, sliding or airborne: +15% damage and 30% less spread.", "speed_min": 6.0, "amount": 0.15, "spread": 0.3, "glyph": "RF", "icon_color": [0.35, 0.85, 0.6], "playstyle": true, "tag": "movement"},
+		{"id": "ember_will", "name": "Ember Will", "effect": "low_health_damage", "description": "Below 40% health this gun deals +30% damage.", "threshold": 0.4, "amount": 0.3, "glyph": "EW", "icon_color": [0.9, 0.25, 0.2], "playstyle": true, "tag": "sustain"},
+		{"id": "arc_tether", "name": "Arc Tether", "effect": "chain_hit", "description": "20% of hits leap to the nearest other zombie within 6 m for 40% of the damage.", "chance": 0.2, "amount": 0.4, "radius": 6.0, "glyph": "AT", "icon_color": [0.45, 0.75, 1.0], "playstyle": true, "tag": "detonation"},
+		{"id": "smolder_shot", "name": "Smolder Shot", "effect": "ignite_hit", "description": "15% of hits set the zombie burning: 35% of the hit's damage per second for 3 s.", "chance": 0.15, "amount": 0.35, "duration": 3.0, "glyph": "SS", "icon_color": [1.0, 0.5, 0.15], "playstyle": true, "tag": "status"},
+		{"id": "mire_rounds", "name": "Mire Rounds", "effect": "slow_hit", "description": "Hits slow the zombie by 30% for 2 s. Kite the horde.", "amount": 0.3, "duration": 2.0, "glyph": "MR", "icon_color": [0.45, 0.6, 0.35], "playstyle": true, "tag": "status"},
+		{"id": "pale_brand", "name": "Pale Brand", "effect": "mark_hit", "description": "25% of hits mark the zombie: it takes +15% damage from everything for 4 s.", "chance": 0.25, "amount": 0.15, "duration": 4.0, "glyph": "PB", "icon_color": [0.85, 0.85, 0.95], "playstyle": true, "tag": "status"},
+		{"id": "pocket_salvage", "name": "Pocket Salvage", "effect": "kill_refill", "description": "Kills move 20% of a magazine from your reserve straight into the gun.", "amount": 0.2, "glyph": "PS", "icon_color": [0.75, 0.6, 0.4], "playstyle": true, "tag": "reload_rhythm"},
+		{"id": "spent_breath", "name": "Spent Breath", "effect": "empty_reload", "description": "Reloading an empty magazine is 40% faster.", "amount": 0.4, "glyph": "SB", "icon_color": [0.6, 0.6, 0.65], "playstyle": false, "tag": "reload_rhythm"},
+		{"id": "bracewire", "name": "Bracewire", "effect": "ads_stability", "description": "35% less spread while aiming down sights.", "amount": 0.35, "glyph": "BW", "icon_color": [0.7, 0.75, 0.8], "playstyle": false, "tag": "stance"},
+		{"id": "choirfall", "name": "Choirfall", "effect": "explode", "description": "Signature. 40% of hits burst for 80% bonus damage in a wide ring. Built to hold a doorway alone.", "chance": 0.4, "amount": 0.8, "radius": 3.4, "glyph": "CF", "icon_color": [1.0, 0.62, 0.05], "playstyle": true, "signature": true, "tag": "detonation"},
+		{"id": "lantern_tithe", "name": "Lantern Tithe", "effect": "heal_on_kill", "description": "Signature. Every kill restores 28 health. Fight from inside the horde.", "amount": 28, "glyph": "LT", "icon_color": [1.0, 0.62, 0.05], "playstyle": true, "signature": true, "tag": "sustain"},
+		{"id": "bellrope_return", "name": "Bellrope Return", "effect": "grenade_refund", "description": "Signature. Kills refund 35% of your grenade cooldown. Throw, clear, throw again.", "amount": 0.35, "glyph": "BR", "icon_color": [1.0, 0.62, 0.05], "playstyle": true, "signature": true, "tag": "grenade_loop"}
 	]
 }

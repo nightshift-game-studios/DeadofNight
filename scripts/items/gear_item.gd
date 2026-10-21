@@ -29,6 +29,7 @@ extends Item
 static var _next_uid: int = 1
 static var _id_serial: int = 0
 var uid: int = 0 ## unique per instance (handy for UI / vault)
+var attr_seed: int = 0 ## seed of the named-attribute roll (GearDB.roll_attributes, playtest #33)
 
 
 func _init() -> void:
@@ -61,8 +62,16 @@ func to_dict() -> Dictionary:
 		"kind": "gear", "id": id, "display_name": display_name, "rarity": rarity, "item_power": item_power, "roll_quality": snappedf(roll_quality, 0.001),
 		"manufacturer": manufacturer, "manufacturer_color": manufacturer_color.to_html(), "flavor": flavor,
 		"slot": slot, "archetype": archetype, "stats": stats.duplicate(), "perks": Array(perks), "seen": seen,
-		"item_id": item_id,
+		"item_id": item_id, "attr_seed": attr_seed, "attributes": attributes(),
 	}
+
+
+## Named attributes for the UI (playtest #33, WEAPON_ATTRS.md): one row per perk in roll order,
+## {id, name, description, tag, playstyle, signature, glyph, icon_color}. Display only: loading ignores it.
+func attributes() -> Array:
+	var ml := Engine.get_main_loop()
+	var gdb: Node = (ml as SceneTree).root.get_node_or_null("GearDB") if ml is SceneTree else null
+	return gdb.attribute_rows(self) if gdb and gdb.has_method("attribute_rows") else []
 
 
 func apply_dict(d: Dictionary) -> void:
@@ -83,5 +92,6 @@ func apply_dict(d: Dictionary) -> void:
 	archetype = d.get("archetype", archetype)
 	stats = d.get("stats", {}).duplicate()
 	perks.assign(d.get("perks", []))
+	attr_seed = int(d.get("attr_seed", 0))
 	seen = bool(d.get("seen", true)) # pre-stash items (no key) count as seen so old stashes don't light up
 	color = rarity_color()

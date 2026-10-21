@@ -17,6 +17,7 @@ var weapon_list: Array = []
 var manufacturers: Array = [] ## fictional weapon makers (data/weapons.json)
 var armor: Dictionary = {}
 var perks: Dictionary = {} ## perk id -> dict
+var attribute_cfg: Dictionary = {} ## perks.json attribute_counts (playtest #33)
 var loot: Dictionary = {}
 var grenades: Dictionary = {}
 var stat_variance: int = 12 ## +/- random roll applied to each weapon stat
@@ -38,8 +39,10 @@ func reload_data() -> void:
 	manufacturers = w.get("manufacturers", [])
 	armor = _load_json(ARMOR_PATH)
 	perks.clear()
-	for p in _load_json(PERKS_PATH).get("perks", []):
+	var pj := _load_json(PERKS_PATH)
+	for p in pj.get("perks", []):
 		perks[p.id] = p
+	attribute_cfg = pj.get("attribute_counts", {})
 	loot = _load_json(LOOT_PATH)
 	grenades = _load_json(GRENADES_PATH).get("grenades", {})
 
@@ -343,14 +346,72 @@ func roll_weapon(arch_id: String = "", rarity: int = -1, round_number: int = 1, 
 		w.display_name = a.names.pick_random()
 	else:
 		w.display_name = "%s %s" % [Rarity.name_of(rarity), a.type]
-	# Mythic signature perks (perks.json "signature": true) never roll at random; the Merchant hands them out (MAIN_HOOKS §19c).
-	var perk_ids: Array = perks.keys().filter(func(k): return k not in w.perks and not bool(perks[k].get("signature", false)))
-	perk_ids.shuffle()
-	while w.perks.size() < Rarity.PERK_SLOTS[rarity] + (1 if rarity == Rarity.MYTHIC else 0) and perk_ids.size() > 0:
-		w.perks.append(perk_ids.pop_back())
+	# Named attributes (playtest #33, WEAPON_ATTRS.md): seeded from attr_seed so the same seed + rarity + archetype
+	# always gives the same attributes (the host rolls, co-op peers get the dict).
+	w.attr_seed = randi()
+	roll_attributes(w)
 	w.description = a.type
 	w.init_ammo()
 	return w
+
+
+## Named attributes a weapon of `rarity` rolls (perks.json attribute_counts, else Rarity.PERK_SLOTS). A Mythic carries its
+## archetype signature (weapons.json mythic.perk) on top of these.
+func attribute_count(rarity: int) -> int:
+	var r := clampi(rarity, 0, Rarity.IDS.size() - 1)
+	return int(attribute_cfg.get(Rarity.IDS[r], Rarity.PERK_SLOTS[r]))
+
+
+func attribute_playstyle_min(rarity: int) -> int:
+	return int(attribute_cfg.get("playstyle_min", {}).get(Rarity.IDS[clampi(rarity, 0, Rarity.IDS.size() - 1)], 0))
+
+
+## Random-roll attribute pool: every perk except Mythic signatures, sorted (deterministic for a seed).
+func attribute_pool() -> Array:
+	var ids: Array = perks.keys().filter(func(k): return not bool(perks[k].get("signature", false)))
+	ids.sort()
+	return ids
+
+
+## Fills w.perks from w.attr_seed: keeps what is already there (a Mythic's signature at index 0), then rolls up to
+## attribute_count(rarity) more from attribute_pool(), at least attribute_playstyle_min(rarity) of them playstyle.
+## Same seed + rarity + starting perks -> same result on every machine.
+func roll_attributes(w: GearItem) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(w.get("attr_seed")) if "attr_seed" in w else 0
+	var want := attribute_count(w.rarity)
+	var need_ps := mini(attribute_playstyle_min(w.rarity), want)
+	var start := w.perks.size()
+	var pool := attribute_pool().filter(func(k): return not (k in w.perks))
+	var ps_pool := pool.filter(func(k): return bool(perks[k].get("playstyle", false)))
+	for i in need_ps:
+		if ps_pool.is_empty():
+			break
+		var pick: String = ps_pool.pop_at(rng.randi_range(0, ps_pool.size() - 1))
+		pool.erase(pick)
+		w.perks.append(pick)
+	while w.perks.size() - start < want and not pool.is_empty():
+		w.perks.append(pool.pop_at(rng.randi_range(0, pool.size() - 1)))
+
+
+## UI rows for a gear item's attributes (GearItem.attributes() / to_dict "attributes"): [{id, name, description, tag,
+## playstyle, signature, glyph, icon_color "#rrggbb"}]. signature = a Mythic's own perk or a Merchant signature.
+func attribute_rows(g: GearItem) -> Array:
+	var out := []
+	var arch_sig := ""
+	if g.rarity == Rarity.MYTHIC and weapons.has(g.archetype):
+		arch_sig = str(weapons[g.archetype].get("mythic", {}).get("perk", ""))
+	for i in g.perks.size():
+		var id: String = g.perks[i]
+		var p: Dictionary = perks.get(id, {})
+		if p.is_empty():
+			continue
+		var c = p.get("icon_color", [0.8, 0.8, 0.8])
+		out.append({"id": id, "name": str(p.get("name", id)), "description": str(p.get("description", "")),
+			"tag": str(p.get("tag", "")), "playstyle": bool(p.get("playstyle", false)),
+			"signature": bool(p.get("signature", false)) or (i == 0 and id == arch_sig),
+			"glyph": str(p.get("glyph", "")), "icon_color": "#" + Color(float(c[0]), float(c[1]), float(c[2])).to_html(false)})
+	return out
 
 
 func roll_armor(slot: String = "", rarity: int = -1, round_number: int = 1, item_power: int = -1) -> ArmorItem:

@@ -587,6 +587,7 @@ func _decorate(o: Dictionary) -> Dictionary:
 	var r := int(o.rarity)
 	return {"offer_id": str(o.offer_id), "slot": int(o.slot), "item_id": str(w.item_id), "item": w,
 		"archetype": str(w.archetype), "rarity": r, "item_power": int(w.item_power), "perks": Array(w.perks),
+		"attributes": w.attributes(), # playtest #33 named attribute rows (WEAPON_ATTRS.md)
 		"price": int(o.price), "sold": bool(o.get("sold", false)), "owned": _owns(str(w.item_id)),
 		"can_afford": _balance() >= int(o.price), "reason": "" if c.ok else str(c.reason),
 		# added fields

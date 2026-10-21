@@ -13,7 +13,7 @@ const COLORS: Array[Color] = [ # punchy, saturated
 	Color(1.00, 0.62, 0.05), # mythic    - molten orange-gold
 ]
 const STAT_BONUS: Array[int] = [0, 3, 6, 10, 14] ## added to weapon stat rolls
-const PERK_SLOTS: Array[int] = [0, 1, 1, 2, 2]
+const PERK_SLOTS: Array[int] = [0, 1, 2, 3, 3] ## named attributes rolled per rarity (playtest #33; data/perks.json attribute_counts wins); a Mythic adds its signature
 
 
 static func from_id(id: String) -> int:
