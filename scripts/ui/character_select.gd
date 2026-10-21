@@ -88,15 +88,7 @@ func entry(id: int) -> Dictionary:
 	return {}
 
 
-## The home kit binds its Inventory to Progress, which Characters reads as "in a match": hand it back first.
-func _release_home_kit() -> void:
-	var kp = load("res://scripts/ui/kit_proxy.gd").bound_proxy()
-	if kp:
-		kp.release()
-
-
 func blocked() -> String:
-	_release_home_kit()
 	var c := chars()
 	return str(c.blocked_reason()) if c else "Character slots switch on with the classes update."
 

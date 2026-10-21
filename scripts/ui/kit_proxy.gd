@@ -16,6 +16,9 @@ var _ready_kit: bool = false
 
 
 func _ready() -> void:
+	var ch := get_node_or_null("/root/Characters")
+	if ch and ch.has_signal("switching") and not ch.switching.is_connected(_on_switching):
+		ch.switching.connect(_on_switching) # Skillz 570e1bd: drop the kit before the character swap
 	if inventory == null:
 		inventory = Inventory.new()
 		inventory.name = "KitInventory"
@@ -60,26 +63,16 @@ func save() -> bool:
 	return bool(prog.save_stash()) if prog.has_method("save_stash") else false
 
 
-## Playtest #21: let go of the home kit before a character create / switch / delete. Saves the kit into the current
-## character, unbinds it from Progress (Characters.blocked_reason treats a bound inventory as "in a match") and drops
-## the Inventory so the next ensure() loads the new character's stash and class.
-func release() -> void:
+## Characters.switching(from, to): Characters captures this kit into the CURRENT character and unbinds it right after
+## this signal; the kit just drops its Inventory (no save here, or the old gear could land in the new character) so the
+## next ensure() loads the new character's stash and class.
+func _on_switching(_from_id: int = 0, _to_id: int = 0) -> void:
 	if inventory == null:
 		return
-	save()
 	var prog := get_node_or_null("/root/Progress")
-	if prog and prog.has_method("bind_inventory") and prog.bound_inventory() == inventory:
+	if prog and prog.has_method("bound_inventory") and prog.bound_inventory() == inventory:
+		prog.capture_stash() # same as Characters does next; keeps the kit's last edits with their owner
 		prog.bind_inventory(null)
 	inventory.queue_free()
 	inventory = null
 	_ready_kit = false
-
-
-## The KitProxy whose inventory Progress has bound (home kit / merchant), or null (none, or a real match).
-static func bound_proxy() -> Node:
-	var ml := Engine.get_main_loop() as SceneTree
-	var prog := ml.root.get_node_or_null("Progress") if ml else null
-	var inv: Node = prog.bound_inventory() if prog and prog.has_method("bound_inventory") else null
-	if inv and inv.get_parent() and inv.get_parent().has_method("release") and inv.get_parent().get_script() == load("res://scripts/ui/kit_proxy.gd"):
-		return inv.get_parent()
-	return null

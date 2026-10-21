@@ -225,7 +225,7 @@ func _characters_screen() -> void:
 	var kp = load("res://scripts/ui/kit_proxy.gd").new()
 	root.add_child(kp)
 	kp.ensure()
-	check(prog.bound_inventory() != null and chars.blocked_reason() != "", "#21 (home kit opened: its inventory is bound)")
+	check(prog.bound_inventory() != null and chars.blocked_reason() == "", "#21 home kit open (inventory bound) doesn't block slots")
 	cs.select_slot(cs.NEW_ID)
 	await frames(2)
 	check(cs.name_edit != null and cs.create_button != null, "#21 create form (name + class)")
@@ -237,7 +237,7 @@ func _characters_screen() -> void:
 	await frames(1)
 	check(cs.name_edit.text == "Mabel" and cs.create_class == "sexton" and not cs.create_button.disabled, "#21 picking a class keeps the typed name")
 	check(cs.create_now(), "#21 CREATE + PLAY AS (even after the home kit was opened)")
-	check(prog.bound_inventory() == null and kp.inventory == null, "#21 home kit released before switching")
+	check(prog.bound_inventory() == null and kp.inventory == null, "#21 home kit drops its Inventory on Characters.switching")
 	kp.queue_free()
 	await frames(2)
 	check(chars.count() == 2 and str(chars.get_character(chars.active_id()).name) == "Mabel" and prog.selected_class == "sexton" and prog.get_level() == 1,
