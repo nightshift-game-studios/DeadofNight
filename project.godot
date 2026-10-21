@@ -21,6 +21,7 @@ GameEvents="*res://scripts/skills/game_events.gd"
 RunState="*res://scripts/skills/run_state.gd"
 Settings="*res://scripts/autoload/settings.gd"
 Merchant="*res://scripts/merchant/merchant.gd"
+Characters="*res://scripts/autoload/characters.gd"
 Net="*res://scripts/net/net.gd"
 
 [display]
