@@ -118,8 +118,10 @@ func _chest(world: Node3D) -> void:
 	var bb := _bounds(model)
 	var box: BoxShape3D = (c.get_node("CollisionShape3D") as CollisionShape3D).shape
 	var by: float = (c.get_node("CollisionShape3D") as Node3D).position.y
-	check(absf(bb.size.y - box.size.y) < 0.05 and absf(bb.size.z - box.size.z) < 0.05 and absf(bb.size.x - box.size.x) < 0.1
-		and absf(bb.get_center().y - by) < 0.05, "chest collision box %s @ y %.2f fits the loot_chest bounds %s" % [box.size, by, bb.size])
+	# 37e7995: the box fits the closed chest body (0.668 m tall @ y 0.284), not the full mesh bounds, so no invisible ledge
+	check(absf(box.size.y - 0.668) < 0.01 and absf(by - 0.284) < 0.01 and box.size.y <= bb.size.y
+		and absf(bb.size.z - box.size.z) < 0.05 and absf(bb.size.x - box.size.x) < 0.1,
+		"chest collision box %s @ y %.2f fits the closed loot_chest body (mesh bounds %s)" % [box.size, by, bb.size])
 	var ls: Node3D = model.find_child("LootSpawn", true, false)
 	check((c.get_node("Glow") as Node3D).position.is_equal_approx(ls.position + Vector3(0, 0.6, 0)), "Glow sits at LootSpawn + (0, 0.6, 0)")
 	# interact -> Open
@@ -131,6 +133,9 @@ func _chest(world: Node3D) -> void:
 	check(not c.can_interact() and not (c.get_node("Glow") as Node3D).visible, "an open chest can't be re-opened and its glow is off")
 	await process_frame
 	c.model.scale = Vector3.ONE
+	# e320b57: a bought chest relocates; rearm() only closes one that had nowhere to move (waiting_for_round)
+	c.relocating = false
+	c.waiting_for_round = true
 	c.rearm(2)
 	check(not c.is_open and c.last_clip == "Close" and ap.current_animation == "Close" and c.round_number == 2, "rearm() of an open chest plays Close")
 	ap.advance(0.5)
@@ -151,6 +156,8 @@ func _chest(world: Node3D) -> void:
 	await process_frame
 	check(c2.anim == null and c2.play_clip("Open") == false, "chest without an AnimationPlayer: play_clip() is a no-op")
 	c2.interact(null)
+	c2.relocating = false
+	c2.waiting_for_round = true
 	c2.rearm(2)
 	check(not c2.is_open and c2.can_interact(), "...and interact()/rearm() still work")
 	c2.queue_free()
