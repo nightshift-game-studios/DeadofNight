@@ -376,10 +376,10 @@ func status(id: String) -> Dictionary:
 	return _statuses.get(id, {})
 
 
-## Mark + Rot amplify all incoming damage.
+## Mark + Rot + Frost amplify all incoming damage.
 func damage_taken_mult() -> float:
 	var m := 1.0
-	for id in ["mark", "rot"]:
+	for id in ["mark", "rot", "frost"]: # frost: Shiverglass (Skillz §24, playtest #25)
 		if has_status(id):
 			m += float(_statuses[id].amp)
 	return m
