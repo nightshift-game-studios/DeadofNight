@@ -140,8 +140,19 @@ func _go() -> void:
 
 	# Confirm UI — compact centered overlay card (not stretched across panel)
 	prog.gravemarks = 100
+	prog.scrap = 70
 	prog.currency_changed.emit(100)
+	# Economy v2: an upgrade confirm is priced in Scrap (balance = Scrap), not Gravemarks
 	menu._ask_buy("upg_sidearm", "upgrade")
+	await process_frame
+	var up_cost = menu._confirm.find_child("ConfirmCost", true, false) as Label
+	check(menu._confirm.visible and "Scrap" in menu._confirm_label.text and not "Gravemark" in menu._confirm_label.text
+		and up_cost != null and up_cost.text.begins_with("70") and "Scrap" in up_cost.text
+		and menu._confirm_cost_row.find_child("GravemarkIcon", true, false) == null,
+		"upgrade confirm says Scrap with the Scrap balance ('%s' / '%s')" % [menu._confirm_label.text, up_cost.text if up_cost else ""])
+	menu._confirm_no()
+	await process_frame
+	menu._ask_buy(buy_id, "attachment")
 	await process_frame
 	check(menu._confirm_overlay != null and menu._confirm_overlay.visible, "confirm overlay visible")
 	check(menu._confirm.visible and "Gravemark" in menu._confirm_label.text, "buy confirm panel shows")

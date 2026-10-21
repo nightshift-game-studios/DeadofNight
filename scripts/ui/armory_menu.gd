@@ -694,7 +694,9 @@ func _ask_buy(id: String, kind: String) -> void:
 	_pending_id = id
 	_pending_kind = "buy"
 	var cost := int(api.cost(id)) if api else 0
-	var bal := int(api.currency_balance()) if api else 0
+	# Economy v2: upgrade tiers are paid in Scrap, attachments / optics in Gravemarks
+	var cur := ArmoryScr.upgrade_currency() if kind == "upgrade" else "gravemark"
+	var bal := ArmoryScr.balance(cur)
 	var label := id
 	if kind == "upgrade":
 		for u in api.list_upgrades(_weapon_id):
@@ -708,13 +710,15 @@ func _ask_buy(id: String, kind: String) -> void:
 			if str(a.id) == id:
 				label = str(a.get("name", id))
 				break
-	_confirm_label.text = "Spend %d Gravemarks on %s?" % [cost, label]
+	_confirm_label.text = "Spend %d %s on %s?" % [cost, ArmoryScr.currency_word(cur, cost), label]
 	# Cost / balance line with Gravemark icon: 100 → 97
 	for c in _confirm_cost_row.get_children():
 		_confirm_cost_row.remove_child(c)
 		c.queue_free()
-	_confirm_cost_row.add_child(UIStyle.gravemark_icon(20))
-	_confirm_cost = UIStyle.label("%d  →  %d" % [bal, maxi(bal - cost, 0)], 15, UIStyle.RUST.lightened(0.25), true)
+	if cur == "gravemark":
+		_confirm_cost_row.add_child(UIStyle.gravemark_icon(20))
+	var unit := "" if cur == "gravemark" else "  " + ArmoryScr.currency_word(cur, 2)
+	_confirm_cost = UIStyle.label("%d  →  %d%s" % [bal, maxi(bal - cost, 0), unit], 15, UIStyle.RUST.lightened(0.25), true)
 	_confirm_cost.name = "ConfirmCost"
 	_confirm_cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_confirm_cost_row.add_child(_confirm_cost)
