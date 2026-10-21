@@ -125,12 +125,27 @@ func get_prompt() -> String:
 	var gear := item as GearItem
 	if gear:
 		return "Pick up %s  (%s %s, IP %d)   hold: equip" % [gear.display_name, gear.rarity_name(), gear.type_name(), gear.item_power]
+	if _is_grenade():
+		return "Swap grenade: %s" % item.display_name
 	return "Pick up " + item.display_name
 
 
 func interact(player: Node) -> void:
+	if _is_grenade(): # MAIN_HOOKS §24c: a grenade pickup replaces the thrown grenade (never goes to the backpack)
+		if (item as ConsumableItem).give_grenade(player):
+			if player.has_signal("loot_received"):
+				player.emit_signal("loot_received", item)
+			var bus := get_node_or_null("/root/GameEvents")
+			if bus and bus.has_method("emit_event"):
+				bus.emit_event(&"pickup_collected", {"player": player, "item": item})
+			queue_free()
+		return
 	if player.receive_item(item):
 		queue_free()
+
+
+func _is_grenade() -> bool:
+	return item is ConsumableItem and (item as ConsumableItem).effect == ConsumableItem.Effect.GRENADE
 
 
 ## Hold E (playtest #3): gear only. Tap E still runs interact() (pick up into the backpack).

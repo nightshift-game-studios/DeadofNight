@@ -60,6 +60,56 @@ func grenade(id: String) -> Dictionary:
 	return grenades.get(id, grenades.get("frag", {}))
 
 
+## MAIN_HOOKS §24c: drop odds per grenades.json id = drop_weight x loot_tables grenade_drops.rarity_mult[its rarity]
+## (Economy v2's rarer-drops scaling). {id: weight}, ids with weight 0 left out.
+func grenade_drop_weights() -> Dictionary:
+	var mult: Dictionary = loot.get("grenade_drops", {}).get("rarity_mult", {})
+	var out := {}
+	for id in grenades:
+		var g: Dictionary = grenades[id]
+		var w := float(g.get("drop_weight", 0)) * float(mult.get(str(g.get("rarity", "common")), 1.0))
+		if w > 0.0:
+			out[id] = w
+	return out
+
+
+## A grenades.json id picked by grenade_drop_weights(). rng: RandomNumberGenerator (null = global randf).
+func roll_grenade_id(rng: RandomNumberGenerator = null) -> String:
+	var ws := grenade_drop_weights()
+	var total := 0.0
+	for id in ws:
+		total += float(ws[id])
+	if total <= 0.0:
+		return "frag"
+	var r := (rng.randf() if rng else randf()) * total
+	for id in ws:
+		r -= float(ws[id])
+		if r <= 0.0:
+			return str(id)
+	return str(ws.keys()[-1])
+
+
+## The world pickup for grenade `id`: a ConsumableItem (effect GRENADE, id "grenade_<id>", so Item.to_dict / from_dict
+## and co-op grants round-trip through consumable()). Its colour is the grenade's rarity colour, its model the variant's.
+func grenade_pickup(id: String) -> ConsumableItem:
+	if not grenades.has(id):
+		return null
+	var g: Dictionary = grenades[id]
+	var c := ConsumableItem.new()
+	c.id = ConsumableItem.GRENADE_PREFIX + id
+	c.effect = ConsumableItem.Effect.GRENADE
+	c.grenade_id = id
+	c.display_name = str(g.get("name", id.capitalize()))
+	var r := Rarity.from_id(str(g.get("rarity", "common")))
+	c.color = Rarity.color(r)
+	c.description = "%s grenade. Pick up to replace your grenade for this match." % Rarity.IDS[r].capitalize()
+	var model := "res://assets/models/grenades/%s.glb" % str(g.get("model", g.get("variant", id)))
+	if ResourceLoader.exists(model):
+		c.model_path = model
+		c.model_scale = 1.6
+	return c
+
+
 func element_color(e: String) -> Color:
 	return ELEMENT_COLORS.get(e, Color.WHITE)
 
@@ -356,6 +406,8 @@ func roll_gear(rarity: int, round_number: int = 1) -> GearItem:
 
 
 func consumable(id: String) -> ConsumableItem:
+	if id.begins_with(ConsumableItem.GRENADE_PREFIX):
+		return grenade_pickup(id.trim_prefix(ConsumableItem.GRENADE_PREFIX))
 	var path := "res://resources/items/%s.tres" % id
 	if ResourceLoader.exists(path):
 		return load(path) as ConsumableItem
@@ -386,6 +438,10 @@ func roll_table(table_id: String, round_number: int = 1, drop_bonus: float = 0.0
 				var c := consumable(e.get("id", ""))
 				if c:
 					out.append(c)
+			"grenade": # MAIN_HOOKS §24c: id by grenades.json drop_weight x rarity_mult (not the table's rarity roll)
+				var gp := grenade_pickup(roll_grenade_id())
+				if gp:
+					out.append(gp)
 	return out
 
 

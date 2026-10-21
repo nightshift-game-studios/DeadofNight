@@ -163,6 +163,32 @@ func _run() -> void:
 	map.free()
 
 	# ------------------------------------------------------------ 3. drops rarer
+	# grenade drops (MAIN_HOOKS §24c): grenades.json drop_weight x rarity_mult
+	var gw: Dictionary = gdb.grenade_drop_weights()
+	check(gw.size() == 9 and is_equal_approx(float(gw.frag), 116.0) and is_equal_approx(float(gw.pulse), 69.6)
+		and is_equal_approx(float(gw.requiem_bell), 0.6) and float(gw.gravewell) < 4.0, "grenade drop weights = drop_weight x rarity_mult (frag %.0f, Requiem %.2f)" % [gw.frag, gw.requiem_bell])
+	var grng := RandomNumberGenerator.new()
+	grng.seed = 25
+	var gcount := {}
+	for i in 4000:
+		var gid: String = gdb.roll_grenade_id(grng)
+		gcount[gid] = int(gcount.get(gid, 0)) + 1
+	check(int(gcount.get("frag", 0)) > int(gcount.get("pulse", 0)) and int(gcount.get("pulse", 0)) > int(gcount.get("cinderjar", 0))
+		and int(gcount.get("cinderjar", 0)) > int(gcount.get("rookery", 0)) and int(gcount.get("requiem_bell", 0)) < 30, "grenade rolls follow the weights (%s)" % [gcount])
+	var CI = load("res://scripts/items/consumable_item.gd")
+	var gp = gdb.grenade_pickup("rookery")
+	var gp2 = gdb.item_from_dict(gp.to_dict()) if gp else null
+	check(gp != null and gp.id == "grenade_rookery" and gp.effect == CI.Effect.GRENADE and not gp.auto_use
+		and gp.color.is_equal_approx(load("res://scripts/gear/rarity.gd").color(2)) and gp2 != null and gp2.grenade_id == "rookery" and gp2.display_name == gp.display_name,
+		"grenade pickup: ConsumableItem GRENADE, rarity colour, to_dict / from_dict round-trip (%s)" % [gp.to_dict() if gp else {}])
+	var has_g := false
+	var saved_dc: float = float(gdb.loot.tables.zombie.drop_chance)
+	gdb.loot.tables.zombie.drop_chance = 1.0
+	for i in 400:
+		for it in gdb.roll_table("zombie", 5):
+			has_g = has_g or ("grenade_id" in it and it.effect == CI.Effect.GRENADE)
+	gdb.loot.tables.zombie.drop_chance = saved_dc
+	check(has_g and gdb.loot.tables.chest.entries.any(func(e): return e.get("kind") == "grenade"), "zombie + chest tables can drop grenades")
 	var lt: Dictionary = gdb.loot.tables.zombie
 	check(is_equal_approx(float(lt.drop_chance), 0.08), "zombie drop chance 0.08 (was 0.14)")
 	var A = load("res://scripts/armory/armory.gd")
@@ -292,6 +318,7 @@ func _run() -> void:
 	var pin = pl.inventory
 	if not pl.has_method("get_stat_effects"):
 		print("  (player.gd without MAIN_HOOKS §21b: StatEffects player checks skipped)")
+		await _grenade_pickup_checks(main, pl)
 		await _match_stats_checks(main, pl, prog)
 		_finish(prog, P, inv)
 		return
@@ -339,8 +366,39 @@ func _run() -> void:
 	pin.equipped["chest"] = null
 	pl.recalc_stats()
 
+	await _grenade_pickup_checks(main, pl)
 	await _match_stats_checks(main, pl, prog)
 	_finish(prog, P, inv)
+
+
+func _grenade_pickup_checks(main, pl) -> void:
+	var gdb = root.get_node("GearDB")
+	var before: Dictionary = pl.grenade_data
+	var pk = load("res://scenes/pickup.tscn").instantiate() if ResourceLoader.exists("res://scenes/pickup.tscn") else null
+	if pk == null:
+		check(false, "scenes/pickup.tscn exists")
+		return
+	pk.item = gdb.grenade_pickup("gravewell")
+	main.add_child(pk)
+	pk.global_position = pl.global_position + Vector3(3, 0, 0)
+	await physics_frame
+	check(str(pk.get_prompt()).begins_with("Swap grenade: Gravewell"), "grenade pickup prompt (%s)" % pk.get_prompt())
+	var k0: float = pl.grenade_cooldown / maxf(float(before.get("cooldown", 20.0)), 0.001)
+	pk.interact(pl)
+	await physics_frame
+	check(str(pl.grenade_data.get("name", "")) == "Gravewell" and pl.get_meta("grenade_override", "") == "gravewell" and (not is_instance_valid(pk) or pk.is_queued_for_deletion()),
+		"E on a grenade pickup: player.grenade_data = GearDB.grenade(gravewell), meta grenade_override, pickup gone (was %s)" % before.get("name", "?"))
+	check(absf(pl.grenade_cooldown - float(pl.grenade_data.get("cooldown", 20.0)) * k0) < 0.01, "grenade cooldown follows the new grenade (%.1f s)" % pl.grenade_cooldown)
+	pl.recalc_stats()
+	check(str(pl.grenade_data.get("name", "")) == "Gravewell", "picked-up grenade survives recalc_stats")
+	var again = gdb.grenade_pickup("gravewell")
+	check(not again.give_grenade(pl), "same grenade again: not taken")
+	if pl.has_method("apply_stats") and FileAccess.get_file_as_string("res://scripts/player.gd").contains("grenade_override"):
+		pl.apply_stats()
+		check(str(pl.grenade_data.get("name", "")) == "Gravewell", "player.gd §24c: picked-up grenade survives apply_stats")
+	pl.remove_meta("grenade_override")
+	pl.grenade_data = before
+	pl.recalc_stats()
 
 
 func _finish(prog, P, inv) -> void:

@@ -63,6 +63,10 @@
 					"kind": "consumable",
 					"id": "heavy_ammo",
 					"weight": 2
+				},
+				{
+					"kind": "grenade",
+					"weight": 1
 				}
 			],
 			"rarity_weights": {
@@ -94,6 +98,10 @@
 					"kind": "consumable",
 					"id": "heavy_ammo",
 					"weight": 1
+				},
+				{
+					"kind": "grenade",
+					"weight": 1
 				}
 			],
 			"rarity_weights": {
@@ -114,6 +122,16 @@
 			"rarity_weights": {
 				"common": 100
 			}
+		}
+	},
+	"grenade_drops": {
+		"_help": "Grenade drops (MAIN_HOOKS §24c, Skillz). A loot-table entry {kind: grenade} picks a grenades.json id by drop_weight (frag 100, pulse 60, uncommon 30, rare 12, legendary 4, mythic 1) x rarity_mult[its rarity]. rarity_mult is Economy v2's rarer-drops scaling: the new / old gear rarity weights (58/50, 29/32, 10.5/14, 2.2/3.5, 0.3/0.5), so a Mythic grenade is 0.6x as likely as before relative weights. Effective odds: frag 44%, Tremor 26%, each uncommon 10%, each rare 3.4%, each legendary 1%, Requiem Bell 0.2%. Zombie table: weight 1 of 12 at drop_chance 0.08 = 0.67% of kills; chest: weight 1 of 11 per roll. Picking one up (E) replaces your grenade for the rest of the match (the player.gd §24c hunk keeps it through apply_stats).",
+		"rarity_mult": {
+			"common": 1.16,
+			"uncommon": 0.91,
+			"rare": 0.75,
+			"legendary": 0.63,
+			"mythic": 0.6
 		}
 	}
 }
