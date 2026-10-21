@@ -913,7 +913,7 @@ func _fire_round(w: WeaponItem) -> void:
 					var dmg := mod_stat("damage_out", base_damage * fall * (hs_mult if crit else 1.0), ctx)
 					var killed: bool = collider.take_damage(dmg, hit.position, crit, self)
 					register_hit(collider, dmg, crit, killed, ctx)
-					PerkSystem.on_hit(w, self, hit.position, dmg)
+					PerkSystem.on_hit(w, self, hit.position, dmg, collider) # playtest #33: status attributes hit the right zombie
 					if killed:
 						on_enemy_killed(collider, w)
 				var a := _sfx()
