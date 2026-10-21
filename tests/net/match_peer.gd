@@ -27,6 +27,8 @@ var boss_phases: Dictionary = {} ## boss name -> phases the puppet entered (afte
 var rx_visual: Array = []
 var my_grenade: Node = null
 var grenade_rx: Array = [] ## specs of received grenade copies
+var heal_rx0 := 0
+var drop0 := 0
 var grenade_ev: Array = [] ## [net_id, kind, data] events on my copies ## per received host projectile: was the copy visual-only
 var health_before_dmg := -1
 var door_ops: Array = [] ## client: M13 results to check at t_finish
@@ -376,50 +378,68 @@ func _host_3b(bob: int, cara: int) -> void:
 	await _sleep(0.8)
 
 
-## Grenades (GRENADES_SPEC): ThrownProjectile type_id "grenade" + variant + rarity. Runs only where the tree has the
-## P1 line and a "grenade" type in data/projectiles.json; the host stands in for Skillz's grenade code (it spawns the
-## Rookery bomblets, sends events, applies avatar-owned damage) to check the net side. E7 part: only with the
-## enemy.gd E7 line.
+## Grenades (Skillz 32dc31c, MAIN_HOOKS §24b): the real Grenade code. Throw = Grenade.throw_from (type "grenade" +
+## variant + the item's rarity); Rookery bomblets "grenade_bomblet" and Leechbell orbs "heal_orb" are host spawns.
+## Runs only where the tree has P1 and the grenade net lines (patches/grenades_skillz.patch); E7 part: enemy.gd E7.
 func _host_grenades(bob: int, cara: int, z_hint) -> void:
 	var P = Net.match_players
 	var NP = Net.projectiles
 	var PS: Script = NP.proj_script()
-	if PS == null or not PS.source_code.contains("NetGate.projectile_spawned") or PS.type_def(&"grenade").is_empty():
-		print("[%s] SKIP  grenades: no P1 line / no 'grenade' type in this tree" % pname)
+	var GS: Script = load("res://scripts/combat/grenade.gd")
+	if PS == null or not PS.source_code.contains("NetGate.projectile_spawned") or not GS.source_code.contains("NetGate.request_throw") or PS.type_def(&"grenade").is_empty():
+		print("[%s] SKIP  grenades: no P1 / grenade net lines in this tree" % pname)
 		return
-	var vdefs: Dictionary = PS.type_def(&"grenade").get("variants", {})
-	var rook_r: int = NP._rarity_int(vdefs.get("rookery", {}).get("rarity", 2))
+	check(Net.status_allowed("frost") and Net.status_allowed("burn") and not Net.status_allowed("bogus"), "host: frost is an allowed status (statuses.forwarded)")
 	var ok0: int = NP.stats.throw_ok
 	var ref0: int = NP.stats.throw_refused
-	Net.broadcast_event(&"t_cmd", bob, {"op": "gthrow", "rarity": rook_r})
-	check(await _wait(func(): return NP.stats.throw_ok == ok0 + 1, 3.0), "host: Bob's Rookery (rarity %d) accepted" % rook_r)
-	check(await _wait(func(): return NP.stats.throw_refused == ref0 + 2, 3.0), "host: wrong rarity + a second grenade inside grenade_min_interval_s refused (%s)" % [NP.stats])
+	Net.broadcast_event(&"t_cmd", bob, {"op": "gthrow"})
+	check(await _wait(func(): return NP.stats.throw_ok == ok0 + 1, 3.0), "host: Bob's Rookery (Grenade.throw_from -> request_throw) accepted")
+	check(await _wait(func(): return NP.stats.throw_refused == ref0 + 2, 3.0), "host: bad rarity + a second grenade inside grenade_min_interval_s refused (%s)" % [NP.stats])
 	var g: Node = NP.projectile(NP._next_id)
-	if not check(g != null and not g.is_visual_only and str(g.variant) == "rookery" and g.owner_id == P.avatar(bob).get_instance_id(), "host: the real Rookery, owned by Bob's avatar"):
+	if not check(g != null and not g.is_visual_only and str(g.type_id) == "grenade" and str(g.variant) == "rookery" and g.owner_id == P.avatar(bob).get_instance_id(), "host: the real Rookery, owned by Bob's avatar"):
 		return
-	# Skillz's Rookery: detonate, then 5 bomblets (host spawns; P1 replicates each one)
-	NetGate.projectile_event(g, "detonate", {"pos": g.global_position, "owner": P.avatar(bob)})
-	for i in 5:
-		PS.spawn({"type_id": &"grenade", "variant": &"rookery_bomblet", "rarity": rook_r, "pos": g.global_position + Vector3(0.3 * i, 0.2, 0),
-			"vel": Vector3(cos(i * 1.256), 2.0, sin(i * 1.256)) * 2.0, "owner_id": g.owner_id, "seed": int(g.seed_value) * 10 + i})
+	var body = g.body
+	check(body != null and body.authoritative and body.data.get("variant") == "rookery", "host: its Grenade body is authoritative, data from the variant id (GearDB)")
+	var fx0: int = NP.stats.fx_fwd
+	var k0: int = NP._next_id
+	body.detonate() # the real Rookery: blast, then bomblets_n grenade_bomblet spawns (P1 replicates each)
+	var nb: int = int(body.data.get("bomblets", 5))
+	check(NP._next_id - k0 == nb and NP.stats.fx_fwd >= fx0 + 2, "host: %d bomblets got net ids, blast + split forwarded (fx %d -> %d)" % [nb, fx0, NP.stats.fx_fwd])
+	# Leechbell for Cara, at a zombie: damage -> heal orbs (heal_orb) home on Cara's avatar -> her machine heals
 	var z: Node = z_hint if z_hint != null and is_instance_valid(z_hint) and not bool(z_hint.get("_dead")) else null
 	if z == null:
 		for zz in main.zombies_root.get_children():
-			if "_dead" in zz and not bool(zz._dead):
+			if "_dead" in zz and not bool(zz._dead) and not zz.has_meta("is_boss"):
 				z = zz
-	if z:
-		NetGate.projectile_event(g, "stick", {"target": z, "chain": [z, P.avatar(cara)]})
+	Net.broadcast_event(&"t_cmd", cara, {"op": "hp_low"})
+	await _sleep(0.5)
+	if check(z != null, "host: a live zombie for the Leechbell"):
+		z.health = maxf(float(z.health), 2000.0) # survives the blast (damage still counts)
+		var ld: Dictionary = GS.data_for_variant("leechbell")
+		var spec: Dictionary = GS.make_spec(P.avatar(cara), ld, (z as Node3D).global_position + Vector3(0, 0.5, 0), Vector3.ZERO, 77)
+		var lp: Node = PS.spawn(spec)
+		var h0: int = P.stats.heal_tx
+		var o0: int = NP._next_id
+		lp.body.detonate()
+		check(NP._next_id > o0 + 0, "host: Leechbell spawned %d heal orbs (host spawns)" % (NP._next_id - o0 - 0))
+		check(await _wait(func(): return P.stats.heal_tx > h0, 6.0), "host: an orb reached Cara's avatar -> heal relayed (heal_tx %d -> %d)" % [h0, P.stats.heal_tx])
+		# frost from a client (E3 claim) lands on the host's zombie
+		Net.broadcast_event(&"t_cmd", cara, {"op": "frost", "z": str(z.name)})
+		check(await _wait(func(): return z.has_status("frost"), 3.0), "host: Cara's frost claim applied to %s" % z.name)
 	for id in [bob, cara]:
-		Net.broadcast_event(&"t_cmd", id, {"op": "gcheck", "z": str(z.name) if z else "", "cara": cara, "bob": bob})
+		Net.broadcast_event(&"t_cmd", id, {"op": "gcheck", "bob": bob, "cara": cara, "nb": nb})
 	await _sleep(1.5)
 	# E7: host-side damage from Bob's grenade credits Bob (needs the enemy.gd E7 line)
 	if not load("res://scripts/enemy.gd").source_code.contains("note_damage_source"):
 		print("[%s] SKIP  grenade kill credit: enemy.gd E7 line not in this tree" % pname)
 		return
-	if check(z != null, "host: a live zombie for the grenade kill"):
+	var zk: Node = null
+	for zz in main.zombies_root.get_children():
+		if "_dead" in zz and not bool(zz._dead) and not zz.has_meta("is_boss"):
+			zk = zz
+	if check(zk != null, "host: a live zombie for the grenade kill"):
 		var b0: int = Net.get_points(bob)
-		var src: Node = g if is_instance_valid(g) else P.avatar(bob)
-		z.take_damage(99999.0, (z as Node3D).global_position, false, src)
+		GS.deal(zk, 99999.0, P.avatar(bob), (zk as Node3D).global_position) # Grenade.deal, as the Tallyhook chain does
 		await _sleep(0.4)
 		check(Net.get_points(bob) > b0, "host: E7 - the kill by Bob's grenade paid Bob (%d -> %d)" % [b0, Net.get_points(bob)])
 
@@ -440,7 +460,7 @@ func _client() -> void:
 		if b:
 			boss_phases[zn] = boss_phases.get(zn, []) + [int(b.phase)])
 	Net.projectiles.event_rx.connect(func(nid, kind, d): grenade_ev.append([nid, kind, d]))
-	Net.projectiles.projectile_rx.connect(func(sp): if str(sp.type_id) == "grenade": grenade_rx.append(sp))
+	Net.projectiles.projectile_rx.connect(func(sp): grenade_rx.append(sp))
 	Net.projectiles.projectile_rx.connect(func(_spec):
 		var live: Array = Net.projectiles.proj_script().live
 		rx_visual.append(not live.is_empty() and live.back().is_visual_only))
@@ -546,30 +566,40 @@ func _do(c: Dictionary) -> void:
 		"hp_check":
 			check(int(main.player.health) - health_before_dmg >= int(c.min_gain) and Net.match_players.stats.heal_rx >= 2, "client: host heals applied to my own player (%d -> %d)" % [health_before_dmg, int(main.player.health)])
 		"gthrow":
-			var gs := {"type_id": &"grenade", "variant": &"rookery", "rarity": int(c.rarity), "pos": main.player.global_position + Vector3(0, 4.0, 0),
-				"vel": Vector3(0, 3, 0), "owner_id": main.player.get_instance_id(), "seed": 4242}
-			my_grenade = Net.projectiles.request_throw(gs)
-			var bad := gs.duplicate()
-			bad.rarity = 5
-			Net.projectiles.request_throw(bad) # wrong rarity for the variant
+			drop0 = Net.projectiles.stats.dropped
+			var Gr: Script = load("res://scripts/combat/grenade.gd") # loaded at run time: autoloads (GearDB) exist by now
+			var gd: Dictionary = Gr.data_for_variant("rookery")
+			var me: Node3D = main.player
+			my_grenade = Gr.throw_from(me, gd, me.global_position + Vector3(0, 1.5, 0), Vector3(0, 0, -1), Vector3.ZERO)
+			my_grenade = my_grenade.proj if my_grenade else null
+			var bad: Dictionary = Gr.make_spec(me, gd, me.global_position + Vector3(0, 1.5, 0), Vector3(0, 3, 0), 5)
+			bad.rarity = 9
+			Net.projectiles.request_throw(bad) # no such rarity
 			await _sleep(0.2)
-			Net.projectiles.request_throw(gs) # inside the grenade interval
+			Gr.throw_from(me, gd, me.global_position + Vector3(0, 1.5, 0), Vector3(0, 0, -1), Vector3.ZERO) # inside the interval
+		"hp_low":
+			main.player.health = maxi(int(main.player.health) - 60, 1)
+			health_before_dmg = int(main.player.health)
+			heal_rx0 = Net.match_players.stats.heal_rx
+		"frost":
+			var fz = main.zombies_root.get_node_or_null(NodePath(str(c.z)))
+			if fz:
+				fz.apply_status("frost", {"dur": 3.0, "amp": 0.15}) # puppet -> E3 claim to the host
 		"gcheck":
-			var NP = Net.projectiles
 			var mine: bool = Net.local_peer_id() == int(c.bob)
-			check(not mine or (is_instance_valid(my_grenade) and my_grenade.has_meta("net_id")), "client: my own grenade copy got the host's net id (bound)")
-			var kids: Array = grenade_rx.filter(func(sp): return str(sp.variant) == "rookery_bomblet")
-			check(kids.size() == 5, "client: 5 Rookery bomblets replicated as visual-only children (%d)" % kids.size())
+			var am_cara: bool = Net.local_peer_id() == int(c.cara)
+			var blasts: Array = grenade_ev.filter(func(e): return e[1] == "blast")
+			check(not mine or (my_grenade == null or not is_instance_valid(my_grenade)) and blasts.size() >= 1, "client: my own Rookery copy was bound to the host's net id (its blast arrived, copy detonated)")
+			check(Net.projectiles.stats.dropped - drop0 == (2 if mine else 0), "client: refused throws dropped their local copy (%d)" % (Net.projectiles.stats.dropped - drop0))
+			var kids: Array = grenade_rx.filter(func(sp): return str(sp.type_id) == "grenade_bomblet")
+			check(kids.size() == int(c.nb), "client: %d Rookery bomblets (grenade_bomblet) replicated as visual-only children (%d)" % [int(c.nb), kids.size()])
 			var want_owner: int = main.player.get_instance_id() if mine else Net.match_players.avatar(int(c.bob)).get_instance_id()
 			check(kids.all(func(sp): return int(sp.owner_id) == want_owner), "client: bomblets owned by Bob here (player / avatar)")
-			check(grenade_rx.filter(func(sp): return str(sp.variant) == "rookery").size() == (0 if mine else 1), "client: the Rookery itself replicated (not echoed to its thrower)")
-			var det: Array = grenade_ev.filter(func(e): return e[1] == "detonate")
-			check(det.size() == 1 and det[0][2].get("owner") == (main.player if mine else Net.match_players.avatar(int(c.bob))), "client: detonate event reached my copy, owner mapped (%s)" % [det])
-			if str(c.z) != "":
-				var st: Array = grenade_ev.filter(func(e): return e[1] == "stick")
-				var zn = main.zombies_root.get_node_or_null(NodePath(str(c.z)))
-				var me_or_cara = main.player if Net.local_peer_id() == int(c.cara) else Net.match_players.avatar(int(c.cara))
-				check(st.size() == 1 and st[0][2].get("target") == zn and zn != null and st[0][2].chain == [zn, me_or_cara], "client: stick event target -> my puppet %s, chain mapped" % c.z)
+			check(grenade_rx.filter(func(sp): return str(sp.type_id) == "grenade" and str(sp.variant) == "rookery").size() == (0 if mine else 1), "client: the Rookery itself replicated (not echoed to its thrower)")
+			check(blasts.size() >= 1 and blasts.all(func(e): return Net.projectiles.projectile(int(e[0])) == null), "client: the host's blast reached my Rookery copy, which detonated on it (copy gone; %d blasts)" % blasts.size())
+			check(grenade_rx.any(func(sp): return str(sp.type_id) == "heal_orb"), "client: Leechbell heal orbs replicated (heal_orb)")
+			if am_cara:
+				check(Net.match_players.stats.heal_rx > heal_rx0 and int(main.player.health) > health_before_dmg, "client: Leechbell heal applied to my own player (%d -> %d)" % [health_before_dmg, int(main.player.health)])
 		"spend":
 			Net.request_spend(999999, "test_door")
 			await _sleep(0.4)

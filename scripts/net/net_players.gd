@@ -34,7 +34,7 @@ var avatars: Dictionary = {} ## peer_id -> NetRemoteAvatar
 var life: Dictionary = {} ## peer_id -> alive | downed | dead (every peer's view, from the host)
 var downed: Dictionary = {} ## host: peer_id -> {bleed, reviver, progress}
 var body_kind := "" ## "" = data/net.json avatar.body; tests force "capsule" / "desi"
-var stats := {"state_rx": 0, "state_clamped": 0, "events_rx": 0, "damage_fwd": 0, "damage_rx": 0, "heal_tx": 0, "heal_rx": 0, "heal_clipped": 0}
+var stats := {"state_rx": 0, "state_clamped": 0, "events_rx": 0, "damage_fwd": 0, "damage_rx": 0, "heal_tx": 0, "heal_rx": 0, "heal_clipped": 0, "refund_tx": 0, "refund_rx": 0}
 var _heal_window: Dictionary = {} ## host: peer -> [window start msec, HP relayed in it]
 var _player: Node3D
 var _root: Node
@@ -603,7 +603,7 @@ func host_heal(target: Node, amount: int, reason: String = "") -> int:
 	var w: Array = _heal_window.get(pid, [now, 0])
 	if now - int(w[0]) >= 1000:
 		w = [now, 0]
-	var cap := int(NetConfig.get_value("projectiles.heal_max_per_s", 120))
+	var cap := int(NetConfig.get_value("projectiles.heal_max_per_s", 500))
 	var give := mini(amount, maxi(cap - int(w[1]), 0))
 	if give < amount:
 		stats.heal_clipped += 1
@@ -623,6 +623,37 @@ func host_heal(target: Node, amount: int, reason: String = "") -> int:
 @rpc("authority", "call_remote", "reliable")
 func _rpc_heal(amount: int, _reason: String) -> void:
 	_apply_heal(amount)
+
+
+## Host: a grenade cooldown refund for `target` (G6) -> the owner's machine (Player.refund_grenade keeps its own cap).
+func host_refund(target: Node, fraction: float, reason: String = "") -> bool:
+	var net := get_parent()
+	if target == null or not net.is_host() or fraction <= 0.0:
+		return false
+	var pid := 0
+	if target == _player:
+		pid = net.local_peer_id()
+	elif target is NetRemoteAvatar:
+		pid = (target as NetRemoteAvatar).peer_id
+	if pid == 0 or life_of(pid) != LIFE_ALIVE:
+		return false
+	stats.refund_tx += 1
+	if pid == net.local_peer_id():
+		_apply_refund(fraction)
+	else:
+		_rpc_refund.rpc_id(pid, fraction, reason)
+	return true
+
+
+@rpc("authority", "call_remote", "reliable")
+func _rpc_refund(fraction: float, _reason: String) -> void:
+	_apply_refund(fraction)
+
+
+func _apply_refund(fraction: float) -> void:
+	stats.refund_rx += 1
+	if _player and is_instance_valid(_player) and _player.has_method("refund_grenade"):
+		_player.refund_grenade(clampf(fraction, 0.0, 1.0))
 
 
 func _apply_heal(amount: int) -> void:

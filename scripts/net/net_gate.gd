@@ -96,6 +96,18 @@ static func grant_heal(target: Node, amount: int, reason: String = "") -> bool:
 	return true
 
 
+## G6 (host): a grenade cooldown refund the host decided (Requiem mark kill) for `target` (the host's player or a
+## remote avatar) -> that player's machine runs Player.refund_grenade(fraction) (its own refund cap). Co-op: true
+## (handled); solo: false -> the caller refunds as before.
+static func grant_grenade_refund(target: Node, fraction: float, reason: String = "") -> bool:
+	var n := net()
+	if n == null or not n.is_networked():
+		return false
+	if n.is_host():
+		n.match_players.host_refund(target, fraction, reason)
+	return true
+
+
 ## E7 (enemy.gd take_damage / apply_status, host side): note who caused this damage so kill / hit credit goes to
 ## the player behind `source` (a remote avatar's grenade, fire patch, chain shock ...). Solo: nothing.
 static func note_damage_source(e: Node, source: Node) -> void:

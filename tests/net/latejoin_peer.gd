@@ -1,6 +1,6 @@
 extends SceneTree
-## Multi-instance LATE JOIN test peer (Netz, phase 3a): the real main.tscn (rustwell_foundry: real doors D1-D6).
-## Run through tests/net/run_latejoin.sh: host Alice + Bob start a match; Alice opens D1, drops loot, starts round 1,
+## Multi-instance LATE JOIN test peer (Netz, phase 3a): the real main.tscn (rustwell_foundry by default; the door is the map's first door_id, or test door LJ1 on a doorless map such as arena).
+## Run through tests/net/run_latejoin.sh: host Alice + Bob start a match; Alice opens that door, drops loot, starts round 1,
 ## Bob goes down; Dan joins mid-round (spectates from the full world snapshot, spectate camera cycles), the round
 ## clears (Dan comes in at the break); Eve joins in the break (straight in). Prints "NETTEST: PASS|FAIL [name] ...".
 ## Args (after --): --role=host|client --name=N --port=P [--map=rustwell_foundry] [--timeout=180]
@@ -20,6 +20,7 @@ var spect: Array = [] ## spectate_changed [peer, name]
 var synced: Array = [] ## late_join_synced(spectating)
 var snap_counts: Array = []
 var party_states: Dictionary = {} ## name -> [states seen]
+var door_id := "" ## the map's first buyable door (sorted door_ids); "LJ1" = a test door on a map without doors (arena)
 
 
 func _initialize() -> void:
@@ -117,6 +118,31 @@ func _protect(on: bool) -> void:
 		main.player.set("invulnerable_t", 99999.0 if on else 0.0)
 
 
+## Every peer, right after load: the door this test buys. The map's own door_ids (rustwell D1..D6, lockout D1);
+## a map without MapDoors (the arena in main.tscn) gets the same test door "LJ1" on every peer, and the late-map-piece
+## path (apply_doors) opens it if the host's door state is already in.
+func _setup_door() -> Node:
+	var ids: Array = []
+	for d in get_root().get_tree().get_nodes_in_group("map_doors"):
+		if str(d.door_id) != "":
+			ids.append(str(d.door_id))
+	ids.sort()
+	if not ids.is_empty():
+		door_id = str(ids[0])
+		print("[%s] door: %s (map door_ids %s)" % [pname, door_id, ids])
+		return _door(door_id)
+	door_id = "LJ1"
+	var d = load("res://maps/common/map_door.gd").new()
+	d.name = "TestDoor_LJ1"
+	d.door_id = &"LJ1"
+	d.cost = 10
+	(main.map if main.get("map") else main).add_child(d)
+	d.global_position = Vector3(220, -50, 220)
+	print("[%s] door: %s (map %s has no MapDoors: test door)" % [pname, door_id, map_id])
+	Net.world.apply_doors()
+	return d
+
+
 func _door(id: String) -> Node:
 	for d in get_root().get_tree().get_nodes_in_group("map_doors"):
 		if str(d.door_id) == id:
@@ -171,12 +197,12 @@ func _host() -> void:
 	var bob := _peer("Bob")
 	await _sleep(1.0)
 	# --- world before the late join: D1 bought, a drop on the floor, round 1 running, Bob down
-	var d1 := _door("D1")
-	if check(d1 != null, "host: rustwell has door D1"):
+	var d1 := _setup_door()
+	if check(d1 != null, "host: door %s on %s" % [door_id, map_id]):
 		Net.award_points(1, int(d1.cost), "test")
 		await _sleep(0.3)
 		d1.interact(main.player)
-		check(d1.is_open and W.doors_open.has("%s/D1" % map_id), "host: bought D1 (key %s/D1)" % map_id)
+		check(d1.is_open and W.doors_open.has("%s/%s" % [map_id, door_id]), "host: bought %s (key %s/%s)" % [door_id, map_id, door_id])
 	var item = root.get_node("GearDB").roll_weapon("auto_rifle")
 	W.host_drop(item, main._player_spawn.origin + Vector3(0, 0.3, 2), false)
 	var drop_id: String = W.drops.keys().back()
@@ -261,6 +287,7 @@ func _client() -> void:
 	if not check(await _wait(_find_main, 150.0), "match scene loaded + match_started"):
 		return finish("load")
 	_protect(true)
+	_setup_door()
 	while not _done:
 		if not cmd_q.is_empty():
 			await _do(cmd_q.pop_front())
@@ -288,8 +315,8 @@ func _do(c: Dictionary) -> void:
 			check(c.zombies.all(func(n): return n in mine), "dan: the host's live zombies are here (%s)" % [c.zombies])
 			var z0 = main.zombies_root.get_node_or_null(NodePath(str(c.zombies[0]))) if c.zombies.size() else null
 			check(z0 != null and z0.has_meta("net_puppet") and hp_ok, "dan: snapshot zombies are puppets with the host's hp")
-			var d1 := _door("D1")
-			check(d1 != null and d1.is_open and Net.world.doors_open.has("%s/D1" % map_id), "dan: D1 open from the M13 door state (key %s/D1)" % map_id)
+			var d1 := _door(door_id)
+			check(d1 != null and d1.is_open and Net.world.doors_open.has("%s/%s" % [map_id, door_id]), "dan: %s open from the M13 door state (key %s/%s)" % [door_id, map_id, door_id])
 			check(Net.world.drops.has(str(c.drop)) and main.pickups_root.has_node(NodePath(str(c.drop))), "dan: the untaken drop %s is on the floor" % c.drop)
 			check(main.current_round == int(c.round) and Net.round_phase == "combat" and Net.current_round == int(c.round), "dan: round %d, phase combat" % int(c.round))
 			check(Net.get_points(1) == int(c.host_points) and int(main.player.points) == int(NetConfig.get_value("points.late_join_start")), "dan: everyone's points + own wallet %d (late_join_start)" % int(main.player.points))
@@ -335,7 +362,7 @@ func _client_final() -> void:
 		check(synced == [false], "eve: late_join_synced(spectating = false)")
 		check(P.life_of(Net.local_peer_id()) == "alive" and not bool(main.player.dead) and not P.spectate.active, "eve: straight in during the break, no spectate")
 		check(Net.round_phase == "break" and main.current_round == 1, "eve: round 1 break")
-		check(_door("D1") != null and _door("D1").is_open, "eve: D1 open")
+		check(_door(door_id) != null and _door(door_id).is_open, "eve: %s open" % door_id)
 		check(P.avatars.size() == 3, "eve: avatars for Alice, Bob, Dan (%d)" % P.avatars.size())
 	if pname == "Bob":
 		check(P.avatars.size() == 3 and P.avatars.has(_peer("Eve")), "bob: avatars for Alice, Dan, Eve")

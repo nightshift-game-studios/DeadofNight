@@ -1368,6 +1368,10 @@ func on_round_cleared(n: int) -> void:
 	if not is_networked() or not is_host():
 		return
 	_offers_closed.clear()
+	for id in match_players.late_spectators: # joined mid-round (spectated it): never block this break's Field Cards
+		_offers_closed[id] = true
+	for id in _late: # still loading in
+		_offers_closed[id] = true
 	_offers_since = Time.get_ticks_msec()
 	_offers_open = _match != null and is_instance_valid(_match) and bool(_match.get("field_cards_enabled")) and n >= 1
 	_rpc_round_state.rpc(n, "break", 0)
@@ -1504,7 +1508,8 @@ func forward_zombie_damage(enemy: Node, amount: float, hit_pos: Vector3 = Vector
 	return predicted
 
 
-## E3 (client puppet): statuses from skills (burn / slow / mark / rot) go to the host too. `source` is not sent.
+## E3 (client puppet): statuses from skills and grenades (data/net.json statuses.forwarded: burn / slow / mark / rot /
+## frost ...) go to the host too. `source` is not sent.
 func forward_zombie_status(enemy: Node, id: String, p: Dictionary) -> void:
 	if enemy == null or not is_networked() or is_host():
 		return
@@ -1521,12 +1526,18 @@ func _rpc_hit_claim(zombie_name: String, amount: float, hit_pos: Vector3, crit: 
 		handle_hit_claim(multiplayer.get_remote_sender_id(), zombie_name, amount, hit_pos, crit)
 
 
+## The enemy status ids a client may claim (data/net.json statuses.forwarded; Shiverglass "frost" included).
+func status_allowed(id: String) -> bool:
+	var lst = NetConfig.get_value("statuses.forwarded", ["burn", "slow", "mark", "rot", "frost"])
+	return lst is Array and (lst as Array).has(id)
+
+
 @rpc("any_peer", "call_remote", "reliable")
 func _rpc_status_claim(zombie_name: String, id: String, p: Dictionary) -> void:
 	if not is_host():
 		return
 	var z := _find_zombie(zombie_name)
-	if z and not bool(z.get("_dead")) and id in ["burn", "slow", "mark", "rot"]:
+	if z and not bool(z.get("_dead")) and status_allowed(id):
 		p["source"] = _avatar_for(multiplayer.get_remote_sender_id())
 		z.apply_status(id, p)
 
