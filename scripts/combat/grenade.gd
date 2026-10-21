@@ -62,12 +62,18 @@ var _rest_t: float = 0.0
 var _vortex_t: float = -1.0 ## Gravewell: pull time left (>= 0 while pulling)
 var _vortex_lead: bool = false
 var _staggered: Dictionary = {}
+var _net_held: bool = false ## NET G1: co-op visual copy: waits for the host's moments (net_event), own fuse + NET_GRACE as fallback
+var _net_fired: bool = false ## NET G1: the host's detonation already played on this copy
+const NET_GRACE := 1.0
+const NET_DETONATE_KINDS := ["blast", "fire_patch", "frost", "zap", "split", "pull_start", "leech"]
 
 
 static func throw_from(player: Node, grenade_data: Dictionary, origin: Vector3, dir: Vector3, inherit: Vector3) -> Grenade:
 	var vel := dir * float(grenade_data.get("throw_speed", 15.0)) + Vector3.UP * 3.0 + inherit * 0.5
 	var spec := make_spec(player, grenade_data, origin, vel, randi())
-	var p := ThrownProjectile.spawn(spec)
+	var p := NetGate.request_throw(spec) as ThrownProjectile # NET G5: co-op client -> visual copy now + the host validates and spawns the real one
+	if p == null:
+		p = ThrownProjectile.spawn(spec)
 	if p != null and p.body is Grenade:
 		return p.body as Grenade
 	if p != null:
@@ -166,6 +172,8 @@ func _ready() -> void:
 	_fuse = float(data.get("fuse", 1.5))
 	if _fuse <= 0.0: # impact grenades (Cinderjar): a fallback fuse in case it never touches anything
 		_fuse = float(data.get("max_fuse", 4.0))
+	var n := NetGate.net()
+	_net_held = not authoritative and n != null and n.is_networked() # NET G1
 	contact_monitor = true
 	max_contacts_reported = 4
 	body_entered.connect(_on_bounce)
@@ -350,6 +358,8 @@ func _on_bounce(body: Node) -> void:
 	if done:
 		return
 	var t := _type()
+	if _net_held and t in ["tallyhook", "cinderjar", "requiem_bell"]: # NET G1: the host's stick / impact / bounce arrive as events
+		return
 	if t == "tallyhook" and stuck_to == null and body.is_in_group("enemies") and not body.get("_dead"):
 		stick_to(body as Node3D, contact_point(body as Node3D))
 		return
@@ -389,18 +399,51 @@ func _physics_process(delta: float) -> void:
 		return
 	if _stick_t >= 0.0:
 		_stick_t -= delta
-		if _stick_t <= 0.0:
+		if _stick_t <= (-NET_GRACE if _net_held else 0.0):
 			_stick_t = -1.0
 			_zap()
 		return
-	if _type() == "requiem_bell" and not freeze: # came to rest early (wedged): toll anyway
+	if _type() == "requiem_bell" and not freeze and not _net_held: # came to rest early (wedged): toll anyway
 		_rest_t = _rest_t + delta if linear_velocity.length() < 0.4 else 0.0
 		if _rest_t >= 0.5:
 			_toll()
 			return
 	_fuse -= delta
-	if _fuse <= 0.0:
+	if _fuse <= (-NET_GRACE if _net_held else 0.0):
 		detonate()
+
+
+## NET G2: the host copy's `effect` (Net forwards it, node refs mapped to this machine) -> this visual copy plays the
+## same moment where the host had it. The first detonation kind detonates (visual paths only: not authoritative).
+func net_event(kind: String, d: Dictionary) -> void:
+	if authoritative or done:
+		return
+	var at = d.get("pos")
+	match kind:
+		"stick":
+			var z = d.get("target")
+			if z is Node3D and is_instance_valid(z):
+				stick_to(z, d.get("contact") if d.get("contact") is Vector3 else global_position)
+		"bell_bounce":
+			_net_snap(at)
+			_bell_bounce()
+		"toll":
+			_net_snap(at)
+			_toll()
+		_:
+			if _type() == "requiem_bell": # its blasts are the bounces (bell_bounce / toll above)
+				return
+			if kind in NET_DETONATE_KINDS and not _net_fired:
+				_net_fired = true
+				_net_held = false
+				_net_snap(at)
+				detonate()
+
+
+func _net_snap(at: Variant) -> void:
+	if at is Vector3 and stuck_to == null:
+		global_position = at
+		linear_velocity = Vector3.ZERO
 
 
 ## Fuse end (or impact): the type's effect. Public so tests and the cinderjar contact can call it.
@@ -786,7 +829,12 @@ func _leechbell() -> void:
 
 ## A heal orb reached its owner (host copy): heal them.
 static func orb_arrived(p: ThrownProjectile, _where: Vector3, target: Node, amount: float) -> void:
-	if p.is_visual_only or target == null or not is_instance_valid(target) or not target.has_method("heal"):
+	if p.is_visual_only or target == null or not is_instance_valid(target):
+		return
+	if NetGate.grant_heal(target, maxi(int(round(amount)), 1), "leechbell"): # NET G4: co-op -> the owner's machine heals
+		orbs_healed += amount
+		return
+	if not target.has_method("heal"):
 		return
 	target.call("heal", maxi(int(round(amount)), 1))
 	orbs_healed += amount
@@ -854,6 +902,9 @@ static func _requiem_died(e: Node) -> void:
 	if m.is_empty() or Time.get_ticks_msec() > int(m.until):
 		return
 	var o = instance_from_id(int(m.owner)) if int(m.owner) != 0 else null
+	if o is Node and is_instance_valid(o) and NetGate.grant_grenade_refund(o, float(m.refund), "requiem"): # NET G6
+		requiem_refunds += 1
+		return
 	if o is Node and is_instance_valid(o) and o.has_method("refund_grenade"):
 		o.call("refund_grenade", float(m.refund))
 		requiem_refunds += 1
