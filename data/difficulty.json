@@ -1,6 +1,6 @@
 {
 	"version": 1,
-	"_help": "Difficulty profiles (Skillz). A map picks one through data/maps.json -> maps[].difficulty (arena=easy, rustwell_foundry=medium, lockout_substation=hard; a missing field means 'default'). Difficulty.apply_to_main(main) scales main.gd's wave exports: *_mult multiply the base value, *_add add to it. 'easy' is exactly the current tuning (all 1.0 / 0), so the Arena plays as before. wave: zombie stats and spawning. variants: wave_mix_round_offset = use the zombies.json wave_mix of round n+offset (Soldiers show up sooner); weight_mult multiplies a variant's weight. specials (art pass 3: bloated / crawler / riot) = share of all spawns from from_round: weight + per_round x (rounds since), capped at max; the regular mix fills the rest (Difficulty.spawn_weights; walkers stay the bulk). share_floor {variant: {share, from: [...]}} = that variant never drops below `share` of all spawns; the gap is taken proportionally from the `from` variants (Hard: plain walkers >= 25%, paid by Soldiers + specials). bloater_burst_player_cap = most HP one Bloater burst can take from the player on this profile (each burst capped on its own; falls back to zombies.json bloated.behavior.player_damage_cap). Specials only spawn through MAIN_HOOKS §15a (Difficulty.pick_spawn_variant), which also gives them their behaviour script. boss: cadence for data/bosses.json (first_round, every N rounds, count = base + per_cycle x cycles so far, capped at max_count; hp_mult/damage_mult on top of the boss's own stats). rewards: xp_mult (match XP), loot_rarity_bias (each rarity tier's drop weight x (1+bias)^tier: 0 = unchanged, 0.3 = Mythic weight x2.86), rare_currency_drop_mult (read by the Armory currency drop, coming with attachments), points_mult (kept at 1.0; points are tuned in economy.json).",
+	"_help": "Difficulty profiles (Skillz). A map picks one through data/maps.json -> maps[].difficulty (arena=easy, rustwell_foundry=medium, lockout_substation=hard; a missing field means 'default'). Difficulty.apply_to_main(main) scales main.gd's wave exports: *_mult multiply the base value, *_add add to it. 'easy' is exactly the current tuning (all 1.0 / 0), so the Arena plays as before. wave: zombie stats and spawning. variants: wave_mix_round_offset = use the zombies.json wave_mix of round n+offset (Soldiers show up sooner); weight_mult multiplies a variant's weight. specials (art pass 3: bloated / crawler / riot; Skillz §22: gallspitter, the ranged Gallspitter) = share of all spawns from from_round: weight + per_round x (rounds since), capped at max; the regular mix fills the rest (Difficulty.spawn_weights; walkers stay the bulk). share_floor {variant: {share, from: [...]}} = that variant never drops below `share` of all spawns; the gap is taken proportionally from the `from` variants (Hard: plain walkers >= 25%, paid by Soldiers + specials). bloater_burst_player_cap = most HP one Bloater burst can take from the player on this profile (each burst capped on its own; falls back to zombies.json bloated.behavior.player_damage_cap). Specials only spawn through MAIN_HOOKS §15a (Difficulty.pick_spawn_variant), which also gives them their behaviour script. boss: cadence for data/bosses.json (first_round, every N rounds, count = base + per_cycle x cycles so far, capped at max_count; hp_mult/damage_mult on top of the boss's own stats). rewards: xp_mult (match XP), loot_rarity_bias (each rarity tier's drop weight x (1+bias)^tier: 0 = unchanged, 0.3 = Mythic weight x2.86), rare_currency_drop_mult (read by the Armory currency drop, coming with attachments), points_mult (kept at 1.0; points are tuned in economy.json).",
 	"default": "easy",
 	"profiles": {
 		"easy": {
@@ -17,7 +17,8 @@
 				"specials": {
 					"crawler": {"from_round": 3, "weight": 0.04, "per_round": 0.005, "max": 0.07},
 					"bloated": {"from_round": 4, "weight": 0.03, "per_round": 0.005, "max": 0.06},
-					"riot": {"from_round": 8, "weight": 0.03, "per_round": 0.005, "max": 0.06}
+					"riot": {"from_round": 8, "weight": 0.03, "per_round": 0.005, "max": 0.06},
+					"gallspitter": {"from_round": 6, "weight": 0.025, "per_round": 0.004, "max": 0.05}
 				}},
 			"boss": {"first_round": 10, "every": 10, "base_count": 1, "per_cycle": 0, "max_count": 1, "hp_mult": 1.0, "damage_mult": 1.0},
 			"rewards": {"xp_mult": 1.0, "loot_rarity_bias": 0.0, "rare_currency_drop_mult": 1.0, "points_mult": 1.0}
@@ -36,7 +37,8 @@
 				"specials": {
 					"bloated": {"from_round": 5, "weight": 0.06, "per_round": 0.008, "max": 0.10},
 					"crawler": {"from_round": 5, "weight": 0.07, "per_round": 0.01, "max": 0.12},
-					"riot": {"from_round": 5, "weight": 0.05, "per_round": 0.008, "max": 0.09}
+					"riot": {"from_round": 5, "weight": 0.05, "per_round": 0.008, "max": 0.09},
+					"gallspitter": {"from_round": 5, "weight": 0.04, "per_round": 0.006, "max": 0.06}
 				}},
 			"boss": {"first_round": 8, "every": 8, "base_count": 1, "per_cycle": 0, "max_count": 2, "hp_mult": 1.15, "damage_mult": 1.1},
 			"rewards": {"xp_mult": 1.25, "loot_rarity_bias": 0.15, "rare_currency_drop_mult": 1.35, "points_mult": 1.0}
@@ -51,12 +53,13 @@
 				"count_mult": 1.3, "count_ramp_mult": 1.3,
 				"spawn_interval_mult": 0.8, "max_alive_add": 4
 			},
-			"variants": {"wave_mix_round_offset": 2, "bloater_burst_player_cap": 65, "weight_mult": {"worker": 1.3, "soldier": 2.5},
-				"share_floor": {"city": {"share": 0.25, "from": ["soldier", "crawler", "bloated", "riot"]}},
+			"variants": {"wave_mix_round_offset": 2, "bloater_burst_player_cap": 65, "weight_mult": {"worker": 1.3, "soldier": 2.8},
+				"share_floor": {"city": {"share": 0.25, "from": ["soldier", "crawler", "bloated", "riot", "gallspitter"]}},
 				"specials": {
-					"crawler": {"from_round": 2, "weight": 0.09, "per_round": 0.01, "max": 0.14},
-					"bloated": {"from_round": 3, "weight": 0.08, "per_round": 0.008, "max": 0.12},
-					"riot": {"from_round": 4, "weight": 0.07, "per_round": 0.008, "max": 0.11}
+					"crawler": {"from_round": 2, "weight": 0.09, "per_round": 0.01, "max": 0.144},
+					"bloated": {"from_round": 3, "weight": 0.08, "per_round": 0.008, "max": 0.123},
+					"riot": {"from_round": 4, "weight": 0.07, "per_round": 0.008, "max": 0.113},
+					"gallspitter": {"from_round": 4, "weight": 0.05, "per_round": 0.006, "max": 0.075}
 				}},
 			"boss": {"first_round": 6, "every": 5, "base_count": 1, "per_cycle": 1, "max_count": 3, "hp_mult": 1.3, "damage_mult": 1.2},
 			"rewards": {"xp_mult": 1.6, "loot_rarity_bias": 0.3, "rare_currency_drop_mult": 1.75, "points_mult": 1.0}

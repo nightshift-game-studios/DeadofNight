@@ -1,0 +1,313 @@
+class_name ThrownProjectile
+extends Node3D
+## Thrown projectile base (Skillz, DESIGN §22 / MAIN_HOOKS §22): a slow, visible, ballistic throw (the Gallspitter's
+## bile glob today, grenades later). Types live in data/projectiles.json by type_id.
+## Only ever created through ThrownProjectile.spawn(spec), the co-op contract agreed with Netz:
+##   spec = {type_id: StringName, variant: StringName (&"" default), rarity: int (Rarity, 0 for enemy shots),
+##           pos: Vector3, vel: Vector3, owner_id: int (enemy / player instance id, or net id), seed: int}
+## is_visual_only: a client copy. It flies, splashes and leaves the puddle visual, but never damages, slows or
+## collides with anyone (the host's copy does).
+## Motion: own gravity (types[].gravity), stepped in _physics_process. Each step sweeps prev -> next against the world
+## (layer 1) and against every player's capsule (collision_radius), so a fast frame can't tunnel through.
+
+const DATA_PATH := "res://data/projectiles.json"
+const WORLD_MASK := 1
+const HazardScr := preload("res://scripts/projectiles/gall_puddle.gd")
+
+signal impacted(p: ThrownProjectile, where: Vector3, direct_hit: Node) ## direct_hit = the player hit, or null
+
+static var _data: Dictionary = {}
+static var spawned_total: int = 0 ## tests / stats
+static var live: Array = [] ## projectiles in flight (tests, debug draw)
+
+var type_id: StringName = &""
+var variant: StringName = &""
+var rarity: int = 0
+var owner_id: int = 0
+var seed_value: int = 0
+var spec: Dictionary = {}
+var def: Dictionary = {}
+var is_visual_only: bool = false
+var velocity: Vector3 = Vector3.ZERO
+var gravity: float = 6.0
+var collision_radius: float = 0.25
+var visual_radius: float = 0.18
+var age: float = 0.0
+var lifetime: float = 6.0
+var done: bool = false
+var direct_hit: Node = null ## who it hit (tests)
+var impact_pos: Vector3 = Vector3.INF
+var hazard: Node3D = null
+var start_pos: Vector3
+var _visual: Node3D
+var _loop: Node
+
+
+# ------------------------------------------------------------------ data
+
+static func data() -> Dictionary:
+	if _data.is_empty():
+		var f := FileAccess.open(DATA_PATH, FileAccess.READ)
+		var d = JSON.parse_string(f.get_as_text()) if f else null
+		_data = d if d is Dictionary else {}
+	return _data
+
+
+static func reload_data(forced: Dictionary = {}) -> void:
+	_data = forced
+
+
+## A type's settings with the variant's overrides merged on top. {} for an unknown type.
+static func type_def(id: StringName, var_id: StringName = &"") -> Dictionary:
+	var t: Dictionary = data().get("types", {}).get(str(id), {})
+	if t.is_empty():
+		return {}
+	var out := t.duplicate(true)
+	if var_id != &"":
+		out.merge(t.get("variants", {}).get(str(var_id), {}), true)
+	return out
+
+
+## Launch velocity for a lob from `from` that lands on `to` with the type's horizontal launch_speed and gravity.
+## Flight time = flat distance / launch_speed.
+static func lob_velocity(from: Vector3, to: Vector3, id: StringName = &"bile_glob") -> Vector3:
+	var d := type_def(id)
+	var hs := float(d.get("launch_speed", 9.0))
+	var g := float(d.get("gravity", 6.0))
+	var flat := Vector3(to.x - from.x, 0.0, to.z - from.z)
+	var dist := flat.length()
+	var t := maxf(dist / hs, 0.2)
+	var vy := ((to.y - from.y) + 0.5 * g * t * t) / t
+	return (flat.normalized() * hs if dist > 0.01 else Vector3.ZERO) + Vector3(0.0, vy, 0.0)
+
+
+## Points along that lob (for clearance checks / debug draw), `n` segments.
+static func lob_points(from: Vector3, vel: Vector3, flight_t: float, id: StringName = &"bile_glob", n: int = 10) -> PackedVector3Array:
+	var g := float(type_def(id).get("gravity", 6.0))
+	var pts := PackedVector3Array()
+	for i in n + 1:
+		var t := flight_t * float(i) / float(n)
+		pts.append(from + vel * t + Vector3(0.0, -0.5 * g * t * t, 0.0))
+	return pts
+
+
+## The one way to make a projectile. Returns null for an unknown type or no scene tree.
+static func spawn(spec_in: Dictionary) -> ThrownProjectile:
+	var id := StringName(str(spec_in.get("type_id", "")))
+	var var_id := StringName(str(spec_in.get("variant", "")))
+	var d := type_def(id, var_id)
+	var tree := Engine.get_main_loop() as SceneTree
+	if d.is_empty() or tree == null:
+		return null
+	var p := ThrownProjectile.new()
+	p.type_id = id
+	p.variant = var_id
+	p.rarity = int(spec_in.get("rarity", 0))
+	p.owner_id = int(spec_in.get("owner_id", 0))
+	p.seed_value = int(spec_in.get("seed", 0))
+	p.spec = spec_in.duplicate()
+	p.def = d
+	p.velocity = spec_in.get("vel", Vector3.ZERO)
+	p.is_visual_only = bool(spec_in.get("visual_only", false))
+	# NETZ phase-3 hook P1 (MAIN_HOOKS §22): the host-only branch point. Solo and the co-op host make the authoritative
+	# copy here (damage, puddle effects); Netz adds the replication of `spec_in` to every peer at this line, and peers
+	# call spawn() with visual_only = true. A non-host peer can never make an authoritative projectile: in co-op its
+	# copy is visual-only even if a caller forgot the flag.
+	var n := NetGate.net()
+	if n != null and n.is_networked() and not n.is_host():
+		p.is_visual_only = true
+	var parent: Node = tree.current_scene if tree.current_scene else tree.root
+	parent.add_child(p)
+	p.global_position = spec_in.get("pos", Vector3.ZERO)
+	p.start_pos = p.global_position
+	spawned_total += 1
+	return p
+
+
+# ------------------------------------------------------------------ node
+
+func _ready() -> void:
+	name = "Proj_%s_%d" % [type_id, spawned_total]
+	add_to_group("thrown_projectiles")
+	live.append(self)
+	gravity = float(def.get("gravity", 6.0))
+	collision_radius = float(def.get("collision_radius", 0.25))
+	visual_radius = float(def.get("visual_radius", 0.18))
+	lifetime = float(def.get("lifetime", 6.0))
+	_build_visual()
+	var a: Dictionary = def.get("audio", {})
+	var sfx := get_node_or_null("/root/Sfx")
+	if sfx and str(a.get("flight_loop", "")) != "":
+		_loop = sfx.attach_loop(str(a.flight_loop), self)
+
+
+func _exit_tree() -> void:
+	live.erase(self)
+
+
+func _build_visual() -> void:
+	var v: Dictionary = def.get("visual", {})
+	var path := str(v.get("model", ""))
+	if path != "" and ResourceLoader.exists(path):
+		var sc := load(path) as PackedScene
+		if sc:
+			_visual = sc.instantiate() as Node3D
+	if _visual == null: # placeholder until Desi's bile_glob.glb lands
+		var mi := MeshInstance3D.new()
+		var sm := SphereMesh.new()
+		sm.radius = visual_radius
+		sm.height = visual_radius * 2.0
+		sm.radial_segments = 16
+		sm.rings = 8
+		mi.mesh = sm
+		var mat := StandardMaterial3D.new()
+		var c: Array = v.get("color", [0.62, 0.78, 0.16, 0.95])
+		mat.albedo_color = Color(c[0], c[1], c[2], c[3] if c.size() > 3 else 1.0)
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA if mat.albedo_color.a < 1.0 else BaseMaterial3D.TRANSPARENCY_DISABLED
+		var e: Array = v.get("emission", [0.42, 0.62, 0.06])
+		mat.emission_enabled = true
+		mat.emission = Color(e[0], e[1], e[2])
+		mat.emission_energy_multiplier = float(v.get("emission_energy", 1.6))
+		mat.roughness = 0.2
+		mi.material_override = mat
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_visual = mi
+	_visual.name = "Visual"
+	add_child(_visual)
+	var light := OmniLight3D.new() # keeps it readable at night / at range
+	light.name = "Glow"
+	light.light_color = Color(0.55, 0.85, 0.2)
+	light.light_energy = 0.6
+	light.omni_range = 2.2
+	light.shadow_enabled = false
+	add_child(light)
+
+
+func _physics_process(delta: float) -> void:
+	if done:
+		return
+	age += delta
+	var from := global_position
+	var vel0 := velocity
+	velocity.y -= gravity * delta
+	var to := from + (vel0 + velocity) * 0.5 * delta
+	# players first (a glob that clips a player's head and then a wall hits the player)
+	if bool(def.get("hits_players", true)):
+		var pl := _player_on_segment(from, to)
+		if pl:
+			_impact(_closest_on_segment(from, to, (pl as Node3D).global_position + Vector3(0, 0.9, 0)), pl, Vector3.UP)
+			return
+	var hit := _world_hit(from, to)
+	if not hit.is_empty():
+		_impact(hit.position, null, hit.normal)
+		return
+	global_position = to
+	if _visual and velocity.length() > 0.1:
+		_visual.look_at(global_position + velocity, Vector3.UP if absf(velocity.normalized().y) < 0.99 else Vector3.FORWARD)
+	if age >= lifetime or global_position.y < -60.0:
+		_impact(global_position, null, Vector3.UP)
+
+
+## Sphere sweep from `a` to `b` against the world (layer 1), as a ray offset by the collision radius along the motion.
+func _world_hit(a: Vector3, b: Vector3) -> Dictionary:
+	var space := get_world_3d().direct_space_state
+	var dir := (b - a)
+	var len := dir.length()
+	if len < 0.0001:
+		return {}
+	var q := PhysicsRayQueryParameters3D.create(a, b + dir / len * collision_radius, WORLD_MASK)
+	q.collide_with_areas = false
+	var r := space.intersect_ray(q)
+	if r.is_empty():
+		return {}
+	var owner_node := instance_from_id(owner_id) if owner_id != 0 else null
+	if owner_node != null and r.collider == owner_node:
+		return {}
+	r.position = (r.position as Vector3) - dir / len * collision_radius
+	return r
+
+
+static func _closest_on_segment(a: Vector3, b: Vector3, p: Vector3) -> Vector3:
+	var ab := b - a
+	var t := clampf((p - a).dot(ab) / maxf(ab.length_squared(), 1e-8), 0.0, 1.0)
+	return a + ab * t
+
+
+## Distance between two segments (a0-a1, b0-b1).
+static func seg_seg_dist(a0: Vector3, a1: Vector3, b0: Vector3, b1: Vector3) -> float:
+	var best := INF
+	for i in 9:
+		var p := a0.lerp(a1, float(i) / 8.0)
+		best = minf(best, p.distance_to(_closest_on_segment(b0, b1, p)))
+	var q := _closest_on_segment(a0, a1, _closest_on_segment(b0, b1, a0.lerp(a1, 0.5)))
+	best = minf(best, q.distance_to(_closest_on_segment(b0, b1, q)))
+	return best
+
+
+## Every player body this projectile can hit (co-op: local + remote avatars, NetGate E6 list).
+func targets() -> Array:
+	var lst = NetGate.players_or_null()
+	if lst is Array:
+		return lst
+	return get_tree().get_nodes_in_group("player")
+
+
+func _player_on_segment(a: Vector3, b: Vector3) -> Node:
+	for pl in targets():
+		if not (pl is Node3D) or not is_instance_valid(pl) or pl.get("dead"):
+			continue
+		var r := 0.4
+		var h := 1.8
+		var cs := (pl as Node).get_node_or_null("CollisionShape3D") as CollisionShape3D
+		if cs and cs.shape is CapsuleShape3D:
+			r = (cs.shape as CapsuleShape3D).radius
+			h = (cs.shape as CapsuleShape3D).height
+		var mid: Vector3 = (pl as Node3D).global_position + Vector3(0, h * 0.5, 0)
+		if cs:
+			mid = cs.global_position
+		var half := maxf(h * 0.5 - r, 0.0)
+		var c0 := mid - Vector3(0, half, 0)
+		var c1 := mid + Vector3(0, half, 0)
+		if seg_seg_dist(a, b, c0, c1) <= r + collision_radius:
+			return pl
+	return null
+
+
+func _impact(where: Vector3, hit_player: Node, normal: Vector3) -> void:
+	done = true
+	impact_pos = where
+	direct_hit = hit_player
+	global_position = where
+	var owner_node := instance_from_id(owner_id) if owner_id != 0 else null
+	if owner_node != null and not is_instance_valid(owner_node):
+		owner_node = null
+	var a: Dictionary = def.get("audio", {})
+	var sfx := get_node_or_null("/root/Sfx")
+	if hit_player and not is_visual_only:
+		var dmg := int(def.get("direct_damage", 10))
+		if owner_node and owner_node.has_method("projectile_damage"):
+			dmg = int(owner_node.projectile_damage(type_id))
+		if hit_player.has_method("take_damage"):
+			hit_player.call("take_damage", dmg, owner_node)
+		if sfx and str(a.get("direct_hit", "")) != "":
+			sfx.play_at(str(a.direct_hit), where)
+	if sfx and str(a.get("impact", "")) != "":
+		sfx.play_at(str(a.impact), where)
+	var imp: Dictionary = def.get("impact", {})
+	if str(imp.get("hazard", "")) != "":
+		var ground := _ground_below(where, normal, float(imp.get("max_drop", 8.0)))
+		if ground != Vector3.INF:
+			hazard = HazardScr.spawn(get_parent(), ground, imp, def, owner_node, is_visual_only)
+	impacted.emit(self, where, hit_player)
+	if _loop and is_instance_valid(_loop):
+		_loop.queue_free()
+	queue_free()
+
+
+## Where the hazard lies: straight down from the impact (a wall / ceiling splash drips to the floor below).
+func _ground_below(where: Vector3, normal: Vector3, max_drop: float) -> Vector3:
+	var space := get_world_3d().direct_space_state
+	var start := where + normal * 0.05 + Vector3(0, 0.3, 0)
+	var q := PhysicsRayQueryParameters3D.create(start, start - Vector3(0, max_drop + 0.3, 0), WORLD_MASK)
+	var r := space.intersect_ray(q)
+	return r.position if not r.is_empty() else Vector3.INF

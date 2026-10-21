@@ -54,6 +54,11 @@ const MIX := {
 	"player_death": [-2.0, 0.0, "SFX"], "melee_swing": [-6.0, 0.06, "SFX"], "dash": [-6.0, 0.05, "SFX"],
 	"adrenaline_boost": [-4.0, 0.0, "SFX"], "frag_throw": [-8.0, 0.06, "SFX"], "frag_bounce": [-9.0, 0.10, "SFX"],
 	"tremor_charge_pulse_loop": [-3.0, 0.0, "SFX"], "heartbeat_low_health_loop": [-5.0, 0.0, "SFX"],
+	"gallspitter_windup": [-5.0, 0.05, "SFX"], "gallspitter_spit": [-4.0, 0.07, "SFX"], ## Skillz §22 / Audi-0
+	"bile_glob_travel_loop": [-8.0, 0.0, "SFX"], "bile_glob_impact": [-3.0, 0.08, "SFX"],
+	"gall_puddle_sizzle": [-7.0, 0.04, "SFX"], "gall_puddle_sizzle_loop": [-13.0, 0.0, "SFX"],
+	"gallspitter_idle": [-8.0, 0.08, "SFX"], "gallspitter_aggro": [-4.0, 0.07, "SFX"], "gallspitter_swipe": [-6.0, 0.07, "SFX"],
+	"gallspitter_hurt": [-5.5, 0.08, "SFX"], "gallspitter_death": [-3.0, 0.06, "SFX"], ## 9bef360 voices, same mix as the walker's
 	"hitmarker": [-4.0, 0.04, "UI"],
 	"round_start_stinger": [-2.0, 0.0, "UI"], "round_end_stinger": [-2.0, 0.0, "UI"], "game_over_sting": [-1.0, 0.0, "UI"],
 	"menu_open": [-7.0, 0.02, "UI"], "menu_close": [-7.0, 0.02, "UI"], "ui_hover": [-15.0, 0.04, "UI"],

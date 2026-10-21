@@ -1,0 +1,42 @@
+{
+	"_help": "Thrown projectiles by type_id (Skillz, DESIGN §22 / MAIN_HOOKS §22). Spawned only through ThrownProjectile.spawn(spec) with spec = {type_id, variant, rarity, pos, vel, owner_id, seed} (Netz co-op contract; grenades will reuse it). Motion: ballistic, gravity m/s^2 (its own, not the world's: a slow, readable lob). launch_speed = horizontal speed in m/s, so flight time = range / launch_speed. collision_radius m: what touches the world and players; visual_radius m: the drawn glob. direct_damage: HP on a direct hit when the owner has no projectile_damage(type_id) (the Gallspitter scales it from its wave damage, zombies.json gallspitter.behavior.glob_damage_mult). lifetime s, then it pops where it is. impact.hazard: a ground hazard spawned where it lands (radius m, duration s, dps HP/s while inside, ticked every tick s; slow = player move speed -x, strongest slow wins; one gall puddle at a time damages a player). visual.model: Desi's GLB by path (placeholder sphere if missing); puddle_model_radius = the radius the puddle GLB is authored at (scaled to impact.radius); visual.color / emission: the placeholder. variants: per-variant overrides (none yet, grenades will add some).",
+	"types": {
+		"bile_glob": {
+			"display_name": "Bile Glob",
+			"launch_speed": 9.0,
+			"gravity": 6.0,
+			"collision_radius": 0.25,
+			"visual_radius": 0.18,
+			"direct_damage": 14,
+			"lifetime": 6.0,
+			"hits_players": true,
+			"hits_enemies": false,
+			"impact": {
+				"hazard": "gall_puddle",
+				"radius": 2.5,
+				"duration": 4.0,
+				"dps": 4.0,
+				"tick": 0.5,
+				"slow": 0.25,
+				"max_drop": 8.0
+			},
+			"visual": {
+				"model": "res://assets/models/zombies/bile_glob.glb",
+				"puddle_model": "res://assets/models/zombies/gall_puddle.glb",
+				"puddle_model_radius": 2.5,
+				"color": [0.62, 0.78, 0.16, 0.95],
+				"emission": [0.42, 0.62, 0.06],
+				"emission_energy": 1.6,
+				"trail": true
+			},
+			"audio": {
+				"flight_loop": "bile_glob_travel_loop",
+				"impact": "bile_glob_impact",
+				"direct_hit": "bile_glob_hit_player",
+				"puddle": "gall_puddle_sizzle",
+				"puddle_loop": "gall_puddle_sizzle_loop"
+			},
+			"variants": {}
+		}
+	}
+}

@@ -1,6 +1,6 @@
 extends SceneTree
 ## Zombie navigation course test (Skillz, DESIGN §18 / MAIN_HOOKS §17).
-##   godot --headless --path . -s res://tests/ai_nav_test.gd [-- --baseline] [-- --maps=arena,rustwell_foundry] [-- --realtime]
+##   godot --headless --path . -s res://tests/ai_nav_test.gd [-- --skip-ranged] [-- --baseline] [-- --maps=arena,rustwell_foundry] [-- --realtime]
 ## Runs zombies of every variant (walker / worker / soldier / crawler / bloated / riot / echo add) and a boss through ramp,
 ## stair and obstacle courses on Arena, Rustwell Foundry, Lockout Substation and the synthetic course
 ## (tests/ai_nav_course.tscn). The player stands at each course's goal (invulnerable); zombies start at the course's starts.
@@ -645,6 +645,8 @@ func _run() -> void:
 				await _boss_avoid_checks(main)
 		for c in COURSES[map_id]:
 			await _run_course(main, map_id, c)
+		if _arg("skip-ranged") == "" and not baseline:
+			await _ranged_checks(main, map_id) # Skillz §22: Gallspitter standpoint walks on every map
 		main.queue_free()
 		current_scene = null
 		await wait(5)
@@ -670,3 +672,67 @@ func _run() -> void:
 			print("  " + l)
 	print("ai_nav_test: %d passed, %d failed" % [_passes, _fails])
 	quit(_fails)
+
+
+# ------------------------------------------------------------------ Skillz §22: ranged (Gallspitter) checkpoints
+
+## The Gallspitter doesn't walk up to the player, so it isn't in KINDS: on each map it starts at the first two courses'
+## starts with the player at the goal and must, within RANGED_TIME s, never stand still > STILL_MAX s while it wants to
+## walk (wants_move(): approach / standpoint walk / retreat) and end up shooting (at least one spit) from 8-22 m.
+const RANGED_TIME := 20.0
+const RANGED_SCRIPT := "res://scripts/enemies/variants/gallspitter.gd"
+
+
+func _ranged_checks(main: Node, map_id: String) -> void:
+	if not ResourceLoader.exists(RANGED_SCRIPT) or ZombieVariants.get_variant("gallspitter").is_empty():
+		return
+	var player: Node3D = main.player
+	var n := 0
+	for c in COURSES[map_id]:
+		if n >= 2 or c.has("vias"):
+			continue
+		n += 1
+		player.global_position = c.goal
+		player.velocity = Vector3.ZERO
+		player.set("invulnerable_t", 1.0e9)
+		await wait(10)
+		var goal: Vector3 = player.global_position
+		var zs: Array = []
+		for s in c.starts.slice(0, 2):
+			zs.append(_spawn(main, "gallspitter", s))
+		var still: Array = []
+		var last: Array = []
+		for z in zs:
+			still.append(0.0)
+			last.append(z.global_position)
+		var worst := 0.0
+		for i in int(RANGED_TIME / STEP):
+			await physics_frame
+			player.global_position = goal
+			for k in zs.size():
+				var z = zs[k]
+				if not is_instance_valid(z):
+					continue
+				if z.wants_move() and z.global_position.distance_to(last[k]) < STILL_EPS:
+					still[k] += STEP
+				else:
+					still[k] = 0.0
+					last[k] = z.global_position
+				worst = maxf(worst, still[k])
+		var spits := 0
+		var shooters := 0
+		var modes: Array = []
+		for z in zs:
+			if not is_instance_valid(z):
+				continue
+			spits += int(z.spits)
+			shooters += 1 if int(z.spits) > 0 else 0
+			var d := Vector2(z.global_position.x - goal.x, z.global_position.z - goal.z).length()
+			modes.append("%s %.1fm %d spits %d hops" % [z.mode_name(), d, int(z.spits), int(z.hops)])
+			z.queue_free()
+		check(worst < STILL_MAX, "%s/%s ranged: Gallspitters never stall (worst still %.1f s) [%s]" % [map_id, c.name, worst, ", ".join(modes)])
+		check(shooters == zs.size(), "%s/%s ranged: every Gallspitter gets a shot off within %.0f s (%d/%d, %d spits)" % [map_id, c.name, RANGED_TIME, shooters, zs.size(), spits])
+		_checkpoints.append("%s ranged_%s: worst still %.1fs, %d/%d shooting, %d spits [%s]" % [map_id, c.name, worst, shooters, zs.size(), spits, ", ".join(modes)])
+		for p in root.get_tree().get_nodes_in_group("thrown_projectiles") + root.get_tree().get_nodes_in_group("gall_puddles"):
+			p.queue_free()
+		await wait(5)

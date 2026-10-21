@@ -117,7 +117,7 @@ func _run() -> void:
 
 # ------------------------------------------------------------------ data
 func _data() -> void:
-	check(ZombieVariants.ids().size() == 6, "zombies.json: 6 variants (%s)" % [ZombieVariants.ids()])
+	check(ZombieVariants.ids().size() == 7, "zombies.json: 7 variants (%s)" % [ZombieVariants.ids()])
 	for id in ["bloated", "crawler", "riot"]:
 		var v := ZombieVariants.get_variant(id)
 		check(bool(v.get("special")) and ResourceLoader.exists(ZombieVariants.script_path(id)) and ZombieVariants.scene(id) != null
@@ -166,7 +166,7 @@ func _weights() -> void:
 		var h: float = D.spawn_share(vid, 12, "hard")
 		check(e < m and m <= h + 1e-6, "round 12 %s share easy %.3f < medium %.3f <= hard %.3f" % [vid, e, m, h])
 		check(D.spawn_share(vid, 6, "hard") > D.spawn_share(vid, 6, "medium"), "round 6 %s: hard %.3f > medium %.3f (sooner, ramps faster)" % [vid, D.spawn_share(vid, 6, "hard"), D.spawn_share(vid, 6, "medium")])
-	check(D.spawn_share("bloated", 30, "easy") <= 0.06 + 1e-6 and D.spawn_share("crawler", 30, "hard") <= 0.14 + 1e-6, "shares cap at max")
+	check(D.spawn_share("bloated", 30, "easy") <= 0.06 + 1e-6 and D.spawn_share("crawler", 30, "hard") <= 0.144 + 1e-6, "shares cap at max")
 	# tuning pass: Hard round 12 plain walkers ~25% (pulled from Soldiers + specials)
 	var hw: Dictionary = D.spawn_weights(12, "hard")
 	var hsp: float = float(hw.get("bloated", 0.0)) + float(hw.get("crawler", 0.0)) + float(hw.get("riot", 0.0))
