@@ -267,6 +267,11 @@ func receive_event(net_id: int, kind: String, data: Dictionary) -> bool:
 
 
 # ------------------------------------------------------------------ client throws (grenades)
+## A variant's data rarity: the Rarity int, or its id ("rare", as in data/grenades.json).
+func _rarity_int(v: Variant) -> int:
+	return Rarity.IDS.find(str(v).to_lower()) if v is String or v is StringName else int(v)
+
+
 ## data/net.json projectiles.cooldown_types: player-thrown types on a cooldown (grenades) -> grenade_min_interval_s.
 func _cooldown_type(type_id: StringName) -> bool:
 	var lst = NetConfig.get_value("projectiles.cooldown_types", ["grenade"])
@@ -314,9 +319,9 @@ func host_throw(peer_id: int, tx: Dictionary) -> String:
 		why = "no_projectiles"
 	elif def.is_empty():
 		why = "unknown_type"
-	elif spec.variant != &"" and not (def.get("variants", {}) as Dictionary).has(str(spec.variant)):
+	elif spec.variant != &"" and def.get("variants") is Dictionary and not (def.variants as Dictionary).is_empty() and not (def.variants as Dictionary).has(str(spec.variant)):
 		why = "unknown_variant"
-	elif def.has("rarity") and int(def.rarity) != int(spec.rarity):
+	elif def.has("rarity") and _rarity_int(def.rarity) != int(spec.rarity):
 		why = "wrong_rarity"
 	elif int(spec.rarity) < 0 or int(spec.rarity) >= Rarity.IDS.size():
 		why = "wrong_rarity"

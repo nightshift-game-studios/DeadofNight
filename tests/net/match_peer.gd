@@ -388,7 +388,7 @@ func _host_grenades(bob: int, cara: int, z_hint) -> void:
 		print("[%s] SKIP  grenades: no P1 line / no 'grenade' type in this tree" % pname)
 		return
 	var vdefs: Dictionary = PS.type_def(&"grenade").get("variants", {})
-	var rook_r := int(vdefs.get("rookery", {}).get("rarity", 3))
+	var rook_r: int = NP._rarity_int(vdefs.get("rookery", {}).get("rarity", 2))
 	var ok0: int = NP.stats.throw_ok
 	var ref0: int = NP.stats.throw_refused
 	Net.broadcast_event(&"t_cmd", bob, {"op": "gthrow", "rarity": rook_r})
