@@ -60,6 +60,54 @@ static func set_active(id: String) -> void:
 	_active_id = id if is_valid(id) else ""
 
 
+## difficulty.json -> wave_base (MAIN_KEYS only; "_" keys and _previous dropped). {} = main.gd's exports as they are.
+static func wave_base() -> Dictionary:
+	var out := {}
+	var wb = data().get("wave_base", {})
+	if typeof(wb) == TYPE_DICTIONARY:
+		for k in wb:
+			if str(k) in MAIN_KEYS:
+				out[str(k)] = wb[k]
+	return out
+
+
+## Zombie stats of round n on profile `id` from main.gd's default exports (as main._zombie_stats computes them after
+## apply_to_main): {health, speed, damage}. `exports` overrides the main.gd defaults (tests / before-after tables).
+static func zombie_stats_for(n: int, id: String = "", exports: Dictionary = {}) -> Dictionary:
+	var e := {"base_health": 90, "health_per_round": 35, "base_speed": 2.4, "speed_per_round": 0.3, "max_speed": 6.0,
+		"base_damage": 10, "damage_per_round": 2}
+	e.merge(exports, true)
+	var fake := _StatsProbe.new()
+	for k in e:
+		fake.vals[k] = e[k]
+	var prev_active := _active_id
+	apply_to_main(fake, id if id != "" else default_id())
+	_active_id = prev_active # a probe must not change the live profile
+	var v: Dictionary = fake.vals.duplicate()
+	fake.free()
+	return {"health": int(v.base_health) + int(v.health_per_round) * (n - 1),
+		"speed": minf(float(v.base_speed) + float(v.speed_per_round) * (n - 1), float(v.max_speed)),
+		"damage": int(v.base_damage) + int(v.damage_per_round) * (n - 1)}
+
+
+## Stand-in for main.gd in zombie_stats_for(): int-typed keys stay ints like main.gd's exports.
+class _StatsProbe extends Object:
+	var vals := {}
+	const INTS := ["first_round_zombies", "zombies_per_round", "base_health", "health_per_round", "base_damage", "damage_per_round", "max_alive"]
+	func _get(p: StringName):
+		return vals.get(str(p))
+	func _set(p: StringName, v) -> bool:
+		if vals.has(str(p)):
+			vals[str(p)] = int(v) if str(p) in INTS else float(v)
+			return true
+		return false
+	func _get_property_list() -> Array:
+		var out := []
+		for k in vals:
+			out.append({"name": k, "type": TYPE_INT if k in INTS else TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT})
+		return out
+
+
 static func _sec(section: String, key: String, fallback, id: String = ""):
 	return profile(id).get(section, {}).get(key, fallback)
 
@@ -78,7 +126,10 @@ static func apply_to_main(main: Object, id: String = "") -> String:
 			if k in main:
 				b[k] = main.get(k)
 		main.set_meta("difficulty_base", b)
-	var base: Dictionary = main.get_meta("difficulty_base")
+	var base: Dictionary = (main.get_meta("difficulty_base") as Dictionary).duplicate()
+	for k in wave_base(): # Economy v2: data-driven per-round growth replaces main.gd's export (before profile mults)
+		if base.has(k):
+			base[k] = wave_base()[k]
 	var w: Dictionary = profile(id).get("wave", {})
 	var out := {
 		"first_round_zombies": maxi(int(round(float(base.get("first_round_zombies", 6)) * float(w.get("count_mult", 1.0)))), 1),

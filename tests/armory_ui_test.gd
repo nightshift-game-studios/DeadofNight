@@ -45,6 +45,7 @@ func _go() -> void:
 	await process_frame
 	check(menu.visible and menu._bal_chip != null, "armory menu builds with balance chip")
 	prog.gravemarks = 40
+	prog.scrap = 100 # Economy v2: Rework tiers cost Scrap (SCRAP_API.md)
 	prog.currency_changed.emit(40)
 	await process_frame
 	check(menu._bal_chip.find_child("GravemarkAmount", true, false).text == "40", "armory balance updates live")
@@ -69,14 +70,15 @@ func _go() -> void:
 	# ---- Purchase with seeded balance
 	var uid := str(ups[0].id) # upg_smg
 	var cost0: int = int(ups[0].cost)
-	check(menu.api.can_afford(uid), "can afford first SMG rework at 40 GM (cost %d)" % cost0)
+	check(menu.api.can_afford(uid), "can afford first SMG rework at 100 Scrap (cost %d)" % cost0)
 	check(menu.api.purchase(uid), "purchase SMG Rework I")
-	check(prog.gravemarks == 40 - cost0 and int(ArmoryScr.upgrade_tier("smg")) == 1, "purchase deducts + marks tier I")
+	check(prog.scrap == 100 - cost0 and prog.gravemarks == 40 and int(ArmoryScr.upgrade_tier("smg")) == 1, "purchase deducts + marks tier I")
 	menu.refresh()
 	await process_frame
 
 	# ---- Disabled reasons
 	prog.gravemarks = 0
+	prog.scrap = 0
 	prog.currency_changed.emit(0)
 	await process_frame
 	menu.refresh()
@@ -231,6 +233,7 @@ func _go() -> void:
 
 	# ---- Refresh on armory_changed: buying the next SMG Rework bumps the header IP
 	prog.gravemarks = 500
+	prog.scrap = 500
 	prog.currency_changed.emit(500)
 	var before_total := int(menu.api.item_power_breakdown("smg").total)
 	check(menu.api.purchase("upg_smg"), "buy next SMG Rework")
@@ -350,6 +353,7 @@ func _go() -> void:
 	check(roll_ok, "ROLL bar keeps the rolled IP: OF IP 280 RANGE")
 	# armory_changed: buy SMG Rework III -> slot plate / AVG update in place, no rebuild
 	prog.gravemarks = 500
+	prog.scrap = 500
 	check(ArmoryScr.new().purchase("upg_smg"), "buy SMG Rework III with screen open")
 	await process_frame
 	var bonus3: int = int(ArmoryScr.power_bonus("smg"))
@@ -478,6 +482,7 @@ func _go() -> void:
 		"refusal toast near actions (%s)" % m2._toast.text)
 	# buy refusal (balance)
 	prog.gravemarks = 0
+	prog.scrap = 0
 	prog.currency_changed.emit(0)
 	var buy2_id := ""
 	for a in m2.api.list_attachments("smg"):

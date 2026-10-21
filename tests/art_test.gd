@@ -237,6 +237,7 @@ func _run() -> void:
 		"pistol: optic fits, no Underbarrel socket so a grip is skipped")
 	# Armory loadout path (no explicit loadout): buy + equip, then apply reads Armory.loadout(arch).
 	prog.gravemarks = 999
+	prog.scrap = 999 # Economy v2: Rework tiers cost Scrap
 	A.buy_upgrade("auto_rifle")
 	A.buy_upgrade("auto_rifle")
 	A.buy_attachment("mine_lamp")
@@ -581,6 +582,7 @@ func _art_pass2(A, Rig, prog: Node, world: Node3D, holder: Node3D, by_arch: Dict
 	check(lrr.lamp != null and lrr.lamp == lrr.attached.grip and Rig.find_node(lrr.lamp, "Glass") != null and Rig.find_node(lrr.lamp, "BeamHint") != null,
 		"Lantern Rail sets rig.lamp (Glass + BeamHint)")
 	prog.gravemarks = 999
+	prog.scrap = 999 # Economy v2: Rework tiers cost Scrap
 	A.buy_attachment("lantern_rail")
 	A.equip("auto_rifle", "lantern_rail")
 	var lfc: Dictionary = A.flashlight_config("auto_rifle")

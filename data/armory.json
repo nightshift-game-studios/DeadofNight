@@ -1,13 +1,13 @@
 {
 	"version": 1,
-	"_help": "Armory economy (Skillz). currency = Gravemark: persistent (Progress [armory]), separate from points, kept on death. Every source's amount or chance is multiplied by Difficulty.rare_currency_drop_mult() (easy 1.0, medium 1.35, hard 1.75); chances above 1 pay the whole part plus a roll for the rest. match_cap = most Gravemarks one match can pay. upgrades = per-archetype tiers bought in order; cost[tier-1] x archetype_cost_mult; item_power = TOTAL bonus at that tier added to the weapon's Item Power (damage x(1+IP*0.004)); mods = that tier's extra WeaponItem mods (they stack with lower tiers). expected = assumptions for Armory.expected_match_income() (tests + the matches-to-max table).",
+	"_help": "Armory economy (Skillz). currency = Gravemark: persistent (Progress [armory]), separate from points, kept on death. Every source's amount or chance is multiplied by Difficulty.rare_currency_drop_mult() (easy 1.0, medium 1.35, hard 1.75); chances above 1 pay the whole part plus a roll for the rest. match_cap = most Gravemarks one match can pay. upgrades = per-archetype tiers bought in order; cost[tier-1] x archetype_cost_mult; item_power = TOTAL bonus at that tier added to the weapon's Item Power (damage x(1+IP*0.004)); mods = that tier's extra WeaponItem mods (they stack with lower tiers). expected = assumptions for Armory.expected_match_income() / expected_match_scrap() (tests + the matches-to-max table). Economy v2 (2026-10-20, DESIGN §21): weapon upgrade tiers cost Scrap (upgrades.currency, scrap section), Gravemark stays for attachments, optics and the Merchant; Gravemark sources retuned (round trickle, chests 50%, milestones every 5, kills x2-3) so a normal Medium match pays ~13 instead of ~1.",
 	"currency": {
 		"id": "gravemark",
 		"name": "Gravemark",
 		"plural": "Gravemarks",
 		"icon": "gravemark",
 		"pickup_model": "res://assets/models/pickups/gravemark.glb",
-		"match_cap": 30,
+		"match_cap": 40,
 		"sources": {
 			"boss": {
 				"_help": "BossCatalog gravemark_reward (2-3) for the first boss killed in a round; later bosses that round pay extra_boss_amount.",
@@ -21,25 +21,31 @@
 			},
 			"special": {
 				"_help": "Tougher regular variants.",
-				"chance": 0.006,
+				"chance": 0.02,
 				"amount": 1,
 				"variants": [
 					"soldier"
 				]
 			},
 			"regular": {
-				"chance": 0.0015,
+				"chance": 0.003,
 				"amount": 1
 			},
 			"chest": {
-				"chance": 0.04,
+				"chance": 0.4,
 				"amount": 1,
 				"per_round_max": 1,
-				"match_max": 2
+				"match_max": 3,
+				"_help": "Chests cost points now (data/economy.json -> chests) and relocate after a buy, so a bought chest is a real event: 40% x drop mult, max 1 per round / 3 per match."
 			},
 			"milestone": {
-				"every": 10,
+				"every": 5,
 				"amount": 1
+			},
+			"round": {
+				"_help": "Economy v2: every cleared round pays `amount` x drop mult (fractions roll, see Armory.roll_count), from from_round on. The steady trickle that was missing: before v2 almost everything came from bosses and round-10 milestones most players never reached.",
+				"amount": 0.25,
+				"from_round": 1
 			}
 		}
 	},
@@ -49,67 +55,98 @@
 			{
 				"tier": 1,
 				"name": "I",
-				"cost": 3,
+				"cost": 10,
 				"item_power": 8,
 				"mods": {},
-				"summary": "+8 Item Power."
+				"summary": "+8 Item Power.",
+				"gravemark_cost": 3
 			},
 			{
 				"tier": 2,
 				"name": "II",
-				"cost": 6,
+				"cost": 25,
 				"item_power": 16,
 				"mods": {
 					"reload_mult": 0.95
 				},
-				"summary": "+16 Item Power, reload -5%. Unlocks tier 2 attachments."
+				"summary": "+16 Item Power, reload -5%. Unlocks tier 2 attachments.",
+				"gravemark_cost": 6
 			},
 			{
 				"tier": 3,
 				"name": "III",
-				"cost": 11,
+				"cost": 50,
 				"item_power": 26,
 				"mods": {
 					"reserve_mags_add": 1
 				},
-				"summary": "+26 Item Power, +1 reserve mag."
+				"summary": "+26 Item Power, +1 reserve mag.",
+				"gravemark_cost": 11
 			},
 			{
 				"tier": 4,
 				"name": "IV",
-				"cost": 20,
+				"cost": 90,
 				"item_power": 38,
 				"mods": {
 					"recoil_mult": 0.9
 				},
-				"summary": "+38 Item Power, recoil -10%. Unlocks tier 3 attachments."
+				"summary": "+38 Item Power, recoil -10%. Unlocks tier 3 attachments.",
+				"gravemark_cost": 20
 			},
 			{
 				"tier": 5,
 				"name": "V",
-				"cost": 36,
+				"cost": 150,
 				"item_power": 55,
 				"mods": {
 					"mag_mult": 1.1,
 					"swap_mult": 0.9
 				},
-				"summary": "Masterwork: +55 Item Power, magazine +10%, swap -10%."
+				"summary": "Masterwork: +55 Item Power, magazine +10%, swap -10%.",
+				"gravemark_cost": 36
 			}
 		],
 		"archetype_cost_mult": {
 			"rocket_launcher": 1.25
 		},
-		"min_growth": 1.6
+		"min_growth": 1.6,
+		"currency": "scrap",
+		"_help": "currency: 'scrap' (Economy v2) or 'gravemark' (the old behaviour; costs then read gravemark_cost). cost = Scrap per tier; gravemark_cost = the pre-v2 Gravemark price, kept so currency can be switched back."
 	},
 	"expected": {
-		"_help": "Income model: kills = main.gd wave counts x Difficulty count mults; chest_opens_per_round; bosses killed as rostered.",
-		"chest_opens_per_round": 2,
+		"_help": "Income model: kills = main.gd wave counts x Difficulty count mults; chest_opens_per_round (paid chests: ~1 buy every 3 rounds); bosses killed as rostered; scrap_share = share of gear pickups a player scraps. typical_rounds = where a normal match ends (v2: measured against Jason's v0.6.1 run, ~3 Gravemarks by level ~20, which the old 15 / 13 / 11 overestimated: players die around rounds 6-8 before the gentler scaling).",
+		"chest_opens_per_round": 0.35,
 		"first_round_zombies": 6,
 		"zombies_per_round": 3,
 		"typical_rounds": {
-			"easy": 15,
-			"medium": 13,
-			"hard": 11
-		}
+			"easy": 12,
+			"medium": 10,
+			"hard": 8
+		},
+		"_previous": {
+			"chest_opens_per_round": 2,
+			"typical_rounds": {
+				"easy": 15,
+				"medium": 13,
+				"hard": 11
+			}
+		},
+		"scrap_share": 0.7
+	},
+	"scrap": {
+		"_help": "Scrap (Economy v2, save v6, /workspace/skillz/SCRAP_API.md): persistent currency (Progress [scrap]), kept on death. Earned only by scrapping gear (stash / Kit / Armory: Inventory.dismantle, Progress.scrap_item). yield[rarity] per piece, + item_power_step: +1 Scrap per that many Item Power above 100 (0 = off). Spent on Armory weapon upgrade tiers (upgrades.currency).",
+		"id": "scrap",
+		"name": "Scrap",
+		"plural": "Scrap",
+		"icon": "scrap",
+		"yield": {
+			"common": 1,
+			"uncommon": 2,
+			"rare": 4,
+			"legendary": 8,
+			"mythic": 15
+		},
+		"item_power_step": 50
 	}
 }

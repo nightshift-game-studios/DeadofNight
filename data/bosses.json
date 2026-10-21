@@ -1,7 +1,7 @@
 {
 	"version": 1,
-	"_help": "Boss zombies (Skillz). Cadence comes from Difficulty.boss_* (data/difficulty.json). HP = round(normal_round_hp * hp_mult * Difficulty.boss_cfg().hp_mult), where normal_round_hp = main.base_health + main.health_per_round*(round-1). Kill points = points_per_kill * kill_points_mult (halved economy: 50 base). gravemark_reward is an int for the future Gravemark currency (multiply by Difficulty.rare_currency_drop_mult when wired). Echo adds use echo_* and pay no Gravemark. Spawn roster: BossCatalog.pick_roster(round, difficulty_id).",
-	"default_points_per_kill": 50,
+	"_help": "Boss zombies (Skillz). Cadence comes from Difficulty.boss_* (data/difficulty.json). HP = round(normal_round_hp * hp_mult * Difficulty.boss_cfg().hp_mult), where normal_round_hp = main.base_health + main.health_per_round*(round-1). Kill points = points_per_kill * kill_points_mult (Economy v2: 25 base). gravemark_reward is an int for the future Gravemark currency (multiply by Difficulty.rare_currency_drop_mult when wired). Echo adds use echo_* and pay no Gravemark. Spawn roster: BossCatalog.pick_roster(round, difficulty_id).",
+	"default_points_per_kill": 25,
 	"bosses": {
 		"bellwether": {
 			"id": "bellwether",

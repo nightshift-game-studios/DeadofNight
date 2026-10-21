@@ -2,6 +2,13 @@
 	"version": 1,
 	"_help": "Difficulty profiles (Skillz). A map picks one through data/maps.json -> maps[].difficulty (arena=easy, rustwell_foundry=medium, lockout_substation=hard; a missing field means 'default'). Difficulty.apply_to_main(main) scales main.gd's wave exports: *_mult multiply the base value, *_add add to it. 'easy' is exactly the current tuning (all 1.0 / 0), so the Arena plays as before. wave: zombie stats and spawning. variants: wave_mix_round_offset = use the zombies.json wave_mix of round n+offset (Soldiers show up sooner); weight_mult multiplies a variant's weight. specials (art pass 3: bloated / crawler / riot; Skillz §22: gallspitter, the ranged Gallspitter) = share of all spawns from from_round: weight + per_round x (rounds since), capped at max; the regular mix fills the rest (Difficulty.spawn_weights; walkers stay the bulk). share_floor {variant: {share, from: [...]}} = that variant never drops below `share` of all spawns; the gap is taken proportionally from the `from` variants (Hard: plain walkers >= 25%, paid by Soldiers + specials). bloater_burst_player_cap = most HP one Bloater burst can take from the player on this profile (each burst capped on its own; falls back to zombies.json bloated.behavior.player_damage_cap). Specials only spawn through MAIN_HOOKS §15a (Difficulty.pick_spawn_variant), which also gives them their behaviour script. boss: cadence for data/bosses.json (first_round, every N rounds, count = base + per_cycle x cycles so far, capped at max_count; hp_mult/damage_mult on top of the boss's own stats). rewards: xp_mult (match XP), loot_rarity_bias (each rarity tier's drop weight x (1+bias)^tier: 0 = unchanged, 0.3 = Mythic weight x2.86), rare_currency_drop_mult (read by the Armory currency drop, coming with attachments), points_mult (kept at 1.0; points are tuned in economy.json).",
 	"default": "easy",
+	"wave_base": {
+		"_help": "Economy v2 (2026-10-20, DESIGN §21, Jason: enemies get too powerful too fast): replaces main.gd's per-round growth exports BEFORE the profile mults below (Difficulty.apply_to_main). Missing key = main.gd's own value. damage_per_round stays an int on main.gd, so Hard gets its steeper ramp through damage_ramp_mult 2.0 (round(1 x 2.0) = 2).",
+		"health_per_round": 24,
+		"speed_per_round": 0.2,
+		"damage_per_round": 1,
+		"_previous": {"health_per_round": 35, "speed_per_round": 0.3, "damage_per_round": 2}
+	},
 	"profiles": {
 		"easy": {
 			"name": "Easy",
@@ -27,9 +34,9 @@
 			"name": "Medium",
 			"color": [0.9, 0.72, 0.25],
 			"wave": {
-				"health_mult": 1.15, "health_ramp_mult": 1.15,
+				"health_mult": 1.15, "health_ramp_mult": 1.1,
 				"speed_mult": 1.05, "speed_ramp_mult": 1.1, "max_speed_add": 0.3,
-				"damage_mult": 1.1, "damage_ramp_mult": 1.1,
+				"damage_mult": 1.1, "damage_ramp_mult": 1.0,
 				"count_mult": 1.15, "count_ramp_mult": 1.15,
 				"spawn_interval_mult": 0.9, "max_alive_add": 2
 			},
@@ -47,9 +54,9 @@
 			"name": "Hard",
 			"color": [0.78, 0.3, 0.25],
 			"wave": {
-				"health_mult": 1.35, "health_ramp_mult": 1.3,
-				"speed_mult": 1.12, "speed_ramp_mult": 1.2, "max_speed_add": 0.6,
-				"damage_mult": 1.25, "damage_ramp_mult": 1.25,
+				"health_mult": 1.35, "health_ramp_mult": 1.25,
+				"speed_mult": 1.12, "speed_ramp_mult": 1.15, "max_speed_add": 0.6,
+				"damage_mult": 1.25, "damage_ramp_mult": 2.0,
 				"count_mult": 1.3, "count_ramp_mult": 1.3,
 				"spawn_interval_mult": 0.8, "max_alive_add": 4
 			},

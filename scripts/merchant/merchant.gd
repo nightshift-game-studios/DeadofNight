@@ -212,7 +212,13 @@ func price_for(r: int, featured: bool = false) -> int:
 	var p := float(rarity_cfg(r).get("price", 1))
 	if featured:
 		p *= float(data.get("featured_bonus", {}).get("price_mult", 1.0))
-	return maxi(int(round(p)), 1)
+	return maxi(int(round(p * price_mult())), 1)
+
+
+## Global price dial (merchant.json price_mult, default 1). Economy v2 runs at 0.5; set it back to 1.0 to restore the
+## §20.7 list prices. Saved stock is re-priced on read (_state), so a change applies at once, not at the next refresh.
+func price_mult() -> float:
+	return maxf(float(data.get("price_mult", 1.0)), 0.0)
 
 
 ## Normalized rarity odds (0..1, common..mythic) for stock slot i.
@@ -311,6 +317,9 @@ func _state() -> Dictionary:
 			m[k] = -1 if k == "hour_index" else (randi() if k == "seed" else 0)
 	if typeof(m.get("stock")) != TYPE_ARRAY:
 		m["stock"] = []
+	for o in m.stock: # price_mult / list price changes apply to the saved stock too
+		if typeof(o) == TYPE_DICTIONARY and o.has("rarity"):
+			o["price"] = price_for(int(o.rarity), bool(o.get("featured", false)))
 	return m
 
 

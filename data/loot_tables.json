@@ -1,5 +1,5 @@
 {
-	"_help": "Loot tables. Each table: drop_chance (0-1, per kill/open), rolls, weighted 'entries' and 'rarity_weights'. Entry kinds: gear (random weapon or armor), weapon (optional archetype/slot), armor (optional slot), consumable (id = file in resources/items). 'rarity_round_bonus' adds weight per round survived.",
+	"_help": "Economy v2 (2026-10-20, DESIGN §21): zombie drops are rarer (drop_chance 0.14 -> 0.08, gear weight 5 -> 4 of the entries, rarity weights shifted toward common, smaller per-round bonus); chests now cost points and relocate instead of re-arming each round (data/economy.json -> chests), so their table is unchanged. Loot tables. Each table: drop_chance (0-1, per kill/open), rolls, weighted 'entries' and 'rarity_weights'. Entry kinds: gear (random weapon or armor), weapon (optional archetype/slot), armor (optional slot), consumable (id = file in resources/items). 'rarity_round_bonus' adds weight per round survived.",
 	"stash": {
 		"_help": "Persistent stash (Skillz). cap = max spare (non-equipped) gear pieces carried between matches, across all 8 slots, on top of each slot's 9-tile grid. Equipped gear does not count. Scrap (right-click) frees space. Saved in progress.cfg [stash].",
 		"cap": 40
@@ -9,6 +9,8 @@
 		"base": 100,
 		"per_round": 5,
 		"variance": 3,
+		"upgrade_margin": 5,
+		"_upgrade_margin_help": "GearDB.is_upgrade (loot '!' badge, G4M3N markers): a piece is an upgrade when its effective Item Power beats the equipped one by at least upgrade_margin (more than variance, so same-round same-rarity rolls are not flagged), or matches it at a higher rarity.",
 		"rarity_bonus": {
 			"common": 0,
 			"uncommon": 3,
@@ -40,12 +42,12 @@
 	},
 	"tables": {
 		"zombie": {
-			"drop_chance": 0.14,
+			"drop_chance": 0.08,
 			"rolls": 1,
 			"entries": [
 				{
 					"kind": "gear",
-					"weight": 5
+					"weight": 4
 				},
 				{
 					"kind": "consumable",
@@ -64,16 +66,16 @@
 				}
 			],
 			"rarity_weights": {
-				"common": 50,
-				"uncommon": 32,
-				"rare": 14,
-				"legendary": 3.5,
-				"mythic": 0.5
+				"common": 58,
+				"uncommon": 29,
+				"rare": 10.5,
+				"legendary": 2.2,
+				"mythic": 0.3
 			},
 			"rarity_round_bonus": {
-				"rare": 1.0,
-				"legendary": 0.6,
-				"mythic": 0.12
+				"rare": 0.6,
+				"legendary": 0.3,
+				"mythic": 0.06
 			}
 		},
 		"chest": {

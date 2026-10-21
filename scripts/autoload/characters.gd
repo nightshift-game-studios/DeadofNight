@@ -563,6 +563,7 @@ func _fill_char_cfg(cfg: ConfigFile, id: int, e: Dictionary, prog: Node) -> void
 	cfg.set_value("stats", "total_kills", 0 if fresh else prog.total_kills)
 	cfg.set_value("stats", "best_round", 0 if fresh else prog.best_round)
 	cfg.set_value("stats", "xp", 0 if fresh else prog.xp)
+	cfg.set_value("stats", "xp_curve", 1) # Economy v2: xp is on the skill_tree.json xp_curve (older files: 250 per level)
 	cfg.set_value("stats", "games_played", 0 if fresh else prog.games_played)
 	cfg.set_value("player", "selected_class", str(e.get("class", "soldier")) if fresh else str(prog.selected_class))
 	cfg.set_value("skills", "version", 2)
@@ -589,6 +590,8 @@ func _apply_char(cfg: ConfigFile) -> void:
 	prog.total_kills = int(cfg.get_value("stats", "total_kills", 0))
 	prog.best_round = int(cfg.get_value("stats", "best_round", 0))
 	prog.xp = int(cfg.get_value("stats", "xp", 0))
+	if int(cfg.get_value("stats", "xp_curve", 0)) < 1 and prog.has_method("has_xp_curve") and prog.has_xp_curve():
+		prog.xp = prog.rebase_xp(prog.xp) # char file from before Economy v2 (save v6): keep the level on the new curve
 	prog.games_played = int(cfg.get_value("stats", "games_played", 0))
 	var cls := str(cfg.get_value("player", "selected_class", "soldier"))
 	prog.selected_class = cls if ClassRoster.has(cls) else "soldier"

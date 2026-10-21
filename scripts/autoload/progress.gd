@@ -31,6 +31,12 @@ extends Node
 ## then renames the .tmp over progress.cfg. load_data() falls back to .tmp (only if complete) / .bak when the main file is
 ## missing or corrupt, picking the newest by [meta] save_serial; see _pick_save_file().
 ##
+## Save version 6 (2026-10-20, Economy v2, DESIGN §21): adds [scrap] (balance + lifetime; Scrap is earned by scrapping
+## gear and pays for Armory weapon upgrade tiers, see /workspace/skillz/SCRAP_API.md) and the XP curve
+## (data/skill_tree.json -> xp_curve: each level costs more). v5 and older saves load with 0 Scrap, and their XP is
+## re-based onto the curve so the player keeps exactly the level (and skill points) they had: xp = xp_for_level(old level)
+## + the same fraction of the next level (rebase_xp). Written as v6 on the next save; crash-safe .tmp / .bak unchanged.
+##
 ## Economy: data/economy.json -> points_per_hit / points_per_kill (main.gd reads them, see skillz/MAIN_HOOKS.md).
 
 signal ranks_changed ## any rank bought, reset or loaded
@@ -42,8 +48,11 @@ signal armory_changed(kind: String, id: String) ## kind: "purchase" / "upgrade" 
 ## save_data() finished writing save_path (DESIGN §23.5: the Characters autoload mirrors the active character into its own
 ## file on this; Progress itself stays one account file).
 signal saved(path: String)
+signal scrap_changed(balance: int) ## Scrap balance changed (scrapped gear, spent in the Armory, loaded)
+signal scrap_gained(amount: int, source: String) ## gear was scrapped (source: "stash" / "kit" / "armory" / "match" / ...)
 
-const SAVE_VERSION := 5 ## 1 = v1 skills, 2 = skill ranks, 3 = + persistent gear stash, 4 = + armory / Gravemark / item_id, 5 = + merchant, crash-safe writes
+const SAVE_VERSION := 6 ## 1 = v1 skills, 2 = skill ranks, 3 = + persistent gear stash, 4 = + armory / Gravemark / item_id, 5 = + merchant, crash-safe writes, 6 = + scrap, XP curve
+const LEGACY_XP_PER_LEVEL := 250 ## v5 and older: every level cost this much XP (rebase_xp)
 const MERCHANT_SAVE_VERSION := 1 ## [merchant] version (Progress.migrate_merchant)
 const TMP_SUFFIX := ".tmp" ## save_data() writes here first
 const BAK_SUFFIX := ".bak" ## the previous good save
@@ -90,14 +99,20 @@ var armory_rev: int = 0 ## bumped on every armory change (WeaponItem / AdsProfil
 
 ## Merchant (save v5). Owned and mutated by scripts/merchant/merchant.gd ({} = never used; v4 saves migrate to {}).
 var merchant: Dictionary = {}
+## Scrap (save v6): persistent upgrade currency, earned by scrapping gear (scrap_item / Inventory.dismantle).
+var scrap: int = 0
+var scrap_lifetime: int = 0
+var match_scrap: int = 0 ## scrapped during the current match (reset by begin_match_gravemarks / record_match)
+var last_match_xp: int = 0 ## XP the last finished match paid (death screen, MatchStats)
+var xp_rebased_from: int = -1 ## v5 -> v6 load: the XP before re-basing onto the curve (-1 = not re-based)
 ## Crash-safe saves: which file the last load_data() read ("main", "tmp", "bak" or "none") and the serial it carried.
 var loaded_from: String = "none"
 var save_serial: int = 0 ## bumped on every save_data(); [meta] save_serial picks the newest of .tmp / .bak on recovery
 
 ## Point economy (data/economy.json). Defaults = halved playtest values.
 var economy: Dictionary = {}
-var points_per_hit: int = 5
-var points_per_kill: int = 50
+var points_per_hit: int = 3
+var points_per_kill: int = 25
 
 var tree: Dictionary = {} ## raw v2 data/skill_tree.json
 var _skill_nodes: Dictionary = {} ## id -> raw node dictionary
@@ -113,8 +128,13 @@ func _ready() -> void:
 func _load_economy() -> void:
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(ECONOMY_PATH)) if FileAccess.file_exists(ECONOMY_PATH) else null
 	economy = parsed if typeof(parsed) == TYPE_DICTIONARY else {}
-	points_per_hit = int(economy.get("points_per_hit", 5))
-	points_per_kill = int(economy.get("points_per_kill", 50))
+	points_per_hit = int(economy.get("points_per_hit", 3))
+	points_per_kill = int(economy.get("points_per_kill", 25))
+
+
+## data/economy.json -> chests (chest cost / relocation, DESIGN §21). {} when the file has none.
+func chest_cfg() -> Dictionary:
+	return economy.get("chests", {}) if typeof(economy.get("chests", {})) == TYPE_DICTIONARY else {}
 
 
 ## Window close (quit): capture the live Inventory into the stash and save.
@@ -144,6 +164,13 @@ func load_data() -> void:
 	skill_ranks = migrate_ranks(ranks_v, cfg.get_value("skills", "unlocked", []))
 	loaded_save_version = int(cfg.get_value("meta", "save_version", cfg.get_value("skills", "version", 1)))
 	stash = migrate_stash(cfg.get_value("stash", "data") if cfg.has_section_key("stash", "data") else null)
+	if loaded_save_version < 6 and has_xp_curve():
+		xp_rebased_from = xp
+		xp = rebase_xp(xp)
+	else:
+		xp_rebased_from = -1
+	scrap = maxi(int(cfg.get_value("scrap", "balance", 0)), 0) # v5 and older: no [scrap] -> 0
+	scrap_lifetime = maxi(int(cfg.get_value("scrap", "lifetime", scrap)), scrap)
 	gravemarks = maxi(int(cfg.get_value("armory", "gravemarks", 0)), 0)
 	gravemarks_lifetime = maxi(int(cfg.get_value("armory", "gravemarks_lifetime", gravemarks)), gravemarks)
 	armory = migrate_armory(cfg.get_value("armory", "data") if cfg.has_section_key("armory", "data") else null)
@@ -156,6 +183,7 @@ func load_data() -> void:
 	armory_rev += 1
 	_recompute_spent()
 	currency_changed.emit(gravemarks)
+	scrap_changed.emit(scrap)
 	armory_changed.emit("load", "")
 
 
@@ -304,6 +332,9 @@ func save_data() -> void:
 	cfg.set_value("armory", "gravemarks", gravemarks)
 	cfg.set_value("armory", "gravemarks_lifetime", gravemarks_lifetime)
 	cfg.set_value("armory", "data", armory)
+	cfg.set_value("scrap", "version", 1)
+	cfg.set_value("scrap", "balance", scrap)
+	cfg.set_value("scrap", "lifetime", scrap_lifetime)
 	if not merchant.is_empty():
 		cfg.set_value("merchant", "version", MERCHANT_SAVE_VERSION)
 		cfg.set_value("merchant", "data", merchant)
@@ -365,8 +396,10 @@ func record_match(kills: int, round_reached: int) -> int:
 	total_kills += kills
 	best_round = max(best_round, round_reached)
 	xp += earned
+	last_match_xp = earned
 	games_played += 1
 	last_match_gravemarks = match_gravemarks
+	_match_stats().on_match_recorded(earned)
 	begin_match_gravemarks()
 	capture_stash()
 	save_data()
@@ -411,12 +444,69 @@ func refund_gravemark(n: int) -> int:
 	return gravemarks
 
 
-## New match: per-match Gravemark counters back to 0 (also resets Armory's per-round drop limits).
+## New match: per-match Gravemark / Scrap counters back to 0 (also resets Armory's per-round drop limits). main.gd calls it
+## in _ready, so it also starts the match stats (MatchStats.begin, STATS_API.md) unless MAIN_HOOKS §21 already did.
 func begin_match_gravemarks() -> void:
 	match_gravemarks = 0
+	match_scrap = 0
 	var A = load(ARMORY_SCRIPT)
 	if A:
 		A.reset_match_state()
+	_match_stats().begin_deferred()
+
+
+const MATCH_STATS_SCRIPT := "res://scripts/stats/match_stats.gd"
+
+
+func _match_stats():
+	return load(MATCH_STATS_SCRIPT)
+
+
+# ---------------------------------------------------------------- Scrap (save v6, SCRAP_API.md)
+
+func scrap_balance() -> int:
+	return scrap
+
+
+## Adds n Scrap (n <= 0 ignored). Not saved here (scrap_item / match end / Armory purchases save).
+func add_scrap(n: int, source: String = "") -> int:
+	if n <= 0:
+		return scrap
+	scrap += n
+	scrap_lifetime += n
+	match_scrap += n
+	scrap_gained.emit(n, source)
+	scrap_changed.emit(scrap)
+	return scrap
+
+
+## Spends n if affordable. False (nothing changes) otherwise.
+func spend_scrap(n: int) -> bool:
+	if n < 0 or n > scrap:
+		return false
+	scrap -= n
+	scrap_changed.emit(scrap)
+	return true
+
+
+## What scrapping `item` pays (Armory.scrap_yield: rarity + Item Power). 0 for non-gear.
+func scrap_value(item) -> int:
+	var g := item as GearItem
+	return load(ARMORY_SCRIPT).scrap_yield(g.rarity, g.item_power) if g else 0
+
+
+## Scraps a spare piece of gear for good and pays its Scrap: removes it from `inv` (default: the bound Inventory, i.e.
+## the match / home Kit inventory) through Inventory.dismantle, then saves. Equipped items, items not in that inventory
+## and non-gear refuse with 0. Returns the Scrap paid.
+func scrap_item(item, inv: Node = null, source: String = "stash") -> int:
+	if inv == null:
+		inv = bound_inventory()
+	if inv == null or item == null or not (item is GearItem) or not inv.has_method("dismantle"):
+		return 0
+	var paid: int = inv.dismantle(item, source)
+	if paid > 0:
+		save_stash() if inv == bound_inventory() else save_data()
+	return paid
 
 
 ## Armory calls this after changing `armory`: bump the cache key, save, signal.
@@ -489,9 +579,62 @@ func clear_stash() -> void:
 	save_data()
 
 
-## Display level, derived from skill points earned (one currency: no separate level curve).
+## Display level, derived from skill points earned (one currency: skill points = level - 1).
 func get_level() -> int:
 	return 1 + skill_points_earned()
+
+
+# ---------------------------------------------------------------- XP curve (save v6, DESIGN §21)
+
+## data/skill_tree.json -> xp_curve {first, step, cap}: going from level L to L+1 costs min(first + step x (L-1), cap).
+## No xp_curve -> the old flat xp_per_skill_point per level.
+func has_xp_curve() -> bool:
+	return typeof(tree.get("xp_curve")) == TYPE_DICTIONARY
+
+
+func xp_to_next(level: int) -> int:
+	level = maxi(level, 1)
+	if not has_xp_curve():
+		return maxi(int(tree.get("xp_per_skill_point", LEGACY_XP_PER_LEVEL)), 1)
+	var c: Dictionary = tree.xp_curve
+	var v := int(c.get("first", 400)) + int(c.get("step", 150)) * (level - 1)
+	var cap := int(c.get("cap", 0))
+	return maxi(mini(v, cap) if cap > 0 else v, 1)
+
+
+## Total XP needed to reach `level` from level 1.
+func xp_for_level(level: int) -> int:
+	var t := 0
+	for l in range(1, maxi(level, 1)):
+		t += xp_to_next(l)
+	return t
+
+
+func level_for_xp(x: int) -> int:
+	var l := 1
+	var need := xp_to_next(1)
+	while x >= need and l < 10000:
+		x -= need
+		l += 1
+		need = xp_to_next(l)
+	return l
+
+
+## {level, xp_into_level, xp_for_next, frac} for an XP bar.
+func level_progress() -> Dictionary:
+	var l := get_level()
+	var into := xp - xp_for_level(l)
+	var need := xp_to_next(l)
+	return {"level": l, "xp_into_level": into, "xp_for_next": need, "frac": clampf(float(into) / float(need), 0.0, 1.0)}
+
+
+## v5 -> v6: the XP that gives the same level (and the same fraction of the next one) on the curve as `old_xp` did at
+## LEGACY_XP_PER_LEVEL per level. Nobody loses a level or a skill point.
+func rebase_xp(old_xp: int) -> int:
+	old_xp = maxi(old_xp, 0)
+	var old_level := 1 + old_xp / LEGACY_XP_PER_LEVEL
+	var frac := float(old_xp % LEGACY_XP_PER_LEVEL) / float(LEGACY_XP_PER_LEVEL)
+	return xp_for_level(old_level) + int(floor(frac * xp_to_next(old_level)))
 
 
 ## The class this character plays, with its chosen Q ability (ClassRoster, DESIGN §23.1). Unknown ids load the Soldier.
@@ -590,6 +733,8 @@ func next_cost(id: String) -> int:
 
 
 func skill_points_earned() -> int:
+	if has_xp_curve():
+		return level_for_xp(xp) - 1
 	var per := int(tree.get("xp_per_skill_point", 250))
 	return xp / max(per, 1)
 

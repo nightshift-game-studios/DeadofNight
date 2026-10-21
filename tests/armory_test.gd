@@ -32,6 +32,9 @@ func _reset(prog: Node) -> void:
 	prog.gravemarks = 0
 	prog.gravemarks_lifetime = 0
 	prog.match_gravemarks = 0
+	prog.scrap = 0
+	prog.scrap_lifetime = 0
+	prog.match_scrap = 0
 	prog.armory = {"upgrades": {}, "owned": [], "equipped": {}}
 	prog.stash = {}
 	prog.skill_ranks = {}
@@ -169,24 +172,27 @@ func _run() -> void:
 	check(A.on_zombie_died(_zombie({"is_boss": true, "boss_id": "choir_host"}), 10) == 1, "second boss in the same round pays 1")
 	check(A.on_zombie_died(_zombie({"boss_echo": true}), 10, 0.0) == 0, "Choir echoes pay nothing")
 	check(A.on_zombie_died(_zombie({"elite": true}), 10, 0.1) == 1 and A.on_zombie_died(_zombie({"elite": true}), 10, 0.5) == 0, "elite: 20% roll")
-	check(A.on_zombie_died(_zombie({}, "soldier"), 10, 0.005) == 1 and A.on_zombie_died(_zombie({}, "soldier"), 10, 0.007) == 0, "soldier: 0.6% roll")
-	check(A.on_zombie_died(_zombie({}, "city"), 10, 0.001) == 1 and A.on_zombie_died(_zombie({}, "city"), 10, 0.01) == 0, "regular: 0.15% roll")
+	check(A.on_zombie_died(_zombie({}, "soldier"), 10, 0.015) == 1 and A.on_zombie_died(_zombie({}, "soldier"), 10, 0.025) == 0, "soldier: 2% roll (v2, was 0.6%)")
+	check(A.on_zombie_died(_zombie({}, "city"), 10, 0.002) == 1 and A.on_zombie_died(_zombie({}, "city"), 10, 0.01) == 0, "regular: 0.3% roll (v2, was 0.15%)")
 	check(prog.gravemarks == 6 and _sig.has(["gain", 2, "boss"]), "paid into Progress with source tags")
 	D.set_active("hard")
 	A.reset_match_state()
 	check(A.on_zombie_died(_zombie({"is_boss": true, "boss_id": "bellwether"}), 6) == 4, "hard Bellwether: 2 x 1.75 -> 4")
 	D.set_active("easy")
-	check(A.on_round_cleared(9) == 0 and A.on_round_cleared(10, 0.5) == 1 and A.on_round_cleared(20, 0.5) == 1, "milestone: 1 at rounds 10 / 20")
+	check(A.on_round_cleared(9, 0.9) == 0 and A.on_round_cleared(9, 0.1) == 1 and A.on_round_cleared(5, 0.9) == 1 and A.on_round_cleared(10, 0.1) == 2,
+		"v2: round trickle 0.25 per cleared round + milestone 1 every 5 rounds")
 	D.set_active("hard")
-	check(A.on_round_cleared(30, 0.5) == 2 and A.on_round_cleared(30, 0.9) == 1, "hard milestone 1.75 -> 1 or 2")
+	check(A.on_round_cleared(30, 0.4) == 3 and A.on_round_cleared(30, 0.9) == 1, "hard: trickle 0.44 + milestone 1.75 -> 1 to 3")
 	D.set_active("easy")
 	A.reset_match_state()
 	var c_a: int = A.on_chest_opened(3, 0.0)
 	var c_b: int = A.on_chest_opened(3, 0.0)
 	var c_c: int = A.on_chest_opened(4, 0.0)
 	var c_d: int = A.on_chest_opened(5, 0.0)
-	check(c_a == 1 and c_b == 0 and c_c == 1 and c_d == 0, "chest: max 1 per round, 2 per match")
-	check(A.on_chest_opened(6, 0.9) == 0, "chest roll above 4% pays nothing")
+	var c_e: int = A.on_chest_opened(6, 0.0)
+	check(c_a == 1 and c_b == 0 and c_c == 1 and c_d == 1 and c_e == 0, "chest: max 1 per round, 3 per match (v2: paid chests)")
+	A.reset_match_state()
+	check(A.on_chest_opened(6, 0.5) == 0 and A.on_chest_opened(7, 0.3) == 1, "chest roll: 40% (v2, was 4%)")
 	check(A.on_chest_opened(1, 0.0) == 1 and prog.match_gravemarks == 1, "lower round = new match: chest + match counters reset")
 	prog.match_gravemarks = A.match_cap() - 1
 	check(A.award(3, "test") == 1 and A.award(2, "test") == 0, "match cap clips payouts")
@@ -202,9 +208,9 @@ func _run() -> void:
 	for i in range(1, costs.size()):
 		if float(costs[i]) < float(costs[i - 1]) * growth:
 			steep = false
-	check(A.max_tier() == 5 and costs == [3, 6, 11, 20, 36], "upgrade tiers I-V cost 3/6/11/20/36 (data)")
+	check(A.max_tier() == 5 and costs == [10, 25, 50, 90, 150] and A.upgrade_currency() == "scrap", "upgrade tiers I-V cost 10/25/50/90/150 Scrap (data)")
 	check(steep, "each tier costs >= %.1fx the previous one" % growth)
-	check(A.tier_cost("rocket_launcher", 5) == 45 and A.upgrade_total_cost("auto_rifle") == 76, "rocket x1.25; one archetype to V = 76")
+	check(A.tier_cost("rocket_launcher", 5) == 188 and A.upgrade_total_cost("auto_rifle") == 325, "rocket x1.25; one archetype to V = 325 Scrap")
 	check(A.tier_cost("auto_rifle", 0) == 0 and A.tier_cost("auto_rifle", 6) == 0, "out-of-range tier costs 0")
 	var e15: Dictionary = A.expected_match_income("easy", 15)
 	var e20: Dictionary = A.expected_match_income("easy", 20)
@@ -212,8 +218,11 @@ func _run() -> void:
 	var h15: Dictionary = A.expected_match_income("hard", 15)
 	print("      easy R15 breakdown: ", e15, "\n      easy R20: ", e20, "\n      hard R15: ", h15)
 	print("      income R15: easy %.2f  medium %.2f  hard %.2f   easy R20 %.2f" % [e15.total, m15.total, h15.total, e20.total])
-	check(e15.total >= 3.0 and e15.total <= 6.0, "Easy round-15 match earns 3-6 Gravemarks (%.2f)" % e15.total)
-	check(e20.total <= 10.0, "Easy round-20 match stays <= 10 (%.2f)" % e20.total)
+	var e12: float = A.expected_match_income("easy", 12).total
+	var m10: float = A.expected_match_income("medium", 10).total
+	var m7: float = A.expected_match_income("medium", 7).total
+	check(e12 >= 9.0 and e12 <= 13.0 and m10 >= 11.0 and m10 <= 16.0 and m7 >= 5.0, "v2 typical matches: Easy r12 %.1f, Medium r10 %.1f, Medium r7 %.1f Gravemarks" % [e12, m10, m7])
+	check(e20.total < float(A.match_cap()), "Easy round-20 match stays under the match cap (%.2f)" % e20.total)
 	check(h15.total > m15.total and m15.total > e15.total and h15.total >= e15.total * 1.8, "Hard > Medium > Easy, Hard >= 1.8x Easy")
 	check(h15.total < float(A.match_cap()), "never dozens: Hard R15 under the match cap")
 	var me: Dictionary = A.matches_to_max("easy")
@@ -221,9 +230,9 @@ func _run() -> void:
 	var mh: Dictionary = A.matches_to_max("hard")
 	print("      matches to max one weapon: easy %d medium %d hard %d; everything: %d / %d / %d" % [me.one_weapon_max,
 		mm.one_weapon_max, mh.one_weapon_max, me.everything, mm.everything, mh.everything])
-	check(me.one_weapon_max >= 12, "Easy-only: maxing one weapon is a grind (>= 12 matches)")
-	check(mh.one_weapon_max * 2 <= me.one_weapon_max, "Hard maxes a weapon in at most half the Easy matches")
-	check(me.everything > mm.everything and mm.everything > mh.everything, "everything: Easy > Medium > Hard matches")
+	check(mm.upgrade_currency == "scrap" and mm.one_weapon_max >= 6 and mm.one_weapon_max <= 15 and mm.tiers_to_iv >= 3,
+		"Scrap: one weapon to V in %d Medium matches (6-15), I-IV in %d" % [mm.one_weapon_max, mm.tiers_to_iv])
+	check(me.attachments >= mm.attachments and mm.attachments >= mh.attachments and mm.attachments <= 20, "Gravemark attachments: Easy >= Medium >= Hard matches (%d / %d / %d)" % [me.attachments, mm.attachments, mh.attachments])
 
 	# ------------------------------------------------------------ Armory API (outside a match: no player, no inventory)
 	_reset(prog)
@@ -254,10 +263,12 @@ func _run() -> void:
 	check(api.list_attachments("auto_rifle").filter(func(a): return a.id == "hush_can")[0].state == "equipped", "state: equipped")
 	var crow: Dictionary = api.list_attachments("auto_rifle").filter(func(a): return a.id == "crows_eye_3x")[0]
 	check(crow.state == "locked" and not crow.requirements.is_empty() and not api.can_afford("crows_eye_3x"), "tier-2 optic locked until Rework II")
+	check(not api.purchase("upg_auto_rifle") and A.last_refusal_reason().contains("Scrap"), "Rework needs Scrap, not Gravemarks (\"%s\")" % A.last_refusal_reason())
+	prog.add_scrap(35, "test")
 	check(api.purchase("upg_auto_rifle") and api.purchase("upg_auto_rifle") and A.upgrade_tier("auto_rifle") == 2
-		and api.currency_balance() == 27, "buy Auto Rifle Rework I + II (3 + 6)")
+		and api.currency_balance() == 36 and prog.scrap == 0, "buy Auto Rifle Rework I + II (10 + 25 Scrap; Gravemarks untouched)")
 	check(api_sig.has(["upgrade", "upg_auto_rifle"]) and api.list_upgrades("auto_rifle")[0].level == 2
-		and api.list_upgrades("auto_rifle")[0].cost == 11, "upgrade entry: level 2, next cost 11")
+		and api.list_upgrades("auto_rifle")[0].cost == 50 and api.list_upgrades("auto_rifle")[0].get("currency") == "scrap", "upgrade entry: level 2, next cost 50 Scrap")
 	check(api.purchase("crows_eye_3x") and api.equip_attachment("auto_rifle", "optic", "crows_eye_3x"), "Crow's Eye buyable + equippable at tier II")
 	check(api.purchase("fat_drum") and api.equip_attachment("auto_rifle", "", "fat_drum") and api.purchase("lean_grip")
 		and api.equip_attachment("auto_rifle", "grip", "lean_grip"), "Fat Drum + Lean Grip on the Auto Rifle")
@@ -300,6 +311,7 @@ func _run() -> void:
 	check(is_equal_approx(Ads.move_speed_mult(true, "smg"), 0.7) and is_equal_approx(Ads.spread_mult(true, "smg"), 0.45), "smg: plain ADS numbers")
 	# shotgun pellets + choke, splitjaw recoil, longwatch scope overlay on a scout
 	prog.add_gravemark(60, "test")
+	prog.add_scrap(175, "test")
 	for id in ["tightjaw_choke", "splitjaw_brake"]:
 		api.purchase(id)
 	api.equip_attachment("shotgun", "muzzle", "tightjaw_choke")
@@ -341,6 +353,7 @@ func _run() -> void:
 		"... and nothing from the hip")
 	# Echo Drum: precision kill puts rounds back (refill_mag through the bus)
 	prog.add_gravemark(40, "test")
+	prog.add_scrap(140, "test")
 	for i in 2:
 		api.purchase("upg_auto_rifle")
 	check(A.upgrade_tier("auto_rifle") == 4 and api.purchase("echo_drum") and api.equip_attachment("auto_rifle", "mag", "echo_drum"), "Echo Drum on a Rework IV Auto Rifle")
@@ -357,6 +370,7 @@ func _run() -> void:
 
 	# ------------------------------------------------------------ Mine Lamp (F-toggle flashlight attachment)
 	prog.add_gravemark(30, "test")
+	prog.add_scrap(35, "test")
 	check(not A.has_mine_lamp("auto_rifle") and not A.flag("auto_rifle", "mine_lamp", false),
 		"has_mine_lamp false with empty loadout")
 	check(A.attachment("mine_lamp").slot == "grip" and A.attachment("mine_lamp").get("flags", {}).get("mine_lamp") == true
@@ -387,8 +401,8 @@ func _run() -> void:
 		if t > 1 and c < int(ceil(prev_c * 1.6)):
 			curve_ok = false
 		prev_c = c
-	check(curve_ok and A.tier_cost("auto_rifle", 5) == 36 and A.upgrade_total_cost("auto_rifle") == 76,
-		"upgrade cost curve still 3/6/11/20/36 after Mine Lamp")
+	check(curve_ok and A.tier_cost("auto_rifle", 5) == 150 and A.upgrade_total_cost("auto_rifle") == 325,
+		"upgrade cost curve still 10/25/50/90/150 Scrap after Mine Lamp")
 	check(A.attachment_ids().size() == 44, "44 attachments: 38 + the 6 new optics (optics pass)")
 
 	await _art_pass2b(prog, A)
@@ -507,6 +521,7 @@ func _art_pass3(prog: Node, A) -> void:
 	check(A.buy_attachment("pinhole") and A.last_refusal_reason() == "" and A.owned("pinhole"), "buy_attachment goes through; last_refusal_reason() \"\"")
 	check(A.purchase_check("pinhole").reason == "Already owned" and not api.purchase("pinhole")
 		and api.last_refusal_reason() == "Already owned", "owned -> \"Already owned\" (instance purchase() too)")
+	prog.scrap = 10
 	check(A.purchase_check("upg_smg").ok and api.purchase("upg_smg") and A.upgrade_tier("smg") == 1, "upgrade purchase_check ok -> purchase() buys it")
 	prog.armory.upgrades["smg"] = A.max_tier()
 	c = A.purchase_check("upg_smg")
@@ -516,6 +531,7 @@ func _art_pass3(prog: Node, A) -> void:
 	var agree := true
 	for bal in [0, 3, 9]:
 		prog.gravemarks = bal
+		prog.scrap = bal * 3
 		for a in A.data().get("attachments", []):
 			agree = agree and A.purchase_check(str(a.id)).ok == A.can_afford_id(str(a.id))
 		for arch in ["smg", "shotgun", "sidearm"]:

@@ -9,8 +9,8 @@
 		"reroll_base": 50,
 		"reroll_base_milestone": 100,
 		"reroll_growth": 2.0,
-		"skip_points_per_round": 50,
-		"cache_points_per_round": 50,
+		"skip_points_per_round": 25,
+		"cache_points_per_round": 25,
 		"owned_weight_mult": 1.5,
 		"synergy_weight_mult": 1.5,
 		"max_banish_per_offer": 1
@@ -26,7 +26,7 @@
 		"summary": "Take the points instead.",
 		"description": "+{points} points.",
 		"values": {
-			"points": "50 x round"
+			"points": "25 x round"
 		}
 	},
 	"cards": [

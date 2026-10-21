@@ -15,7 +15,7 @@ extends RefCounted
 const DATA_PATH := "res://data/bosses.json"
 const DEFAULT_BASE_HEALTH := 90
 const DEFAULT_HEALTH_PER_ROUND := 35
-const DEFAULT_POINTS_PER_KILL := 50
+const DEFAULT_POINTS_PER_KILL := 25
 
 static var _data: Dictionary = {}
 

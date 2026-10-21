@@ -129,17 +129,25 @@ func _run() -> void:
 	var inc_ok := true
 	for d in ["easy", "medium", "hard"]:
 		inc_ok = inc_ok and absf(m.income_per_match(d) - float(A.matches_to_max(d).per_match)) < 1e-6
-	check(inc_ok and absf(m.income_per_match("easy") - 5.2) < 0.3 and absf(m.income_per_match("medium") - 7.0) < 0.3 and absf(m.income_per_match("hard") - 14.0) < 0.5,
+	# Economy v2 (DESIGN §21): income per typical match (Easy r12 / Medium r10 / Hard r8) is now ~12 / ~15 / ~16
+	check(inc_ok and m.income_per_match("easy") >= 9.0 and m.income_per_match("easy") <= 14.0 and m.income_per_match("medium") >= 12.0
+		and m.income_per_match("medium") <= 17.0 and m.income_per_match("hard") >= 13.0 and m.income_per_match("hard") <= 19.0,
 		"income from Armory.expected_match_income: %.2f / %.2f / %.2f" % [m.income_per_match("easy"), m.income_per_match("medium"), m.income_per_match("hard")])
-	var hard := [0, 1, 2, 3, 4].map(func(r): return m.matches_to_afford(m.price_for(r), "hard"))
-	var bands := [[0.85, 1.1], [1.8, 2.2], [4.0, 5.0], [10.0, 12.0], [20.0, 25.0]]
+	# Economy v2: one price_mult (0.5) over the retuned table prices 13 / 28 / 63 / 154 / 315
+	var base_prices := [13, 28, 63, 154, 315]
+	var pm_ok := absf(m.price_mult() - 0.5) < 1e-6
+	for r in 5:
+		pm_ok = pm_ok and m.price_for(r) == maxi(int(round(base_prices[r] * 0.5)), 1)
+	check(pm_ok, "price_mult 0.5 halves every price: %s" % [[0, 1, 2, 3, 4].map(func(r): return m.price_for(r))])
+	var med := [0, 1, 2, 3, 4].map(func(r): return m.matches_to_afford(m.price_for(r), "medium"))
+	var bands := [[0.3, 0.7], [0.6, 1.2], [1.5, 2.8], [3.8, 6.5], [8.0, 13.5]]
 	var band_ok := true
 	for r in 5:
-		band_ok = band_ok and hard[r] >= bands[r][0] and hard[r] <= bands[r][1]
-	check(band_ok and m.price_for(0) >= 12 and m.price_for(0) <= 15, "prices in Hard matches %s (targets ~1 / 2 / 4-5 / 10-12 / 20-25; Common 12-15 GM)" % [hard.map(func(x): return snappedf(x, 0.01))])
+		band_ok = band_ok and med[r] >= bands[r][0] and med[r] <= bands[r][1]
+	check(band_ok, "prices in Medium matches %s (targets ~0.5 / ~1 / ~2 / ~5 / ~10)" % [med.map(func(x): return snappedf(x, 0.01))])
 	var feat_ok := true
 	for r in range(2, 5):
-		feat_ok = feat_ok and m.price_for(r, true) == int(round(m.price_for(r) * 1.15))
+		feat_ok = feat_ok and absi(m.price_for(r, true) - int(round(m.price_for(r) * 1.15))) <= 1
 	check(feat_ok and float(m.data.featured_bonus.price_mult) == 1.15, "featured slot stays x1.15: %d / %d / %d" % [m.price_for(2, true), m.price_for(3, true), m.price_for(4, true)])
 	check([0, 1, 2, 3, 4, 5, 6].map(func(n): return m.cost_for_reroll(n)) == [5, 9, 15, 24, 36, 51, 66], "reroll costs 5,9,15,24,36 then +15")
 	check(m.matches_to_afford(m.cost_for_reroll(0), "hard") >= 0.3 and m.cost_for_reroll(0) < m.price_for(0) and m.cost_for_reroll(3) > m.price_for(1) * 0.8,
@@ -155,8 +163,8 @@ func _run() -> void:
 			row.matches.easy, row.matches.medium, row.matches.hard, row.matches_featured.easy, row.matches_featured.medium, row.matches_featured.hard])
 	for row in m.reroll_table(7):
 		print("  reroll #%d: %d GM = %.2f / %.2f / %.2f matches" % [row.n, row.cost, row.matches.easy, row.matches.medium, row.matches.hard])
-	check(tbl.size() == 5 and tbl[0].matches.hard >= 0.85 and tbl[4].matches.easy >= 50.0 and tbl[3].matches_featured.hard > tbl[3].matches.hard,
-		"matches-to-buy table: Common ~1 Hard match, Mythic 50+ Easy matches, featured costs more")
+	check(tbl.size() == 5 and tbl[0].matches.medium <= 1.0 and tbl[4].matches.easy >= 8.0 and tbl[3].matches_featured.hard > tbl[3].matches.hard,
+		"matches-to-buy table: Common within 1 Medium match, Mythic 8+ Easy matches, featured costs more")
 	var ips_ok := true
 	for r in 4:
 		ips_ok = ips_ok and int(m.rarity_cfg(r + 1).item_power[0]) > int(m.rarity_cfg(r).item_power[-1])
@@ -539,17 +547,19 @@ func _run() -> void:
 	_reset(prog, path)
 	v4.save(path)
 	prog.load_data()
-	check(prog.loaded_save_version == 4 and prog.merchant.is_empty() and prog.gravemarks == 17 and prog.xp == 1234 and prog.loaded_from == "main",
-		"v4 save loads: empty merchant state, Gravemarks / xp kept")
+	check(prog.loaded_save_version == 4 and prog.merchant.is_empty() and prog.gravemarks == 17 and prog.xp == prog.rebase_xp(1234)
+		and prog.xp_rebased_from == 1234 and prog.get_level() == 5 and prog.loaded_from == "main",
+		"v4 save loads: empty merchant state, Gravemarks kept, xp re-based onto the v6 curve (level 5 kept, %d xp)" % prog.xp)
 	fc.t = h0 + 20.0 * H
 	m.reset_session_clock()
 	check(m.refresh_if_due() and m.get_stock().size() == 5 and int(prog.merchant.hour_index) == 490020, "fresh merchant rolls its first stock on a migrated save")
 	var c5 := ConfigFile.new()
 	c5.load(path)
-	check(int(c5.get_value("meta", "save_version", 0)) == 5 and prog.SAVE_VERSION == 5 and c5.has_section_key("merchant", "data") and int(c5.get_value("merchant", "version", 0)) == 1,
-		"written back as save_version 5 with [merchant] version 1")
+	check(int(c5.get_value("meta", "save_version", 0)) == prog.SAVE_VERSION and prog.SAVE_VERSION >= 6 and c5.has_section_key("merchant", "data") and int(c5.get_value("merchant", "version", 0)) == 1,
+		"written back as save_version %d with [merchant] version 1" % prog.SAVE_VERSION)
+	var xp_v6: int = prog.xp
 	prog.load_data()
-	check(prog.loaded_save_version == 5 and prog.merchant.stock.size() == 5, "v5 reload")
+	check(prog.loaded_save_version == prog.SAVE_VERSION and prog.merchant.stock.size() == 5 and prog.xp == xp_v6, "current-version reload (xp not re-based twice)")
 	check(prog.migrate_merchant(null).is_empty() and prog.migrate_merchant("junk").is_empty()
 		and prog.migrate_merchant({"seed": 3, "stock": [{"offer_id": "x"}, 5, {"offer_id": "lot1_0", "item": {}}]}).stock.size() == 1,
 		"migrate_merchant: junk -> {}, malformed offers dropped")
@@ -639,13 +649,13 @@ func _run() -> void:
 	DirAccess.copy_absolute(don.path_join("progress.cfg.bak"), gc.path_join("progress_only_bak.cfg.bak"))
 	DirAccess.copy_absolute(don.path_join("progress.cfg.tmp"), gc.path_join("progress_only_bak.cfg.tmp"))
 	prog.load_data()
-	check(prog.loaded_from == "bak" and prog.xp == 777, "migrated dir with a copied .bak + torn .tmp: recovers from .bak")
+	check(prog.loaded_from == "bak" and prog.xp == prog.rebase_xp(777), "migrated dir with a copied .bak + torn .tmp: recovers from .bak (legacy xp 777 re-based)")
 	prog.save_data()
 	check(FileAccess.file_exists(prog.save_path) and not FileAccess.file_exists(prog.save_path + ".tmp"), "first save in the new dir writes progress.cfg, clears the stale .tmp")
 	# a stale .tmp next to a readable main is ignored
 	_write(prog.save_path + ".tmp", "[meta]\nsave_serial=99999\n[stats]\nxp=1\n[end]\ncomplete=true\n")
 	prog.load_data()
-	check(prog.loaded_from == "main" and prog.xp == 777, "readable main always wins over a copied-forward .tmp")
+	check(prog.loaded_from == "main" and prog.xp == prog.rebase_xp(777), "readable main always wins over a copied-forward .tmp")
 
 	# ------------------------------------------------------------ cleanup
 	m.free()

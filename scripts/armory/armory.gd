@@ -1,6 +1,8 @@
 class_name Armory
 extends RefCounted
 ## Armory (Skillz): Gravemark currency drops, weapon attachments and weapon upgrade tiers.
+## Economy v2 (DESIGN §21): upgrade tiers cost Scrap (armory.json upgrades.currency = "scrap"; Progress.scrap, save v6,
+## earned by scrapping gear, see /workspace/skillz/SCRAP_API.md). Attachments / optics stay Gravemark.
 ## Data: res://data/attachments.json (slots, class compatibility, parts) + res://data/armory.json (currency, drops, tiers).
 ## State lives in the Progress autoload (save v4): Progress.gravemarks, Progress.armory {upgrades, owned, equipped}.
 ## Works outside a match (home menu) because it only needs Progress.
@@ -215,12 +217,43 @@ static func tier_name(t: int) -> String:
 	return str(tiers()[t - 1].get("name", str(t))) if t >= 1 and t <= max_tier() else ""
 
 
-## Gravemark cost of tier t (1-based) for an archetype: cost x archetype_cost_mult. 0 outside 1..max.
+## Cost of tier t (1-based) for an archetype, in upgrade_currency(): cost x archetype_cost_mult. 0 outside 1..max.
+## With currency "gravemark" a tier's gravemark_cost (the pre-v2 price) is used when it has one.
 static func tier_cost(arch: String, t: int) -> int:
 	if t < 1 or t > max_tier():
 		return 0
 	var m := float(cfg().get("upgrades", {}).get("archetype_cost_mult", {}).get(arch, 1.0))
-	return int(round(float(tiers()[t - 1].get("cost", 0)) * m))
+	var td: Dictionary = tiers()[t - 1]
+	var key := "gravemark_cost" if upgrade_currency() == "gravemark" and td.has("gravemark_cost") else "cost"
+	return int(round(float(td.get(key, 0)) * m))
+
+
+## What weapon upgrade tiers are paid in: "scrap" (Economy v2) or "gravemark".
+static func upgrade_currency() -> String:
+	var c := str(cfg().get("upgrades", {}).get("currency", "gravemark"))
+	return "scrap" if c == "scrap" else "gravemark"
+
+
+## Balance of a currency id ("gravemark" / "scrap").
+static func balance(currency: String) -> int:
+	var p = prog()
+	if p == null:
+		return 0
+	return int(p.scrap) if currency == "scrap" and "scrap" in p else int(p.gravemarks)
+
+
+static func _spend(currency: String, n: int) -> bool:
+	var p = prog()
+	if p == null:
+		return false
+	return p.spend_scrap(n) if currency == "scrap" else p.spend_gravemark(n)
+
+
+## "Gravemark(s)" / "Scrap" for messages.
+static func currency_word(currency: String, n: int) -> String:
+	var c: Dictionary = cfg().get("scrap", {}) if currency == "scrap" else cfg().get("currency", {})
+	var nm := "Scrap" if currency == "scrap" else "Gravemark"
+	return str(c.get("name", nm)) if n == 1 else str(c.get("plural", nm if currency == "scrap" else nm + "s"))
 
 
 static func next_upgrade_cost(arch: String) -> int:
@@ -773,8 +806,9 @@ static func purchase_check(id: String) -> Dictionary:
 		if upgrade_tier(arch) >= max_tier():
 			return _check(false, "%s is fully reworked" % weapon_type(arch))
 		var c := next_upgrade_cost(arch)
-		if int(p.gravemarks) < c:
-			return _check(false, "Need %d %s (you have %d)" % [c, _currency_word(c), int(p.gravemarks)])
+		var cur := upgrade_currency()
+		if balance(cur) < c:
+			return _check(false, "Need %d %s (you have %d)" % [c, currency_word(cur, c), balance(cur)])
 		return _check(true)
 	if not is_attachment(id):
 		return _check(false, "Unknown attachment")
@@ -835,7 +869,7 @@ static func buy_upgrade(arch: String) -> bool:
 	if not c.ok:
 		return false
 	var p = prog()
-	if not p.spend_gravemark(next_upgrade_cost(arch)):
+	if not _spend(upgrade_currency(), next_upgrade_cost(arch)):
 		_last_refusal = "Purchase failed"
 		return false
 	p.armory.upgrades[arch] = upgrade_tier(arch) + 1
@@ -881,7 +915,7 @@ static func can_afford_id(id: String) -> bool:
 		return false
 	if id.begins_with(UPGRADE_PREFIX):
 		var arch := id.substr(UPGRADE_PREFIX.length())
-		return is_archetype(arch) and upgrade_tier(arch) < max_tier() and p.gravemarks >= next_upgrade_cost(arch)
+		return is_archetype(arch) and upgrade_tier(arch) < max_tier() and balance(upgrade_currency()) >= next_upgrade_cost(arch)
 	if not is_attachment(id) or owned(id) or not purchase_requirements(id).is_empty():
 		return false
 	return p.gravemarks >= cost_of(id)
@@ -985,14 +1019,21 @@ static func boss_amount(boss_id: String, round_number: int) -> int:
 	return int(load(BOSS_SCRIPT).gravemark_scaled(boss_id))
 
 
-## main.gd at round clear (MAIN_HOOKS §9): 1 Gravemark (x drop mult) every `every` rounds.
+## main.gd at round clear (MAIN_HOOKS §9): the per-round trickle (sources.round, Economy v2) plus the milestone
+## (amount every `every` rounds), each x drop mult. roll = test override for both rolls. Returns what was paid.
 static func on_round_cleared(round_number: int, roll: float = -1.0) -> int:
 	_see_round(round_number)
+	if round_number <= 0:
+		return 0
+	var paid := 0
+	var rd := src("round")
+	if not rd.is_empty() and round_number >= int(rd.get("from_round", 1)):
+		paid += award(roll_count(float(rd.get("amount", 0.0)), roll), "round")
 	var m := src("milestone")
 	var every := maxi(int(m.get("every", 10)), 1)
-	if round_number <= 0 or round_number % every != 0:
-		return 0
-	return award(roll_count(float(m.get("amount", 1)), roll), "milestone")
+	if round_number % every == 0:
+		paid += award(roll_count(float(m.get("amount", 1)), roll), "milestone")
+	return paid
 
 
 ## chest.gd interact(): chance x drop mult, at most per_round_max per round and match_max per match.
@@ -1024,12 +1065,13 @@ static func expected_match_income(diff: String, rounds: int) -> Dictionary:
 	var mult := float(D.rare_currency_drop_mult(diff))
 	var first := maxi(int(round(float(ex.get("first_round_zombies", 6)) * float(w.get("count_mult", 1.0)))), 1)
 	var per := int(round(float(ex.get("zombies_per_round", 3)) * float(w.get("count_ramp_mult", 1.0))))
-	var out := {"boss": 0.0, "milestone": 0.0, "chest": 0.0, "special": 0.0, "regular": 0.0, "kills": 0}
+	var out := {"boss": 0.0, "milestone": 0.0, "round": 0.0, "chest": 0.0, "special": 0.0, "regular": 0.0, "kills": 0}
+	var rd := src("round")
 	var sp := src("special")
 	var rg := src("regular")
 	var ch := src("chest")
 	var chest_p := minf(float(ch.get("chance", 0.05)) * mult, 1.0)
-	var opens := int(ex.get("chest_opens_per_round", 2))
+	var opens := float(ex.get("chest_opens_per_round", 2))
 	var chest_total := 0.0
 	for n in range(1, rounds + 1):
 		var z := first + per * (n - 1)
@@ -1046,9 +1088,88 @@ static func expected_match_income(diff: String, rounds: int) -> Dictionary:
 			out.boss += float(B.gravemark_scaled(str(roster[i]), diff)) if i == 0 else float(src("boss").get("extra_boss_amount", 1))
 		if n % maxi(int(src("milestone").get("every", 10)), 1) == 0:
 			out.milestone += float(src("milestone").get("amount", 1)) * mult
+		if not rd.is_empty() and n >= int(rd.get("from_round", 1)):
+			out["round"] += float(rd.get("amount", 0.0)) * mult
 	out.chest = minf(chest_total, float(ch.get("match_max", 2)))
-	out["total"] = minf(out.boss + out.milestone + out.chest + out.special + out.regular, float(match_cap()))
+	out["total"] = minf(out.boss + out.milestone + out["round"] + out.chest + out.special + out.regular, float(match_cap()))
 	return out
+
+
+## Expected Scrap from a match of `rounds` on `diff` if the player scraps expected.scrap_share of the gear that drops
+## (zombie table: kills x drop_chance x gear share; chests: chest_opens_per_round x rolls x gear share), each piece
+## yielding Scrap.yield_for(rarity, typical IP of that round). {total, zombie_gear, chest_gear, per_round[]}.
+static func expected_match_scrap(diff: String, rounds: int) -> Dictionary:
+	var D = load(DIFFICULTY_SCRIPT)
+	var ex: Dictionary = cfg().get("expected", {})
+	var w: Dictionary = D.profile(diff).get("wave", {})
+	var loot = JSON.parse_string(FileAccess.get_file_as_string("res://data/loot_tables.json"))
+	var tables: Dictionary = loot.get("tables", {}) if typeof(loot) == TYPE_DICTIONARY else {}
+	var ip_cfg: Dictionary = loot.get("item_power", {}) if typeof(loot) == TYPE_DICTIONARY else {}
+	var bias := float(D.loot_rarity_bias(diff))
+	var first := maxi(int(round(float(ex.get("first_round_zombies", 6)) * float(w.get("count_mult", 1.0)))), 1)
+	var per := int(round(float(ex.get("zombies_per_round", 3)) * float(w.get("count_ramp_mult", 1.0))))
+	var share := clampf(float(ex.get("scrap_share", 0.7)), 0.0, 1.0)
+	var opens := float(ex.get("chest_opens_per_round", 0.35))
+	var out := {"total": 0.0, "zombie_gear": 0.0, "chest_gear": 0.0, "per_round": []}
+	for n in range(1, rounds + 1):
+		var z := first + per * (n - 1)
+		var ip := int(ip_cfg.get("base", 100)) + int(ip_cfg.get("per_round", 5)) * (n - 1)
+		var zg := z * table_gear_rate(tables.get("zombie", {}))
+		var cg := opens * table_gear_rate(tables.get("chest", {}))
+		var sc := (zg * mean_yield(tables.get("zombie", {}), n, ip, bias) + cg * mean_yield(tables.get("chest", {}), n, ip, bias)) * share
+		out.zombie_gear += zg
+		out.chest_gear += cg
+		out.total += sc
+		out.per_round.append(sc)
+	return out
+
+
+## Expected gear pieces per roll of a loot table: drop_chance x rolls x (gear entries' weight share).
+static func table_gear_rate(t: Dictionary) -> float:
+	if t.is_empty():
+		return 0.0
+	var tot := 0.0
+	var gear := 0.0
+	for e in t.get("entries", []):
+		tot += float(e.get("weight", 0))
+		if str(e.get("kind", "")) in ["gear", "weapon", "armor"]:
+			gear += float(e.get("weight", 0))
+	return minf(float(t.get("drop_chance", 1.0)), 1.0) * float(t.get("rolls", 1)) * (gear / maxf(tot, 0.0001))
+
+
+## Rarity odds (common..mythic, sum 1) of a loot table at round n with Difficulty bias, the same math as GearDB.roll_rarity.
+static func table_rarity_odds(t: Dictionary, n: int, bias: float = 0.0) -> Array:
+	var ids := ["common", "uncommon", "rare", "legendary", "mythic"]
+	var ws := []
+	var rw: Dictionary = t.get("rarity_weights", {})
+	var rb: Dictionary = t.get("rarity_round_bonus", {})
+	for id in ids:
+		ws.append(float(rw.get(id, 0.0)) + float(rb.get(id, 0.0)) * maxi(n - 1, 0))
+	var D = load(DIFFICULTY_SCRIPT)
+	ws = D.bias_rarity_weights(ws, bias)
+	var tot := 0.0
+	for v in ws:
+		tot += float(v)
+	return ws.map(func(v): return float(v) / maxf(tot, 0.0001))
+
+
+static func mean_yield(t: Dictionary, n: int, ip: int, bias: float = 0.0) -> float:
+	var odds := table_rarity_odds(t, n, bias)
+	var y := 0.0
+	for r in odds.size():
+		y += float(odds[r]) * float(scrap_yield(r, ip))
+	return y
+
+
+## Scrap for one piece of gear of rarity r (0..4) and Item Power ip: armory.json scrap.yield[rarity]
+## + 1 per scrap.item_power_step IP above 100 (step 0 = off).
+static func scrap_yield(r: int, ip: int = 100) -> int:
+	var sc: Dictionary = cfg().get("scrap", {})
+	var ids := ["common", "uncommon", "rare", "legendary", "mythic"]
+	var base := int(sc.get("yield", {}).get(ids[clampi(r, 0, 4)], 0))
+	var step := int(sc.get("item_power_step", 0))
+	var extra := maxi(ip - 100, 0) / step if step > 0 else 0
+	return maxi(base + extra, 0)
 
 
 ## Matches of `rounds` (default: armory.json expected.typical_rounds[diff]) to afford tiers I..max for ONE archetype,
@@ -1057,17 +1178,24 @@ static func matches_to_max(diff: String, rounds: int = -1, arch: String = "auto_
 	if rounds <= 0:
 		rounds = int(cfg().get("expected", {}).get("typical_rounds", {}).get(diff, 15))
 	var inc := float(expected_match_income(diff, rounds).total)
+	var up_cur := upgrade_currency()
+	var up_inc := float(expected_match_scrap(diff, rounds).total) if up_cur == "scrap" else inc
 	var to_iv := 0
 	for t in range(1, mini(4, max_tier()) + 1):
 		to_iv += tier_cost(arch, t)
-	var all := 0
+	var ups := 0
 	for w in weapons():
-		all += upgrade_total_cost(w.id)
+		ups += upgrade_total_cost(w.id)
+	var atts := 0
 	for a in data().get("attachments", []):
-		all += int(a.get("cost", 0))
-	return {"rounds": rounds, "per_match": inc, "tiers_to_iv": ceilf(to_iv / maxf(inc, 0.01)),
-		"one_weapon_max": ceilf(upgrade_total_cost(arch) / maxf(inc, 0.01)), "everything": ceilf(all / maxf(inc, 0.01)),
-		"everything_cost": all}
+		atts += int(a.get("cost", 0))
+	var gm_all := atts + (ups if up_cur == "gravemark" else 0)
+	return {"rounds": rounds, "per_match": inc, "scrap_per_match": up_inc if up_cur == "scrap" else 0.0,
+		"upgrade_currency": up_cur, "tiers_to_iv": ceilf(to_iv / maxf(up_inc, 0.01)),
+		"one_weapon_max": ceilf(upgrade_total_cost(arch) / maxf(up_inc, 0.01)),
+		"all_upgrades": ceilf(ups / maxf(up_inc, 0.01)), "upgrades_cost": ups,
+		"everything": maxf(ceilf(gm_all / maxf(inc, 0.01)), ceilf(ups / maxf(up_inc, 0.01))),
+		"everything_cost": gm_all, "attachments_cost": atts, "attachments": ceilf(atts / maxf(inc, 0.01))}
 
 
 # ================================================================== instance API (Gooey's Armory tab)
@@ -1116,12 +1244,12 @@ func list_upgrades(weapon_id: String = "") -> Array:
 		var tl := []
 		for t in range(1, max_tier() + 1):
 			var td: Dictionary = tiers()[t - 1]
-			tl.append({"tier": t, "name": str(td.get("name", t)), "cost": tier_cost(arch, t),
+			tl.append({"tier": t, "name": str(td.get("name", t)), "cost": tier_cost(arch, t), "currency": upgrade_currency(),
 				"summary": str(td.get("summary", "")), "item_power": int(td.get("item_power", 0))})
 		var tpl := str(cfg().get("upgrades", {}).get("name_template", "{type} Rework"))
 		out.append({"id": UPGRADE_PREFIX + arch, "name": tpl.replace("{type}", weapon_type(arch)),
 			"summary": "Fully upgraded." if maxed else str(tiers()[lvl].get("summary", "")),
-			"cost": 0 if maxed else next_upgrade_cost(arch), "level": lvl, "current_level": lvl, "max_level": max_tier(),
+			"cost": 0 if maxed else next_upgrade_cost(arch), "currency": upgrade_currency(), "level": lvl, "current_level": lvl, "max_level": max_tier(),
 			"owned": lvl > 0, "maxed": maxed, "slot": "upgrade", "category": "weapon", "weapon_id": arch,
 			"tier_name": tier_name(lvl), "next_tier_name": "" if maxed else tier_name(lvl + 1), "tiers": tl,
 			"item_power_bonus": power_bonus(arch), "requirements": [], "can_afford": can_afford_id(UPGRADE_PREFIX + arch),

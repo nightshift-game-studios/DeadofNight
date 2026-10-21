@@ -199,11 +199,12 @@ func _migration_checks() -> void:
 	check(FileAccess.file_exists(dir.path_join("index.cfg")) and FileAccess.file_exists(dir.path_join("char_1.cfg")), "index.cfg + char_1.cfg written")
 	var c1 := ConfigFile.new()
 	c1.load(dir.path_join("char_1.cfg"))
-	check(int(c1.get_value("stats", "xp")) == 2500 and str(c1.get_value("player", "selected_class")) == "scout" and c1.get_value("skills", "ranks") == {"mk_root": 1},
+	var xp_v6: int = prog.rebase_xp(2500) # Economy v2: a pre-v6 save's xp is re-based onto the XP curve (level 11 kept)
+	check(int(c1.get_value("stats", "xp")) == xp_v6 and int(c1.get_value("stats", "xp_curve", 0)) == 1 and str(c1.get_value("player", "selected_class")) == "scout" and c1.get_value("skills", "ranks") == {"mk_root": 1},
 		"character 1 holds xp, class, ranks")
 	check(not c1.has_section("armory") and not c1.has_section("merchant"), "account data (Gravemark, Armory, Merchant) stays out of the character file")
 	chars.bind(SAVE)
-	check(chars.last_migration == "" and chars.count() == 1 and prog.xp == 2500, "re-bind is idempotent")
+	check(chars.last_migration == "" and chars.count() == 1 and prog.xp == xp_v6, "re-bind is idempotent (xp not re-based twice)")
 	# index lost -> rebuilt from char files
 	load("res://scripts/autoload/progress.gd").delete_save_files(dir.path_join("index.cfg"))
 	chars.bind(SAVE)

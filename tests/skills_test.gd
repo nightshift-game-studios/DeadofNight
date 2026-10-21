@@ -253,8 +253,8 @@ func _progress_checks() -> void:
 	prog.xp = 0
 	check(prog.state("mk_root") == "available" and not prog.can_afford("mk_root"), "state is structural: available but unaffordable with 0 points")
 	check(not prog.buy_rank("mk_root"), "buy_rank fails without points")
-	prog.xp = 250 * 40
-	check(prog.get_level() == 41, "display level derived from skill points (%d)" % prog.get_level())
+	prog.xp = prog.xp_for_level(41) # Economy v2: XP curve (data/skill_tree.json -> xp_curve)
+	check(prog.get_level() == 41 and prog.skill_points_earned() == 40, "display level derived from skill points (%d)" % prog.get_level())
 	check(prog.state("mk_aim") == "locked", "mk_aim locked before mk_root")
 	_rank_signal.clear()
 	check(prog.buy_rank("mk_root") and prog.rank("mk_root") == 1, "buy_rank mk_root")
@@ -348,8 +348,8 @@ func _runstate_checks() -> void:
 	for c in rp.cards:
 		sums_ok = sums_ok and str(c.get("summary", "")) != "" and str(c.summary).length() <= 60
 	check(sums_ok and rp.cards.size() == 44 and str(rp.cache_card.get("summary", "")) != "", "every Field Card (44 + Supply Cache) has a short summary one-liner")
-	check(int(rp.offer.skip_points_per_round) == 50 and int(rp.offer.cache_points_per_round) == 50 and rs.cache_points() == 50 * maxi(rs.offer_round, 1),
-		"halved card economy: skip and Supply Cache pay 50 x round")
+	check(int(rp.offer.skip_points_per_round) == 25 and int(rp.offer.cache_points_per_round) == 25 and rs.cache_points() == 25 * maxi(rs.offer_round, 1),
+		"Economy v2 card economy: skip and Supply Cache pay 25 x round (was 50)")
 	# reroll economy
 	player.points = 1000
 	check(rs.reroll_cost() == 50 and rs.reroll() and player.points == 950, "paid reroll r1 costs 50 points")
@@ -359,7 +359,7 @@ func _runstate_checks() -> void:
 	# skip
 	_closed.clear()
 	var pts: int = player.points
-	check(rs.skip() == 50 and player.points == pts + 50 and _closed == [["skipped", ""]], "skip pays 50 x round (halved economy) and closes")
+	check(rs.skip() == 25 and player.points == pts + 25 and _closed == [["skipped", ""]], "skip pays 25 x round (Economy v2) and closes")
 	# choose
 	rs.open_offer(2)
 	var pick: String = rs.offer[0]
@@ -768,7 +768,9 @@ func _effect_checks() -> void:
 	await reset({"sc_fed": 1}, [], "scout")
 	var acd0: float = player.ability.cooldown
 	await reset({"sc_fed": 1, "sc_ghost": 1, "sc_racing_heart": 1}, ["L_redline"], "scout")
-	check(near(player.ability.cooldown, acd0 + 4.0, 0.3), "Racing Heart drawback: +4 s Adrenaline cooldown (%.1f vs %.1f)" % [player.ability.cooldown, acd0])
+	var focus_k: float = float(player.get_stat_effects().from_armor.ability_cd_mult) if player.has_method("get_stat_effects") \
+		else 1.0 - float(player.armor_stats.get("focus", 0)) * 0.004 # armor Focus scales the +4 s too (pre-§21b: linear)
+	check(near(player.ability.cooldown, acd0 + 4.0 * focus_k, 0.3), "Racing Heart drawback: +4 s Adrenaline cooldown (x%.2f Focus: %.1f vs %.1f)" % [focus_k, player.ability.cooldown, acd0])
 	player._ev(&"ability_used", {"ability": player.ability})
 	check(player.ability_active_time() >= 7.9 and player.mod_stat("force_precision", 0.0, {}) >= 1.0, "Redline: Adrenaline lasts 8 s, every hit precision")
 	player.set_ability_active_time(0.0)
@@ -949,7 +951,7 @@ func _flow_checks() -> void:
 	await reset({})
 	check(prog.respec_allowed, "respec allowed at round 0")
 	check(main.run_pick_menu != null and main.run_pick_menu.is_inside_tree(), "a run-pick chooser is instanced (%s)" % main.run_pick_menu.get_script().resource_path.get_file())
-	check(main._zombie_stats(1).damage == 10 and main._zombie_stats(10).damage == 28, "zombie damage exports: 10 + 2 per round")
+	check(main._zombie_stats(1).damage == 10 and main._zombie_stats(10).damage == 19, "zombie damage exports: 10 + 1 per round (Economy v2 wave_base, was +2; got %d)" % main._zombie_stats(10).damage)
 	var z_hp_round: int = main.current_round
 	main.current_round = 3
 	main._to_spawn = 0
@@ -961,7 +963,7 @@ func _flow_checks() -> void:
 	var pts: int = player.points
 	rs.skip()
 	await wait(1)
-	check(not paused and not main._offer_pending and near(main._break_timer, main.round_break, 0.2) and player.points == pts + 150,
-		"offer closed -> unpaused, round break starts, skip paid 150 at r3 (50 x round)")
+	check(not paused and not main._offer_pending and near(main._break_timer, main.round_break, 0.2) and player.points == pts + 75,
+		"offer closed -> unpaused, round break starts, skip paid 75 at r3 (25 x round)")
 	main._break_timer = 99999.0
 	main.current_round = z_hp_round

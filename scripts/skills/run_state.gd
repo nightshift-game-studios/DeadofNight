@@ -353,11 +353,11 @@ func _net_reroll(cost: int) -> bool:
 
 
 func skip_reward() -> int:
-	return int(cfg("skip_points_per_round", 50)) * maxi(offer_round, 1)
+	return int(cfg("skip_points_per_round", 25)) * maxi(offer_round, 1)
 
 
 func cache_points() -> int:
-	return int(cfg("cache_points_per_round", 50)) * maxi(offer_round, 1)
+	return int(cfg("cache_points_per_round", 25)) * maxi(offer_round, 1)
 
 
 ## Takes no card, pays skip_reward() points, closes the offer.
