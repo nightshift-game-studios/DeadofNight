@@ -253,6 +253,10 @@ func _characters_screen() -> void:
 		var other: String = abil[1] if str(chars.ability_for("chandler")) == abil[0] else abil[0]
 		check(cs.set_ability("chandler", other) and chars.ability_for("chandler") == other, "#9 Q ability pick saved")
 	check(cs.find_child("ClassStats", true, false) != null and cs.find_child("AbilitySummary", true, false) != null, "#9 class stats + ability summary shown")
+	check(cs.find_child("ClassItems", true, false) != null and (cs.find_child("ClassItemRow", true, false) != null or cs.find_child("ClassItemsNone", true, false) != null),
+		"#9 class items list (ClassItems.owned_rows) in the class picker")
+	var row_meta: Label = cs.find_child("SlotMeta", true, false)
+	check(row_meta != null and row_meta.text.begins_with("BEST ROUND"), "#21 slot rows show best round + games (Characters.list)")
 	await frames(3)
 	check(label_overlaps(cs.panel).is_empty(), "#21/#9 no overlapping text %s" % str(label_overlaps(cs.panel).slice(0, 3)))
 	check(Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(cs.panel.get_global_rect()), "#21 fits 1280x720 (%s)" % str(cs.panel.get_global_rect()))

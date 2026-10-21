@@ -204,7 +204,7 @@ func _slot_card(e: Dictionary) -> void:
 	var id := int(e.id)
 	var b := _btn("", select_slot.bind(id))
 	b.name = "Slot_%d" % id
-	b.custom_minimum_size = Vector2(0, 64)
+	b.custom_minimum_size = Vector2(0, 72)
 	if id == selected_id:
 		b.add_theme_stylebox_override("normal", UIStyle.cut_box(Color(0.16, 0.12, 0.08, 0.95), UIStyle.RUST, 3, 8))
 	var box := VBoxContainer.new()
@@ -225,7 +225,11 @@ func _slot_card(e: Dictionary) -> void:
 	top.add_child(nm)
 	if bool(e.get("active", false)):
 		top.add_child(UIStyle.label("PLAYING", 11, UIStyle.GOOD, true))
-	box.add_child(UIStyle.label("LV %d  //  %s" % [int(e.get("level", 1)), str(e.get("class_name", e.get("class", ""))).to_upper()], 12, UIStyle.BONE_DIM, true))
+	box.add_child(UIStyle.label("LV %d  //  %s  //  Q %s" % [int(e.get("level", 1)), str(e.get("class_name", e.get("class", ""))).to_upper(),
+		str(e.get("ability_name", e.get("ability", ""))).to_upper()], 12, UIStyle.BONE_DIM, true))
+	var meta := UIStyle.label("BEST ROUND %d  //  %d GAMES" % [int(e.get("best_round", 0)), int(e.get("games_played", 0))], 11, Color(UIStyle.BONE_DIM, 0.8))
+	meta.name = "SlotMeta"
+	box.add_child(meta)
 	_left.add_child(b)
 	slot_buttons[id] = b
 
@@ -244,8 +248,8 @@ func _build_detail(e: Dictionary) -> void:
 	nm.name = "DetailName"
 	nm.clip_text = true
 	_right.add_child(nm)
-	_right.add_child(UIStyle.label("LEVEL %d  //  %s%s" % [int(e.get("level", 1)), str(e.get("class_name", "")).to_upper(),
-		"  //  PLAYING NOW" if active else ""], 13, UIStyle.BONE_DIM, true))
+	_right.add_child(UIStyle.label("LEVEL %d  //  %s  //  BEST ROUND %d  //  %d GAMES%s" % [int(e.get("level", 1)), str(e.get("class_name", "")).to_upper(),
+		int(e.get("best_round", 0)), int(e.get("games_played", 0)), "  //  PLAYING NOW" if active else ""], 13, UIStyle.BONE_DIM, true))
 	var acts := HBoxContainer.new()
 	acts.add_theme_constant_override("separation", 10)
 	_right.add_child(acts)
@@ -340,8 +344,40 @@ func _build_loadout() -> void:
 			var al := _wrap(at, 12, UIStyle.BONE_DIM)
 			al.name = "AbilitySummary"
 			_right.add_child(al)
+		_build_class_items(str(cur.id))
 	if locked != "":
 		_right.add_child(_wrap(locked, 12, UIStyle.BAD.lightened(0.2)))
+
+
+## #9: the class items this character owns for the picked class (ClassItems.owned_rows), equipped first.
+func _build_class_items(cid: String) -> void:
+	var rows: Array = ClassItems.owned_rows(cid)
+	_section("%s CLASS ITEMS  //  %d OWNED" % [cid.to_upper(), rows.size()])
+	var box := VBoxContainer.new()
+	box.name = "ClassItems"
+	box.add_theme_constant_override("separation", 2)
+	_right.add_child(box)
+	if rows.is_empty():
+		var none := _wrap("None yet. Class items drop in matches; they work only while you play this class.", 12, UIStyle.BONE_DIM)
+		none.name = "ClassItemsNone"
+		box.add_child(none)
+		return
+	for r in rows.slice(0, 3):
+		var h := HBoxContainer.new()
+		h.name = "ClassItemRow"
+		h.add_theme_constant_override("separation", 8)
+		box.add_child(h)
+		var nm := UIStyle.label(("● " if bool(r.get("equipped", false)) else "") + str(r.get("name", "")).to_upper(), 13, UIStyle.rarity_color(int(r.get("rarity", 0))), true)
+		nm.custom_minimum_size.x = 210
+		nm.clip_text = true
+		h.add_child(nm)
+		var ln := str(r.get("line", ""))
+		if bool(r.get("synergy_owned", false)) and str(r.get("synergy_line", "")) != "":
+			ln += "  +  " + str(r.synergy_line)
+		var l := _wrap(ln, 11, UIStyle.BONE if bool(r.get("active", false)) else UIStyle.BONE_DIM)
+		h.add_child(l)
+	if rows.size() > 3:
+		box.add_child(UIStyle.label("+ %d MORE IN YOUR KIT" % (rows.size() - 3), 11, UIStyle.BONE_DIM))
 
 
 func _build_create() -> void:
