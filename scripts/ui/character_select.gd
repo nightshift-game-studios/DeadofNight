@@ -335,8 +335,8 @@ func _build_loadout() -> void:
 			ar.add_child(ab)
 			ability_buttons[str(a.id)] = ab
 		if not pick_row.is_empty():
-			var at := "%s  //  %ds COOLDOWN%s  //  %s" % [str(pick_row.get("kind", "")).to_upper(), int(pick_row.get("cooldown", 0)),
-				("  //  %.0fs" % float(pick_row.get("duration", 0))) if float(pick_row.get("duration", 0)) > 0 else "", str(pick_row.get("summary", ""))]
+			var at := "%s  //  %ss COOLDOWN%s  //  %s" % [str(pick_row.get("kind", "")).to_upper(), ("%.1f" % float(pick_row.get("cooldown", 0))).trim_suffix(".0"),
+				("  //  LASTS %ss" % ("%.1f" % float(pick_row.get("duration", 0))).trim_suffix(".0")) if float(pick_row.get("duration", 0)) >= 0.5 else "", str(pick_row.get("summary", ""))]
 			var al := _wrap(at, 12, UIStyle.BONE_DIM)
 			al.name = "AbilitySummary"
 			_right.add_child(al)
