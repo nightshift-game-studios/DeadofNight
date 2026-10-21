@@ -152,6 +152,90 @@ static func _col(a) -> Color:
 	return Color(a[0], a[1], a[2]) if a is Array and a.size() >= 3 else Color(0.8, 0.8, 0.8)
 
 
+# ------------------------------------------------------------------ weapon slot rule (data/weapons.json -> slot_rules)
+
+static var _slot_rules: Dictionary = {}
+
+
+static func slot_rules() -> Dictionary:
+	if _slot_rules.is_empty():
+		var d = JSON.parse_string(FileAccess.get_file_as_string(WEAPONS_PATH))
+		_slot_rules = d.get("slot_rules", {}) if typeof(d) == TYPE_DICTIONARY else {}
+		if _slot_rules.is_empty():
+			_slot_rules = {"slots": {}}
+	return _slot_rules
+
+
+## The one equip slot an archetype belongs in ("" = unknown archetype / no rule).
+static func slot_for(archetype: String) -> String:
+	var sl: Dictionary = slot_rules().get("slots", {})
+	for s in sl:
+		if archetype in sl[s]:
+			return str(s)
+	return ""
+
+
+## "" when `item` may sit in equip slot `slot`, else the refusal text for the prompt ("Secondary takes handguns only").
+## Armor / consumables: only their own slot. A weapon: the slot_rules map (no rule for its archetype -> its own slot).
+static func slot_refusal(item, slot: String) -> String:
+	var g := _as_gear(item)
+	if g == null:
+		return "Nothing to equip"
+	if not (g is WeaponItem):
+		return "" if slot == g.slot else "Wrong slot"
+	var want := slot_for(str((g as WeaponItem).archetype))
+	if want == "":
+		want = g.slot
+	if slot == want:
+		return ""
+	var labels: Dictionary = slot_rules().get("labels", {})
+	return "%s takes %s only" % [slot.capitalize(), str(labels.get(slot, "other weapons"))]
+
+
+## G4M3N's loot markers (name locked, STATS_API.md "Loot markers"): true when `item` beats what `player` has equipped in
+## that item's slot. item = GearItem or a Pickup (anything with .item); player = the Player (anything with .inventory)
+## or an Inventory. An empty slot counts as an upgrade. Compares effective Item Power (weapons include their Armory
+## tier bonus): at least upgrade_margin() (data, 5) more IP, or at least equal IP at a higher rarity. Consumables, nulls and the very item that is equipped -> false.
+static func is_upgrade(item, player) -> bool:
+	var g := _as_gear(item)
+	if g == null or g.slot == "":
+		return false
+	var inv = player.get("inventory") if player != null and "inventory" in player else player
+	if inv == null or not ("equipped" in inv):
+		return false
+	var cur = inv.equipped.get(g.slot)
+	if cur == null:
+		return true
+	if cur == g or not (cur is GearItem):
+		return false
+	var a := _power_of(g)
+	var b := _power_of(cur)
+	return a >= b + upgrade_margin() or (a >= b and g.rarity > (cur as GearItem).rarity)
+
+
+static var _upgrade_margin: int = -1
+
+
+## data/loot_tables.json -> item_power.upgrade_margin (Item Power a piece must gain to count as an upgrade).
+static func upgrade_margin() -> int:
+	if _upgrade_margin < 0:
+		var d = JSON.parse_string(FileAccess.get_file_as_string(LOOT_PATH))
+		_upgrade_margin = maxi(int(d.get("item_power", {}).get("upgrade_margin", 1)), 1) if typeof(d) == TYPE_DICTIONARY else 1
+	return _upgrade_margin
+
+
+static func _as_gear(item) -> GearItem:
+	if item is GearItem:
+		return item
+	if item is Object and item != null and "item" in item and item.get("item") is GearItem:
+		return item.get("item")
+	return null
+
+
+static func _power_of(g: GearItem) -> int:
+	return int(g.call("effective_item_power")) if g.has_method("effective_item_power") else g.item_power
+
+
 func roll_rarity(weights: Dictionary, round_bonus: Dictionary = {}, round_number: int = 1) -> int:
 	var total := 0.0
 	var ws := []
@@ -187,7 +271,8 @@ func roll_weapon(arch_id: String = "", rarity: int = -1, round_number: int = 1, 
 	w.color = Rarity.color(rarity)
 	w.id = "%s_%d" % [a.id, w.uid]
 	var variance := stat_variance
-	var makers := manufacturers.filter(func(m): return a.slot in m.get("slots", []))
+	var fam: String = str(a.get("family", a.slot)) # slot before the primary/secondary rule: makers + elements unchanged
+	var makers := manufacturers.filter(func(m): return fam in m.get("slots", []))
 	var maker: Dictionary = makers.pick_random() if makers.size() else {}
 	var mods: Dictionary = maker.get("stat_mods", {})
 	for s in a.stats:
@@ -198,7 +283,7 @@ func roll_weapon(arch_id: String = "", rarity: int = -1, round_number: int = 1, 
 	w.manufacturer_color = _col(maker.get("color"))
 	var lines: Array = maker.get("flavor", [""])
 	w.flavor = lines.pick_random() if lines.size() else ""
-	w.element = "ballistic" if a.slot == "primary" else SECONDARY_ELEMENTS.pick_random()
+	w.element = "ballistic" if fam == "primary" else SECONDARY_ELEMENTS.pick_random()
 	# Name + perks
 	if rarity == Rarity.MYTHIC and a.has("mythic"):
 		w.display_name = a.mythic.name
@@ -323,6 +408,10 @@ func item_from_dict(d: Dictionary) -> Item:
 			var w := WeaponItem.new()
 			w.apply_dict(d)
 			w.arch = weapons.get(w.archetype, {})
+			var right := slot_for(w.archetype)
+			if right != "" and w.slot != right: # saves from before the slot rule (Inventory.load_save_dict re-homes it)
+				w.set_meta("slot_migrated_from", w.slot)
+				w.slot = right
 			w.element = d.get("element", "ballistic")
 			if w.roll_quality < 0.0:
 				w.roll_quality = derive_roll_quality(w)

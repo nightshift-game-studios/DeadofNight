@@ -5,6 +5,10 @@ extends Area3D
 ## are collected on touch).
 
 @export var item: Item
+## G4M3N's loot markers (STATS_API.md): the gear's Rarity tier (Rarity.COMMON..MYTHIC), -1 for consumables / empty.
+var rarity: int:
+	get:
+		return (item as GearItem).rarity if item is GearItem else -1
 
 var _t: float = 0.0
 var _visual: Node3D
@@ -152,3 +156,17 @@ func _on_body_entered(body: Node) -> void:
 func _on_body_exited(body: Node) -> void:
 	if body.has_method("set_nearby_interactable"):
 		body.set_nearby_interactable(self, false)
+
+
+## Same as `rarity` (-1 = not gear).
+func get_rarity() -> int:
+	return rarity
+
+
+func is_gear() -> bool:
+	return item is GearItem
+
+
+## GearDB.is_upgrade(item, player) for this pickup.
+func is_upgrade_for(player) -> bool:
+	return load("res://scripts/autoload/gear_db.gd").is_upgrade(item, player)

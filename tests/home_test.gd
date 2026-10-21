@@ -94,7 +94,7 @@ func _go() -> void:
 	home._kit_proxy.ensure()
 	var inv = home._kit_proxy.inventory
 	inv.mark_all_seen()
-	var unseen = gear.roll_weapon("smg", 2, 2, "secondary") # RARE
+	var unseen = gear.roll_weapon("sidearm", 2, 2, "secondary") # RARE
 	unseen.seen = false
 	inv.add_item(unseen)
 	check(inv.backpack.secondary.has(unseen) and inv.has_unseen("secondary"), "kit stash has unseen secondary")

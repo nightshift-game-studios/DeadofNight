@@ -21,6 +21,7 @@ signal seen_changed(item: GearItem) ## an item's seen flag flipped, or an unseen
 
 const SAVE_VERSION := 1 ## to_save_dict() shape version (1 = equipped + backpack, items carry "seen")
 const DEFAULT_STASH_CAP := 40
+const GEAR_DB_PATH := "res://scripts/autoload/gear_db.gd" ## static GearDB.is_upgrade / slot_refusal (load(), not preload: avoids a compile cycle)
 
 const WEAPON_SLOTS: Array[String] = ["primary", "secondary", "heavy"]
 const ARMOR_SLOTS: Array[String] = ["helmet", "gauntlets", "chest", "legs", "class_item"]
@@ -69,8 +70,8 @@ func give_starter_loadout() -> void:
 
 ## Common primary + secondary weapons and a full common armor set (no stash lookup).
 func give_fresh_starter_loadout() -> void:
-	add_item(GearDB.roll_weapon("sidearm", Rarity.COMMON, 1))
-	add_item(GearDB.roll_weapon("smg", Rarity.COMMON, 1))
+	add_item(GearDB.roll_weapon("smg", Rarity.COMMON, 1)) # primary (big gun)
+	add_item(GearDB.roll_weapon("sidearm", Rarity.COMMON, 1)) # secondary (handgun)
 	for s in ARMOR_SLOTS:
 		add_item(GearDB.roll_armor(s, Rarity.COMMON, 1))
 	equip_weapon_slot("primary")
@@ -78,7 +79,7 @@ func give_fresh_starter_loadout() -> void:
 
 ## After a stash restore: any empty equip slot (except Heavy, which starts empty) gets a Common starter piece.
 func fill_empty_slots() -> void:
-	var fills := {"primary": "sidearm", "secondary": "smg"}
+	var fills := {"primary": "smg", "secondary": "sidearm"} # slot rule: big gun primary, handgun secondary
 	for s in fills:
 		if equipped.get(s) == null:
 			add_item(GearDB.roll_weapon(fills[s], Rarity.COMMON, 1))
@@ -98,6 +99,7 @@ func add_item(item: Item) -> bool:
 	last_reject = ""
 	var gear := item as GearItem
 	if gear:
+		_rehome(gear)
 		var s: String = gear.slot
 		if equipped.get(s) == null:
 			equipped[s] = gear
@@ -152,10 +154,7 @@ func equip(item: GearItem) -> void:
 func equip_refusal(gear: GearItem) -> String:
 	if gear == null:
 		return "Nothing to equip"
-	var gdb := get_node_or_null("/root/GearDB")
-	if gdb and gdb.has_method("slot_refusal"):
-		return str(gdb.slot_refusal(gear, self))
-	return ""
+	return str(load(GEAR_DB_PATH).slot_refusal(gear, gear.slot)) # Skillz: primary = big guns, secondary = handguns (data/weapons.json slot_rules)
 
 
 ## Playtest #18: a new backpack piece gets the '!' badge only if it is Rare or better, or an upgrade over
@@ -164,14 +163,10 @@ func badge_worthy(gear: GearItem) -> bool:
 	return gear != null and (gear.rarity >= Rarity.RARE or is_upgrade(gear))
 
 
-## Skillz's GearDB.is_upgrade(item, player) when it exists; until then: higher rarity than the equipped piece
-## in that slot (an empty slot counts as an upgrade).
+## GearDB.is_upgrade(item, player) is the single source of truth (STATS_API.md "Loot markers"); this inventory stands in
+## for the player (its equipped slots are what is compared).
 func is_upgrade(gear: GearItem) -> bool:
-	var gdb := get_node_or_null("/root/GearDB")
-	if gdb and gdb.has_method("is_upgrade"):
-		return bool(gdb.is_upgrade(gear, get_parent()))
-	var cur: GearItem = equipped.get(gear.slot)
-	return cur == null or gear.rarity > cur.rarity
+	return bool(load(GEAR_DB_PATH).is_upgrade(gear, self))
 
 
 ## Hold-E (playtest #3): take a ground item and equip it at once. The old piece goes to the backpack (seen);
@@ -201,14 +196,22 @@ func take_and_equip(gear: GearItem) -> Dictionary:
 	return {"ok": true, "displaced": displaced, "reason": ""}
 
 
-## Remove an item from the backpack for good (scrap). Frees one stash space.
-func dismantle(item: GearItem) -> void:
-	if not backpack[item.slot].has(item):
-		return
+## Remove an item from the backpack for good (scrap). Frees one stash space and pays its Scrap into Progress
+## (Economy v2, save v6: Armory.scrap_yield by rarity + Item Power; SCRAP_API.md). Returns the Scrap paid (0 = refused:
+## not in the backpack, e.g. equipped). pay_scrap false = just remove (no currency).
+func dismantle(item: GearItem, source: String = "stash", pay_scrap: bool = true) -> int:
+	if item == null or not backpack.has(item.slot) or not backpack[item.slot].has(item):
+		return 0
 	backpack[item.slot].erase(item)
+	var paid := 0
+	var prog := get_node_or_null("/root/Progress") if is_inside_tree() else null
+	if pay_scrap and prog and prog.has_method("add_scrap"):
+		paid = int(prog.scrap_value(item))
+		prog.add_scrap(paid, source)
 	changed.emit()
 	if not item.seen:
 		seen_changed.emit(item)
+	return paid
 
 
 # ------------------------------------------------------------------ stash cap
@@ -416,17 +419,37 @@ func to_save_dict() -> Dictionary:
 
 
 func load_save_dict(d: Dictionary) -> void:
+	slot_migrations = []
+	var moved: Array = [] # wrong-slot weapons (saves from before the slot rule): placed after the right ones
+	for s in WEAPON_SLOTS + ARMOR_SLOTS:
+		equipped[s] = null
+		backpack[s] = []
 	for s in WEAPON_SLOTS + ARMOR_SLOTS:
 		var e = d.get("equipped", {}).get(s)
 		var eq := GearDB.item_from_dict(e) if typeof(e) == TYPE_DICTIONARY else null
-		equipped[s] = eq if _loadable(eq, s) else null
-		if equipped[s]:
-			equipped[s].seen = true # equipped gear is always "looked at"
-		backpack[s] = []
+		if _loadable(eq, s):
+			equipped[s] = eq
+			eq.seen = true # equipped gear is always "looked at"
+		elif _movable(eq, s):
+			moved.append({"item": eq, "from": s, "was": "equipped"})
 		for bd in d.get("backpack", {}).get(s, []):
 			var it := GearDB.item_from_dict(bd) if typeof(bd) == TYPE_DICTIONARY else null
 			if _loadable(it, s):
 				backpack[s].append(it)
+			elif _movable(it, s):
+				moved.append({"item": it, "from": s, "was": "backpack"})
+	# Slot rule migration: a moved weapon takes its right slot when that is empty (equipped first), else goes to the
+	# stash (that slot's backpack, even past backpack_size: nothing is lost). slot_migrations lists what moved.
+	for m in moved:
+		var g: GearItem = m.item
+		var to := "stash"
+		if m.was == "equipped" and equipped.get(g.slot) == null:
+			equipped[g.slot] = g
+			g.seen = true
+			to = "equipped"
+		else:
+			backpack[g.slot].append(g)
+		slot_migrations.append({"item": g, "id": str((g as WeaponItem).archetype), "from": m.from, "slot": g.slot, "to": to})
 	armor_changed.emit()
 	changed.emit()
 	seen_changed.emit(null) # whole inventory replaced: badge UI should recount
@@ -436,6 +459,23 @@ func load_save_dict(d: Dictionary) -> void:
 				active_weapon_slot = s
 				break
 	weapon_equipped.emit(get_equipped_weapon())
+
+
+var slot_migrations: Array = [] ## last load_save_dict: [{item, id, from, slot, to: "equipped" | "stash"}] weapons re-homed by the slot rule
+
+
+## A saved weapon that sits under the wrong slot key but whose archetype still exists: re-homed, not dropped.
+func _movable(it: Item, s: String) -> bool:
+	var w := it as WeaponItem
+	return w != null and not w.arch.is_empty() and w.slot != s and w.slot in WEAPON_SLOTS
+
+
+## Puts a weapon whose slot field disagrees with the slot rule (old dicts, Net mirrors) under its right slot.
+func _rehome(gear: GearItem) -> void:
+	if gear is WeaponItem:
+		var right: String = load(GEAR_DB_PATH).slot_for(str((gear as WeaponItem).archetype))
+		if right != "" and right != gear.slot:
+			gear.slot = right
 
 
 ## Drops saved items that no longer fit the data (removed weapon archetype, wrong slot).

@@ -56,8 +56,8 @@ func _run() -> void:
 		check(ResourceLoader.exists(mp), "model exists for %s (%s)" % [a.id, mp])
 
 	# ---------------------------------------------------------------- starter loadout
-	check(inv.equipped.primary != null and inv.equipped.primary.archetype == "sidearm", "starter primary = sidearm")
-	check(inv.equipped.secondary != null, "starter secondary weapon equipped")
+	check(inv.equipped.primary != null and inv.equipped.primary.archetype == "smg", "starter primary = SMG (slot rule: big guns)")
+	check(inv.equipped.secondary != null and inv.equipped.secondary.archetype == "sidearm", "starter secondary = sidearm (handguns only)")
 	var armor_ok := true
 	for s in inv.ARMOR_SLOTS:
 		armor_ok = armor_ok and inv.equipped[s] != null
@@ -212,8 +212,9 @@ func _run() -> void:
 	check(Rarity.IDS[Rarity.MYTHIC] == "mythic", "top tier is Mythic")
 	var els := {}
 	for i in 60:
-		els[gear.roll_weapon("", -1, 1, "secondary").element] = true
-	check(els.keys().all(func(e): return e in ["volt", "blaze", "blight"]), "secondary elements are volt/blaze/blight %s" % str(els.keys()))
+		els[gear.roll_weapon(["smg", "shotgun", "pulse_rifle"][i % 3], -1, 1).element] = true
+	check(els.keys().all(func(e): return e in ["volt", "blaze", "blight"]) and gear.roll_weapon("sidearm", -1, 1).element == "ballistic",
+		"SMG / shotgun / LMG roll volt/blaze/blight %s; handguns stay ballistic" % str(els.keys()))
 	var banned := ["Ace of Graves", "Last Word", "Rampage", "Outlaw", "Kill Clip", "Demolitionist", "Firmly Planted", "Leech",
 		"Kinetic", "Exotic", "Engram",
 		# skill tree / Field Cards: series terms and well-known perk / skill names (Destiny, Borderlands, CoD, Diablo)
@@ -247,11 +248,11 @@ func _run() -> void:
 	check(gear.perks.has("bloodrush") and gear.perks.has("fever_hands") and not gear.perks.has("rampage"), "renamed perk ids")
 
 	# ---------------------------------------------------------------- inventory
-	var hc = gear.roll_weapon("hand_cannon", Rarity.LEGENDARY, 8)
-	check(inv.add_item(hc), "add legendary hand cannon")
+	var hc = gear.roll_weapon("auto_rifle", Rarity.LEGENDARY, 8)
+	check(inv.add_item(hc), "add legendary auto rifle")
 	check(hc in inv.backpack.primary, "goes to primary backpack (slot occupied)")
 	inv.equip(hc)
-	check(inv.equipped.primary == hc and inv.backpack.primary.size() == 1, "equip swaps old sidearm into backpack")
+	check(inv.equipped.primary == hc and inv.backpack.primary.size() == 1, "equip swaps the old SMG into the backpack")
 	inv.equip_weapon_slot("secondary")
 	check(inv.get_equipped_weapon() == inv.equipped.secondary, "switch to secondary slot")
 	inv.equip_index(0)
@@ -354,10 +355,22 @@ func _run() -> void:
 				chests.append(n)
 	check(chests.size() >= 3, "3 chests in arena (%d)" % chests.size())
 	var pick_before: int = main.pickups_root.get_child_count()
+	# Economy v2: chests cost points (data/economy.json -> chests) and relocate instead of re-arming every round
+	var c_price: int = chests[0].price()
+	var pts_keep: int = player.points
+	player.points = 0
 	chests[0].interact(player)
 	await wait(2)
+	check(c_price >= 1000 and not chests[0].is_open and main.pickups_root.get_child_count() == pick_before,
+		"chest costs %d points: refused with 0 points, nothing spawned" % c_price)
+	player.points = c_price + 7
+	chests[0].interact(player)
+	await wait(2)
+	check(player.points == 7 and chests[0].last_price == c_price, "chest charged its price (%d left)" % player.points)
 	check(main.pickups_root.get_child_count() == pick_before + 2, "chest spawns 2 pickups")
 	check(not chests[0].can_interact(), "chest can't be reopened this round")
+	check(chests[1].price() > c_price, "next chest costs more this match (%d -> %d)" % [c_price, chests[1].price()])
+	player.points = pts_keep
 	var pk = main.pickups_root.get_child(main.pickups_root.get_child_count() - 1)
 	var n_items := 0
 	for s in inv.backpack:
@@ -671,11 +684,11 @@ func _run() -> void:
 	inv.mark_all_seen()
 	await process_frame
 	if inv.equipped.get("secondary") == null:
-		var filler = gear.roll_weapon("smg", Rarity.COMMON, 1, "secondary")
+		var filler = gear.roll_weapon("sidearm", Rarity.COMMON, 1, "secondary")
 		filler.seen = true
 		inv.add_item(filler)
 		inv.mark_all_seen()
-	var unseen_w = gear.roll_weapon("smg", Rarity.RARE, 2, "secondary")
+	var unseen_w = gear.roll_weapon("hand_cannon", Rarity.RARE, 2, "secondary")
 	unseen_w.seen = false
 	unseen_w.display_name = "TEST UNSEEN SMG"
 	unseen_w.slot = "secondary"
@@ -1066,7 +1079,8 @@ func _run() -> void:
 	check(main.current_round == 2, "round 2 started")
 	check(sfx.music_state == "combat", "combat music again in round 2")
 	check(main._zombie_stats(2).health > main._zombie_stats(1).health, "round 2 zombies tougher")
-	check(chests[0].can_interact(), "chest re-armed for new round")
+	check(chests[0].can_interact() and not chests[0].waiting_for_round,
+		"bought arena chest: no free spot to move to, so it closes at the next round (fallback; maps with ChestSpots relocate)")
 
 	# Game over saves progression
 	player.max_health = 100

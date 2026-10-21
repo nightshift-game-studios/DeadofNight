@@ -61,21 +61,21 @@ func _run() -> void:
 	check(prog.stash.is_empty(), "changing save_path drops the in-memory stash (tests never see real gear)")
 
 	# ------------------------------------------------------------ economy
-	check(prog.points_per_hit == 5 and prog.points_per_kill == 50, "economy.json: 5 per hit, 50 per kill (was 10 / 100)")
+	check(prog.points_per_hit == 3 and prog.points_per_kill == 25, "economy.json v2: 3 per hit, 25 per kill (was 5 / 50, before that 10 / 100)")
 	var econ: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/economy.json"))
-	check(int(econ._previous.points_per_hit) == 10 and int(econ._previous.points_per_kill) == 100, "economy.json keeps the previous values for reference")
+	check(int(econ._previous.points_per_hit) == 5 and int(econ._previous.points_per_kill) == 50, "economy.json keeps the previous values for reference")
 	var maps: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/maps.json"))
 	check(JSON.stringify(maps).contains("750 / 1000 / 1250"), "door prices untouched (750 / 1000 / 1250)")
 
 	# ------------------------------------------------------------ seen flags
 	var inv = _new_inv()
 	check(inv.stash_cap == 40 and int(gear.loot.stash.cap) == 40, "stash cap 40 (data/loot_tables.json -> stash.cap)")
-	var w1 = gear.roll_weapon("sidearm", COMMON, 1)
+	var w1 = gear.roll_weapon("smg", COMMON, 1) # slot rule: primary = big guns
 	check(w1.seen == false, "freshly rolled gear starts unseen")
 	inv.add_item(w1)
 	check(inv.equipped.primary == w1 and w1.seen, "auto-equipped pickup is marked seen")
 	_seen_events.clear()
-	var w2 = gear.roll_weapon("hand_cannon", LEGENDARY, 5)
+	var w2 = gear.roll_weapon("shotgun", LEGENDARY, 5)
 	inv.add_item(w2)
 	check(inv.backpack.primary.has(w2) and not w2.seen, "backpack pickup stays unseen")
 	check(_seen_events == [w2], "seen_changed(item) fires when an unseen item arrives")
@@ -191,10 +191,10 @@ func _run() -> void:
 	prog.clear_stash()
 	var main = await _load_main()
 	var player = main.get_node("Player")
-	check(player.inventory.equipped.primary != null and player.inventory.equipped.primary.archetype == "sidearm"
+	check(player.inventory.equipped.primary != null and player.inventory.equipped.primary.archetype == "smg"
 		and player.inventory.carried_count() == 0, "no stash: Common starter loadout")
 	check(prog.bound_inventory() == player.inventory, "player binds its inventory to Progress")
-	var hc = gear.roll_weapon("hand_cannon", LEGENDARY, 8)
+	var hc = gear.roll_weapon("auto_rifle", LEGENDARY, 8)
 	var hc_name: String = hc.display_name
 	player.receive_item(hc)
 	var hv = gear.roll_weapon("rocket_launcher", RARE, 4)

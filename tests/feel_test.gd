@@ -162,8 +162,8 @@ func _run() -> void:
 	# full backpack: the old piece drops where the new one lay
 	var bsize: int = inv.backpack_size
 	while inv.backpack[g2.slot].size() < bsize:
-		inv.backpack[g2.slot].append(gdb.roll_weapon("smg", 0, 1))
-	var g3 = gdb.roll_weapon("hand_cannon", 3, 3)
+		inv.backpack[g2.slot].append(gdb.roll_weapon(str(g2.archetype), 0, 1))
+	var g3 = gdb.roll_weapon(str(g2.archetype), 3, 3) # same slot as g2 (Skillz slot rule: handguns are secondary)
 	var p3 = await near.call(g3)
 	Input.action_press("interact")
 	player._interact()
@@ -207,23 +207,23 @@ func _run() -> void:
 	var iv = Inv.new()
 	root.add_child(iv)
 	iv.stash_cap = -1
-	var base = gdb.roll_weapon("sidearm", 1, 1) # Uncommon equipped primary
+	var base = gdb.roll_weapon("auto_rifle", 1, 1, "", 110) # Uncommon equipped primary (Skillz slot rule: primary = big guns)
 	iv.add_item(base)
-	var c0 = gdb.roll_weapon("hand_cannon", 0, 1)
-	var u0 = gdb.roll_weapon("auto_rifle", 1, 1)
+	var c0 = gdb.roll_weapon("smg", 0, 1, "", 108) # explicit IP: GearDB.is_upgrade compares Item Power (margin 5)
+	var u0 = gdb.roll_weapon("shotgun", 1, 1, "", 112)
 	var r0 = gdb.roll_weapon("scout_rifle", 2, 1)
-	var l0 = gdb.roll_weapon("hand_cannon", 3, 1)
+	var l0 = gdb.roll_weapon("pulse_rifle", 3, 1)
 	for it in [c0, u0, r0, l0]:
 		iv.add_item(it)
 	check(c0.seen and u0.seen, "#18 Common / same-rarity Uncommon below Rare: no '!'")
 	check(not r0.seen and not l0.seen, "#18 Rare and Legendary: '!'")
 	check(iv.unseen_count("primary") == 2, "#18 unseen_count counts only those (%d)" % iv.unseen_count("primary"))
-	var hb = gdb.roll_armor("helmet", 0, 1)
+	var hb = gdb.roll_armor("helmet", 0, 1, 100)
 	iv.add_item(hb) # Common helmet equipped
-	var hu = gdb.roll_armor("helmet", 1, 1)
+	var hu = gdb.roll_armor("helmet", 1, 1, 100)
 	iv.add_item(hu)
 	check(not hu.seen and iv.is_upgrade(hu), "#18 Uncommon over an equipped Common: upgrade -> '!'")
-	var hc = gdb.roll_armor("helmet", 0, 2)
+	var hc = gdb.roll_armor("helmet", 0, 2, 103)
 	iv.add_item(hc)
 	check(hc.seen and not iv.is_upgrade(hc), "#18 Common next to a Common: no '!'")
 	iv.queue_free()

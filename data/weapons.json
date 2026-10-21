@@ -2,11 +2,21 @@
 	"_help": "Weapon archetypes plus fictional manufacturers. Each roll picks a manufacturer allowed in the weapon's slot; its stat_mods are added to the rolled stats and one of its flavor lines is used (mythic-tier rolls use the archetype's mythic name, perk and flavor). Precision (head) hits multiply damage by the archetype's headshot_multiplier, falling back to headshot_multiplier_default. Optional per archetype: \"fire_sfx\" = sound key in assets/audio/sfx/weapons (file name minus _NN), \"burst\"/\"burst_interval\" = rounds per trigger pull and seconds between them (rpm stays the average fire rate).",
 	"stat_variance": 12,
 	"headshot_multiplier_default": 2.0,
+	"slot_rules": {
+		"_help": "Skillz (playtest batch, pulled forward from the weapons batch): which equip slot each archetype may sit in. GearDB.slot_for(archetype) / GearDB.slot_refusal(item, slot) read this; Inventory.equip_refusal (pickup, Hold-E take_and_equip, wheel cycle, stash equip) honours it, and saves with a weapon in the wrong slot are moved on load (Inventory.load_save_dict). primary = big guns (rifles, SMG, shotgun, LMG), secondary = handguns only (Sidearm; the Hand Cannon is the revolver, so it is a handgun), heavy = Sniper + Rocket Launcher (the launcher is neither big-gun primary nor handgun). An archetype's own `slot` field matches this map; `family` = its slot before the rule (keeps manufacturer and element rolls unchanged).",
+		"slots": {
+			"primary": ["auto_rifle", "scout_rifle", "smg", "shotgun", "pulse_rifle"],
+			"secondary": ["sidearm", "hand_cannon"],
+			"heavy": ["sniper_rifle", "rocket_launcher"]
+		},
+		"labels": {"primary": "big guns", "secondary": "handguns", "heavy": "heavy weapons"}
+	},
 	"archetypes": [
 		{
 			"id": "sidearm",
 			"type": "Sidearm",
-			"slot": "primary",
+			"slot": "secondary",
+			"family": "primary",
 			"model": "res://assets/models/weapons/weapon_pistol.glb",
 			"model_legacy": "res://assets/models/guns/sidearm.glb",
 			"view": {
@@ -52,7 +62,8 @@
 		{
 			"id": "hand_cannon",
 			"type": "Hand Cannon",
-			"slot": "primary",
+			"slot": "secondary",
+			"family": "primary",
 			"model": "res://assets/models/weapons/weapon_hand_cannon.glb",
 			"model_legacy": "res://assets/models/guns/hand_cannon.glb",
 			"view": {
@@ -190,7 +201,8 @@
 		{
 			"id": "smg",
 			"type": "Submachine Gun",
-			"slot": "secondary",
+			"slot": "primary",
+			"family": "secondary",
 			"model": "res://assets/models/weapons/weapon_smg.glb",
 			"model_legacy": "res://assets/models/guns/smg.glb",
 			"view": {
@@ -236,7 +248,8 @@
 		{
 			"id": "shotgun",
 			"type": "Shotgun",
-			"slot": "secondary",
+			"slot": "primary",
+			"family": "secondary",
 			"model": "res://assets/models/weapons/weapon_shotgun.glb",
 			"model_legacy": "res://assets/models/guns/shotgun.glb",
 			"view": {
@@ -282,7 +295,8 @@
 		{
 			"id": "pulse_rifle",
 			"type": "Pulse Rifle",
-			"slot": "secondary",
+			"slot": "primary",
+			"family": "secondary",
 			"model": "res://assets/models/weapons/weapon_lmg.glb",
 			"model_legacy": "res://assets/models/guns/pulse_rifle.glb",
 			"view": {
