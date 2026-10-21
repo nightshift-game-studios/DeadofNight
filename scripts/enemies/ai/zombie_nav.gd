@@ -168,7 +168,9 @@ func _setup(e: CharacterBody3D) -> void:
 	# Door rebakes: the map only serves the new polygons 1-2 sync iterations after bake_finished, so listen to the map.
 	if not NavigationServer3D.map_changed.is_connected(_on_map_changed):
 		NavigationServer3D.map_changed.connect(_on_map_changed)
-	_repath_t = randf() * float(nav_cfg.repath_interval) # spread the first queries
+	rng_order = _attach_seq
+	_attach_seq += 1
+	_spread_pending = true # the first tick spreads the first queries (no roll here: _setup runs on puppets too)
 	_probe_pos = e.global_position if e.is_inside_tree() else Vector3.ZERO
 
 
@@ -235,9 +237,48 @@ func _watch_frame(delta: float) -> void:
 		agent.velocity = motion if motion.length() > 0.05 else Vector3.ZERO
 
 
+# Own RNG per zombie (never the global one, so nav decisions can't shift anyone else's rolls; Netz solo trace). Seeded
+# lazily at the first roll, which only happens in tick() / repath() / unstick, i.e. on the host: from the co-op spawn
+# seed (meta net_seed, Netz E4) when present, else from run_seed + the zombie's attach order in this match.
+static var run_seed: int = 0 ## set_run_seed(); 0 = fixed default stream
+static var _attach_seq: int = 0 ## attach order in the current match (reset by prepare_nav_region / set_run_seed)
+static var log_rolls: bool = false ## tests: record every nav roll in rng_log
+var rng_order: int = -1
+var rng_log: PackedStringArray = PackedStringArray()
+var _rng_gen: RandomNumberGenerator = null
+var _spread_pending: bool = true
+
+
 func _target() -> Node3D:
 	var t = enemy.get("target")
 	return t if is_instance_valid(t) and t is Node3D else null
+
+
+## Seed for this zombie's nav RNG: co-op spawn seed (net_seed meta, same on every peer) or run_seed + attach order.
+func rng_seed() -> int:
+	if enemy and enemy.has_meta("net_seed"):
+		return hash(["zombie_nav", int(enemy.get_meta("net_seed"))])
+	return hash(["zombie_nav", run_seed, rng_order])
+
+
+func _rng() -> RandomNumberGenerator:
+	if _rng_gen == null:
+		_rng_gen = RandomNumberGenerator.new()
+		_rng_gen.seed = rng_seed()
+	return _rng_gen
+
+
+func _roll(what: String) -> float:
+	var v := _rng().randf()
+	if log_rolls:
+		rng_log.append("%s %.6f" % [what, v])
+	return v
+
+
+## New run seed for every zombie attached after this (tests, Netz solo trace). Resets the attach order.
+static func set_run_seed(s: int) -> void:
+	run_seed = s
+	_attach_seq = 0
 
 
 func _nav_ready() -> bool:
@@ -265,6 +306,8 @@ static func _flat(v: Vector3) -> Vector3:
 static var last_carve_stats: Dictionary = {}
 
 static func prepare_nav_region(region: NavigationRegion3D, dry_run: bool = false) -> int:
+	if not dry_run:
+		_attach_seq = 0 # a new match: attach order (nav RNG seeds) starts again
 	if region == null or (not dry_run and region.has_node("ZombieNavRampCarves")):
 		return 0
 	var rc: Dictionary = (DEFAULTS.ramp_carve as Dictionary).duplicate()
@@ -471,7 +514,8 @@ func _back_off_ledge(pos: Vector3) -> void:
 
 func repath(goal: Vector3) -> void:
 	_since_query = 0.0
-	_repath_t = float(nav_cfg.repath_interval) + randf_range(-1.0, 1.0) * float(nav_cfg.repath_jitter)
+	_spread_pending = false
+	_repath_t = float(nav_cfg.repath_interval) + (_roll("jitter") * 2.0 - 1.0) * float(nav_cfg.repath_jitter)
 	_last_goal = goal
 	path_queries += 1
 	if not _nav_ready():
@@ -502,6 +546,9 @@ func path_remaining() -> float:
 ## The one per-frame call (host / authority only). desired = flat walking velocity (move_dir * speed).
 func tick(delta: float, desired: Vector3) -> void:
 	var frame := Engine.get_physics_frames()
+	if _spread_pending: # first host tick without a query yet: spread the first queries over repath_interval
+		_spread_pending = false
+		_repath_t = _roll("spread") * float(nav_cfg.repath_interval)
 	if not _avoid_on and agent and bool(avoid_cfg.get("enabled", true)):
 		_set_avoidance(true)
 	if frame - _last_tick_frame > 2: # boss telegraph / grab / anything that skipped us: restart the stuck probe
@@ -781,7 +828,7 @@ func _begin_sidestep() -> void:
 	var free_r := not enemy.test_move(enemy.global_transform, -left * dist)
 	var side := left
 	if free_l and free_r:
-		side = left if randf() < 0.5 else -left
+		side = left if _roll("sidestep") < 0.5 else -left
 	elif free_r:
 		side = -left
 	elif not free_l:
@@ -800,7 +847,7 @@ func _begin_detour() -> bool:
 	var pos := enemy.global_position
 	var fwd := _flat(_desired_dir if _desired_dir.length() > 0.1 else -enemy.global_basis.z).normalized()
 	var angles := [70.0, -70.0, 110.0, -110.0, 160.0, -160.0]
-	if randf() < 0.5:
+	if _roll("detour") < 0.5:
 		angles = [-70.0, 70.0, -110.0, 110.0, -160.0, 160.0]
 	for pass_i in 2:
 		for a in angles:

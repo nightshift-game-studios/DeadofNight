@@ -488,6 +488,83 @@ func _component_checks(main: Node) -> void:
 	await wait(2)
 
 
+## Netz flag (2026-10-20), §17f: nav decisions come from a per-zombie RandomNumberGenerator (never the global one), so
+## two solo runs with one seed make identical decisions. (The freed-target fix is G4M3N's, already in e038c1f.)
+func _robustness_checks(main: Node) -> void:
+	if not ResourceLoader.exists(NAV_SCRIPT):
+		return
+	var pl: Node3D = main.player
+	pl.global_position = Vector3(30, 0.1, -7)
+	pl.velocity = Vector3.ZERO
+	await wait(3)
+	# reproducible nav rolls: global RNG untouched, same seed -> same decisions, other seed -> other decisions
+	var src := FileAccess.get_file_as_string(NAV_SCRIPT)
+	var rx := RegEx.create_from_string("(?<![\\w.])(randf|randi|randf_range|randi_range|randfn|pick_random|shuffle|randomize|seed)\\(")
+	var hits: Array = []
+	for m in rx.search_all(src):
+		hits.append(m.get_string())
+	check(hits.is_empty(), "zombie_nav.gd never uses the global RNG (calls found: %s)" % [hits])
+	var a := await _rng_run(main, 777)
+	var b := await _rng_run(main, 777)
+	var c := await _rng_run(main, 778)
+	var kinds_seen := {}
+	for k in a:
+		for e in a[k]:
+			kinds_seen[str(e).get_slice(" ", 0)] = true
+	check(kinds_seen.has("jitter") and kinds_seen.has("sidestep") and kinds_seen.has("detour"), "seeded run rolls repath jitter, sidestep side and detour pick (%s)" % [kinds_seen.keys()])
+	# A run is a fixed wall of frames, but how many repaths land inside it can differ by one or two between runs
+	# (physics settle). Determinism = each zombie's roll stream is identical over the rolls both runs made.
+	var same := a.size() == b.size() and a.size() > 0
+	var n_rolls := 0
+	for k in a:
+		if not b.has(k):
+			same = false
+			continue
+		var ra: PackedStringArray = a[k]
+		var rb: PackedStringArray = b[k]
+		var n := mini(ra.size(), rb.size())
+		if n < 3 or ra.slice(0, n) != rb.slice(0, n):
+			same = false
+		n_rolls += n
+	if not same and _arg("verbose") != "":
+		print("  rng run A %s\n  rng run B %s" % [a, b])
+	check(same and n_rolls > 0, "two solo runs with seed 777: identical nav decisions (%d shared rolls over %d zombies)" % [n_rolls, a.size()])
+	check(a != c, "seed 778 gives different nav decisions than 777")
+
+
+## One seeded solo run: 4 zombies (2 pinned so they sidestep / detour), 5 s; returns {attach order: rng_log}.
+func _rng_run(main: Node, s: int) -> Dictionary:
+	var nav_scr = load(NAV_SCRIPT)
+	var pl: Node3D = main.player
+	var hold := Vector3(30, 0.1, -7)
+	pl.global_position = hold
+	pl.velocity = Vector3.ZERO
+	await wait(2)
+	nav_scr.set_run_seed(s)
+	nav_scr.log_rolls = true
+	var zs: Array = []
+	var spots := [Vector3(24, 0.1, 6), Vector3(36, 0.1, 6), Vector3(27, 0.1, 9), Vector3(33, 0.1, 9)]
+	var kinds := ["city", "worker", "soldier", "crawler"]
+	for i in 4:
+		zs.append(_spawn(main, kinds[i], spots[i]))
+	await physics_frame
+	zs[0].nav.debug_freeze = true
+	zs[1].nav.debug_freeze = true
+	for i in 60 * 5:
+		await physics_frame
+		pl.global_position = hold
+		pl.velocity = Vector3.ZERO
+	var out := {}
+	for z in zs:
+		if is_instance_valid(z):
+			out[int(z.nav.rng_order)] = z.nav.rng_log.duplicate()
+			z.queue_free()
+	nav_scr.log_rolls = false
+	nav_scr.set_run_seed(0)
+	await wait(5)
+	return out
+
+
 ## Boss telegraphs (no nav movement): the RVO wish must drop to the boss's real motion (0 in place) at once, a zombie walking
 ## head-on (lane 0.3 m off the boss) must not swerve while still 3.2-4.6 m out (only a moving boss is avoided that early) (a stale walking vector would make RVO see the boss rushing at it),
 ## and the first nav tick after the telegraph must walk the fresh wish (toward the player, who moved behind the boss),
@@ -643,6 +720,8 @@ func _run() -> void:
 			await _component_checks(main)
 			if _arg("skip-boss-avoid") == "":
 				await _boss_avoid_checks(main)
+			if _arg("skip-robust") == "":
+				await _robustness_checks(main)
 		for c in COURSES[map_id]:
 			await _run_course(main, map_id, c)
 		if _arg("skip-ranged") == "" and not baseline:
