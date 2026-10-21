@@ -20,13 +20,19 @@ func _on_body_entered(body: Node) -> void:
 		body.set_nearby_interactable(self, true)
 
 
-func _request(player: Node) -> void:
+func _request(player: Node, equip: bool = false) -> void:
 	if _asked or not player.is_in_group("player"):
 		return
 	var w := get_node_or_null("/root/Net/World")
 	if w:
 		_asked = true
-		w.request_grab(drop_id)
+		w.request_grab(drop_id, equip)
+
+
+## Hold E (playtest #3): Pickup.interact_hold would equip + free locally; in co-op the host decides first (same
+## first-grab rules), then the grabber equips the granted copy (NetWorld._grant -> Player.equip_from_ground).
+func interact_hold(player: Node) -> void:
+	_request(player, true)
 
 
 ## Host refused (someone else was first, or our inventory was full): allow another try.

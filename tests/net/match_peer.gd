@@ -22,6 +22,7 @@ var hold_target := 0
 var start_points := 0
 var killed_zombie := ""
 var my_drop := ""
+var seen_drops: Array = []
 var health_before_dmg := -1
 var door_ops: Array = [] ## client: M13 results to check at t_finish
 var reroll_log: Array = []
@@ -209,6 +210,16 @@ func _host() -> void:
 	check(await _wait(func(): return removed.size() == 1, 5.0), "host: drop taken exactly once (%s)" % [removed])
 	await _sleep(0.5)
 	check(removed.size() == 1 and int(removed[0][1]) in ids and not W.drops.has(did) and not main.pickups_root.has_node(NodePath(did)), "host: drop gone everywhere after the grab")
+	# --- hold-E equip on a shared drop (playtest #3): host grants first-grab, Bob equips the granted copy
+	var item2 = root.get_node("GearDB").roll_weapon("auto_rifle")
+	removed.clear()
+	check(W.host_drop(item2, main._player_spawn.origin + Vector3(1, 0.3, 2), false), "host: second shared drop (hold-E)")
+	var did2: String = W.drops.keys().back()
+	await _sleep(1.0)
+	Net.broadcast_event(&"t_cmd", bob, {"op": "grab_equip", "drop": did2, "name": item2.display_name, "slot": item2.slot})
+	check(await _wait(func(): return removed.size() == 1, 6.0) and int(removed[0][1]) == bob, "host: Bob's hold-E took %s (%s)" % [did2, removed])
+	await _sleep(0.3)
+	check(W.stats.grabs_equip == 1 and not main.pickups_root.has_node(NodePath(did2)), "host: granted as an equip grab (%d), drop gone here" % W.stats.grabs_equip)
 	# --- spending through the host
 	Net.award_points(cara, 40, "test") # arena wallets start at 0
 	await _sleep(0.3)
@@ -307,6 +318,7 @@ func _client() -> void:
 	if not check(await _wait(_find_main, 60.0), "match scene loaded + match_started"):
 		return finish("load")
 	_protect(true)
+	Net.world.drop_spawned.connect(func(id): seen_drops.append(str(id)))
 	_make_door("T1", 25)
 	Net.world.door_refused.connect(func(id, why): door_ops.append(["refused", str(id), why]))
 	start_points = int(main.player.points)
@@ -367,8 +379,22 @@ func _do(c: Dictionary) -> void:
 					Net.forward_zombie_damage(z, 99999.0, z.global_position + Vector3(0, 1.6, 0), true, main.player)
 		"grab":
 			my_drop = str(c.drop)
-			check(Net.world.drops.has(my_drop) and main.pickups_root.has_node(NodePath(my_drop)), "client: the shared drop exists here too")
+			# the other client may already have won (drop gone before this command arrives): spawned here is enough
+			check(my_drop in seen_drops, "client: the shared drop spawned here too")
 			Net.world.request_grab(my_drop)
+		"grab_equip": # playtest #3 hold-E on a shared drop: the inherited Pickup hold path, through the host
+			var nd = main.pickups_root.get_node_or_null(NodePath(str(c.drop)))
+			var inv = main.player.inventory
+			var old = inv.equipped.get(str(c.slot))
+			var bp_before: int = inv.backpack[str(c.slot)].size()
+			if check(nd != null and nd.can_hold_interact(), "client: hold-E offered on the shared drop %s" % c.drop):
+				nd.interact_hold(main.player)
+				check(inv.equipped.get(str(c.slot)) == old, "client: nothing equipped before the host grants it")
+				var got := await _wait(func(): var e = inv.equipped.get(str(c.slot)); return e != null and e != old and e.display_name == str(c.name), 5.0)
+				check(got, "client: host-granted %s equipped straight off the ground (slot %s)" % [c.name, c.slot])
+				check(old == null or inv.backpack[str(c.slot)].size() == bp_before + 1, "client: the old %s went to the backpack" % c.slot)
+				await _sleep(0.5)
+				check(main.pickups_root.get_node_or_null(NodePath(str(c.drop))) == null, "client: the drop is gone here")
 		"spend":
 			Net.request_spend(999999, "test_door")
 			await _sleep(0.4)

@@ -27,7 +27,7 @@ var _host_drops: Dictionary = {} ## host: drop_id -> {item: dict, taker: 0, pos}
 var _host_specs: Dictionary = {} ## host: zombie name -> its spawn spec (late-join snapshots rebuild from it)
 var _drop_counter := 0
 var _snap_t := 0.0
-var stats := {"snaps_tx": 0, "snaps_rx": 0, "spawns_rx": 0, "gone_rx": 0, "doors_rx": 0, "refunds": 0, "world_snaps_rx": 0}
+var stats := {"snaps_tx": 0, "snaps_rx": 0, "spawns_rx": 0, "gone_rx": 0, "doors_rx": 0, "refunds": 0, "world_snaps_rx": 0, "grabs_equip": 0}
 ## M13 doors, every peer: "<map_id>/<door_id>" -> opener peer. Applied to the map on attach (late joiners) and kept
 ## for the match; never keyed on node paths.
 var doors_open: Dictionary = {}
@@ -246,11 +246,21 @@ func _make_drop(id: String, d: Dictionary, pos: Vector3, chime: bool) -> void:
 	drop_spawned.emit(id)
 
 
-func request_grab(id: String) -> void:
+## equip = true: hold-E (playtest #3). Same first-grab rules; the grabber runs Player.equip_from_ground
+## (Inventory.take_and_equip) on the rebuilt item instead of receive_item.
+func request_grab(id: String, equip: bool = false) -> void:
 	if net.is_host():
-		host_grab(net.local_peer_id(), id)
+		host_grab(net.local_peer_id(), id, equip)
+	elif equip:
+		_rpc_grab_equip.rpc_id(1, id)
 	else:
 		_rpc_grab.rpc_id(1, id)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _rpc_grab_equip(id: String) -> void:
+	if net.is_host():
+		host_grab(multiplayer.get_remote_sender_id(), id, true)
 
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -260,7 +270,7 @@ func _rpc_grab(id: String) -> void:
 
 
 ## Host: first request wins; the drop is reserved for that peer until it confirms (inventory may be full).
-func host_grab(peer_id: int, id: String) -> bool:
+func host_grab(peer_id: int, id: String, equip: bool = false) -> bool:
 	var hd: Dictionary = _host_drops.get(id, {})
 	if hd.is_empty() or int(hd.taker) != 0:
 		if peer_id == net.local_peer_id():
@@ -269,11 +279,19 @@ func host_grab(peer_id: int, id: String) -> bool:
 			_rpc_grab_refused.rpc_id(peer_id, id)
 		return false
 	hd.taker = peer_id
+	stats.grabs_equip += 1 if equip else 0
 	if peer_id == net.local_peer_id():
-		_grant(id, hd.item)
+		_grant(id, hd.item, equip)
+	elif equip:
+		_rpc_grant_equip.rpc_id(peer_id, id, hd.item)
 	else:
 		_rpc_grant.rpc_id(peer_id, id, hd.item)
 	return true
+
+
+@rpc("authority", "call_remote", "reliable")
+func _rpc_grant_equip(id: String, d: Dictionary) -> void:
+	_grant(id, d, true)
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -293,11 +311,20 @@ func _release(id: String) -> void:
 
 
 ## Grabber: rebuild the item and give it to the local player; tell the host whether it fit.
-func _grant(id: String, d: Dictionary) -> void:
+func _grant(id: String, d: Dictionary, equip: bool = false) -> void:
 	var m := _main()
 	var pl = m.get("player") if m else null
 	var item: Item = ItemScr.from_dict(d)
-	var ok: bool = item != null and pl != null and pl.receive_item(item)
+	var ok := false
+	if item != null and pl != null:
+		if equip and item is GearItem and pl.has_method("equip_from_ground"):
+			# A displaced piece with no backpack room drops where this one lay: through main.spawn_pickup, so a
+			# local-only pickup on a client (it's that player's own old gear), a shared drop on the host.
+			var p = drops.get(id)
+			var at: Vector3 = p.global_position if p and is_instance_valid(p) else (pl as Node3D).global_position
+			ok = pl.equip_from_ground(item, at)
+		else:
+			ok = pl.receive_item(item)
 	if not ok:
 		_release(id)
 	if net.is_host():
