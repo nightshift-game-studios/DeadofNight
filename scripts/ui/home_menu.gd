@@ -17,6 +17,7 @@ const SettingsMenuScript := preload("res://scripts/ui/settings_menu.gd")
 const ArmoryMenuScript := preload("res://scripts/ui/armory_menu.gd")
 const ArmoryNoticeScript := preload("res://scripts/ui/armory_notice.gd")
 const MerchantMenuScript := preload("res://scripts/ui/merchant_menu.gd")
+const MERCHANT_PORTRAIT_PATH := "res://assets/icons/merchant_portrait.png"
 const KitProxyScript := preload("res://scripts/ui/kit_proxy.gd")
 const LobbyMenuScript := preload("res://scripts/ui/lobby_menu.gd")
 const NamePromptScript := preload("res://scripts/ui/name_prompt.gd")
@@ -219,6 +220,9 @@ func _build() -> void:
 	_merchant.name = "HomeMerchant"
 	_merchant.closed.connect(_on_merchant_closed)
 	add_child(_merchant)
+	# Desi merchant portrait (392x800 RGBA, rendered from assets/models/merchant/merchant.glb); placeholder stays if missing
+	if ResourceLoader.exists(MERCHANT_PORTRAIT_PATH):
+		_merchant.set_portrait_texture(load(MERCHANT_PORTRAIT_PATH))
 
 	_armory_api = ArmoryScr.new()
 	if _armory_api.has_signal("currency_changed"):

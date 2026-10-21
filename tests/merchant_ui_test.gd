@@ -414,8 +414,11 @@ func _run() -> void:
 	var slot: Control = m.find_child("PortraitSlot", true, false)
 	check(slot != null and slot.get_parent().name == "PortraitFrame" and slot.get_parent().get_parent().name == "MerchantPortrait"
 		and slot == m.portrait_slot(), "portrait slot at MerchantPortrait/PortraitFrame/PortraitSlot")
-	check(m.find_child("PortraitPlaceholder", true, false).visible and m.find_child("PortraitNamePlate", true, false) != null
-		and (m.find_child("MerchantName", true, false) as Label).text == "THE GRAVEDIGGER", "placeholder silhouette + name plate")
+	var shipped: Node = m.find_child("PortraitTexture", true, false)
+	check(shipped != null and shipped.get_parent() == slot and (shipped as TextureRect).texture != null
+		and not m.find_child("PortraitPlaceholder", true, false).visible, "home loads the merchant portrait (assets/icons/merchant_portrait.png) into the slot")
+	check(m.find_child("PortraitNamePlate", true, false) != null
+		and (m.find_child("MerchantName", true, false) as Label).text == "THE GRAVEDIGGER", "name plate")
 	var tr = m.set_portrait_texture(UIStyle.gravemark_tex())
 	await frames(1)
 	check(tr.get_parent() == slot and not m.find_child("PortraitPlaceholder", true, false).visible and tr.anchor_right == 1.0,
