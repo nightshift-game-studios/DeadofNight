@@ -115,7 +115,7 @@ func _layout_defs() -> void:
 		if str(d.get("class", "")) == class_view:
 			cw = maxf(cw, float(d.get("x", 0)) - cx0)
 	var shift_x := roundf((gen_max_x - cw) * 0.5) - cx0
-	var shift_y := (gen_max_y + 1.75) - cy0
+	var shift_y := (gen_max_y + 1.35) - cy0 # smoke / #14: tight gap so less vertical panning
 	for id in Progress.all_node_ids():
 		var d := Progress.get_skill(id)
 		var cls := str(d.get("class", ""))
@@ -348,7 +348,7 @@ func _build_canvas() -> void:
 	max_x = maxf(max_x, float(g.get("cols", 1)) - 1.0)
 	var clip_w := panel.custom_minimum_size.x - 40.0
 	_pitch = maxf((clip_w - ORIGIN.x * 2.0) / maxf(max_x, 1.0), MIN_PITCH)
-	_content_size = Vector2(ORIGIN.x * 2.0 + max_x * _pitch, ORIGIN.y + max_y * ROW_H + 86.0)
+	_content_size = Vector2(ORIGIN.x * 2.0 + max_x * _pitch, ORIGIN.y + max_y * ROW_H + 64.0)
 	_canvas.size = _content_size
 	# class lines dock (behind wires)
 	var cls_ids := _defs.keys().filter(func(i): return str(_defs[i].get("class", "")) != "")

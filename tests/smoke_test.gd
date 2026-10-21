@@ -421,11 +421,21 @@ func _run() -> void:
 	check(stm._nodes.size() == shown_ids.size(), "skill tree: a tile per general + selected-class node (%d/%d)" % [stm._nodes.size(), shown_ids.size()])
 	var clip_r: Rect2 = stm._clip.get_global_rect().grow(1.0)
 	var vp_r := Rect2(Vector2.ZERO, stm.get_viewport().get_visible_rect().size).grow(1.0)
+	# Batch C: 8 general rows + the class dock are taller than one screen, so the tree pans vertically only.
+	# Every branch must fit across (no side panning), and panning down must bring the class dock fully into view.
 	var fit_ok := true
+	var low_id := ""
 	for id in stm._nodes:
 		var tr: Rect2 = stm._nodes[id].get_global_rect()
-		fit_ok = fit_ok and clip_r.encloses(tr) and vp_r.encloses(tr)
-	check(fit_ok, "skill tree: every branch fits on screen without panning")
+		fit_ok = fit_ok and tr.position.x >= clip_r.position.x and tr.end.x <= clip_r.end.x and tr.position.x >= vp_r.position.x and tr.end.x <= vp_r.end.x
+		if low_id == "" or stm._nodes[id].position.y > stm._nodes[low_id].position.y:
+			low_id = id
+	check(fit_ok, "skill tree: every branch fits across the screen (no side panning)")
+	stm._set_pan(Vector2(0, 1e6))
+	await process_frame
+	var low_r: Rect2 = stm._nodes[low_id].get_global_rect()
+	check(clip_r.encloses(low_r) and vp_r.encloses(low_r) and stm._pan.x == 0.0, "skill tree: panning down shows the class dock's last row (%s)" % low_id)
+	stm._set_pan(Vector2.ZERO)
 	progress.skill_ranks["mk_key"] = 1 # temporarily own a keystone to see the exclusion state
 	var states_ok: bool = stm.ui_state("sv_root") in ["owned", "maxed"] and stm.ui_state("lg_spare") in ["available", "unaffordable"] \
 		and stm.ui_state("lg_gilded") == "locked" and stm.ui_state("sp_key") == "excluded"
