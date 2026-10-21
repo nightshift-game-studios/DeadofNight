@@ -7,14 +7,15 @@ extends RefCounted
 ##   default_hooks()  events to subscribe to when the JSON has no "on"
 ##   stats()          stat names this effect answers in modify()
 ##   priority()       fold order for modify(): 0 = additive (default), 10 = multiplicative
-##   wants(ctx)       gate before on_event (default: the JSON "if" filter, see passes())
+##   wants(ctx)       gate before on_event (default: the JSON "if" filter, see passes(); "@<name>" keys ask
+##                    SkillRunner.cond(name), e.g. {"@target_burning": true})
 ##   on_event(name, ctx), modify(stat, value, ctx) -> float, tick(delta), attach(), detach()
 
 var script_id: String = ""
 var params: Dictionary = {}
 var rank: int = 1
 var source_id: String = "" ## node or card id
-var source_kind: String = "" ## "meta", "card" or "armory"
+var source_kind: String = "" ## "meta", "card", "armory" or "class_item"
 var weapon_arch: String = "" ## armory effects: only active while a weapon of this archetype is in hand (SkillRunner gates it)
 var on: Array = []
 var cond: Dictionary = {}
@@ -96,6 +97,10 @@ func p(key: String, default = null):
 func passes(ctx: Dictionary) -> bool:
 	for k in cond:
 		var want = cond[k]
+		if str(k).begins_with("@"): # named SkillRunner condition (DESIGN §23.4): {"@target_marked": true}
+			if runner == null or runner.cond(str(k).substr(1), ctx, params) != truthy(want):
+				return false
+			continue
 		var have = ctx.get(k)
 		if typeof(want) == TYPE_ARRAY:
 			if not (have in want):

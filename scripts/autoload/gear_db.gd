@@ -258,6 +258,9 @@ func roll_armor(slot: String = "", rarity: int = -1, round_number: int = 1, item
 	else:
 		a.display_name = armor.get("names", {}).get(slot, ["Armor"]).pick_random()
 	a.description = a.slot_label
+	if slot == "class_item": # DESIGN §23.3: every class item is a class effect for the class being played
+		var prog := get_node_or_null("/root/Progress")
+		ClassItems.assign(a, str(prog.selected_class) if prog else "soldier", rarity == Rarity.MYTHIC and armor.get("mythics", {}).has(slot))
 	return a
 
 

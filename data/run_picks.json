@@ -1698,7 +1698,8 @@
 						"ability_ended"
 					]
 				}
-			]
+			],
+			"ability": "dash"
 		},
 		{
 			"id": "L_redline",
@@ -1734,6 +1735,199 @@
 					"params": {
 						"cond": "ability_active"
 					}
+				}
+			],
+			"ability": "adrenaline"
+		},
+		{
+			"id": "L_unstruck",
+			"name": "Unstruck Colors",
+			"tier": "legendary",
+			"branch": "soldier",
+			"type": "passive",
+			"icon": "L_unstruck",
+			"ranks": 1,
+			"weight": 10,
+			"requires_meta": [
+				"so_capstone"
+			],
+			"class": "soldier",
+			"tags": [
+				"soldier"
+			],
+			"summary": "A banner that holds the room.",
+			"description": "Rally Banner stands +{t}s longer, its overshield cap is +{cap}, and you deal +{pct}% damage while at it.",
+			"drawback": "",
+			"values": {
+				"t": 6,
+				"cap": 50,
+				"pct": 25
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "ab_banner_time",
+						"add": 6.0
+					}
+				},
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "ab_banner_cap",
+						"add": 50.0
+					}
+				},
+				{
+					"script": "conditional_damage",
+					"params": {
+						"cond": "in_field",
+						"mult": 0.25
+					}
+				}
+			],
+			"ability": "rally_banner"
+		},
+		{
+			"id": "L_chalk_outline",
+			"name": "Chalk Outline",
+			"tier": "legendary",
+			"branch": "scout",
+			"type": "passive",
+			"icon": "L_chalk_outline",
+			"ranks": 1,
+			"weight": 10,
+			"requires_meta": [
+				"sc_capstone"
+			],
+			"class": "scout",
+			"tags": [
+				"scout"
+			],
+			"summary": "Every Marked zombie is a precision target.",
+			"description": "Chalk Mark tags {n} more zombies, and every hit on a Marked zombie counts as precision.",
+			"drawback": "",
+			"values": {
+				"n": 6
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "ab_mark_count",
+						"add": 6.0
+					}
+				},
+				{
+					"script": "force_precision",
+					"params": {
+						"cond": "target_marked"
+					}
+				}
+			],
+			"ability": "chalk_mark"
+		},
+		{
+			"id": "L_funeral_toll",
+			"name": "Funeral Toll",
+			"tier": "legendary",
+			"branch": "sexton",
+			"type": "passive",
+			"icon": "L_funeral_toll",
+			"ranks": 1,
+			"weight": 10,
+			"requires_meta": [
+				"sx_capstone"
+			],
+			"class": "sexton",
+			"tags": [
+				"sexton"
+			],
+			"summary": "Ability kills ring out in a blast.",
+			"description": "Ability kills blast {radius}m around the corpse for {damage} damage. Ability cooldowns -{pct}%.",
+			"drawback": "",
+			"values": {
+				"radius": 4,
+				"damage": 80,
+				"pct": 20
+			},
+			"effects": [
+				{
+					"script": "on_event_explode",
+					"params": {
+						"damage": 80.0,
+						"radius": 4.0,
+						"knockback": 5.0,
+						"icd": 0.3,
+						"at": "target"
+					},
+					"on": [
+						"enemy_killed"
+					],
+					"if": {
+						"source": "ability"
+					}
+				},
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "ability_cd_mult",
+						"mult": 0.8
+					}
+				}
+			]
+		},
+		{
+			"id": "L_wickfire",
+			"name": "Wickfire Crown",
+			"tier": "legendary",
+			"branch": "chandler",
+			"type": "passive",
+			"icon": "L_wickfire",
+			"ranks": 1,
+			"weight": 10,
+			"requires_meta": [
+				"ch_capstone"
+			],
+			"class": "chandler",
+			"tags": [
+				"chandler"
+			],
+			"summary": "Burning deaths burst and spread.",
+			"description": "Burning zombies you kill burst for {damage} in {radius}m and spread their fire ({dps} dps).",
+			"drawback": "",
+			"values": {
+				"damage": 60,
+				"radius": 3,
+				"dps": 20
+			},
+			"effects": [
+				{
+					"script": "on_event_explode",
+					"params": {
+						"damage": 60.0,
+						"radius": 3.0,
+						"knockback": 3.0,
+						"at": "target"
+					},
+					"on": [
+						"enemy_killed"
+					],
+					"if": {
+						"@target_burning": true
+					}
+				},
+				{
+					"script": "element_dot",
+					"params": {
+						"spread_on_death": true,
+						"spread_radius": 3.0,
+						"spread_dps": 20.0,
+						"dur": 3.0
+					},
+					"on": [
+						"enemy_killed"
+					]
 				}
 			]
 		}

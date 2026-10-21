@@ -51,6 +51,20 @@ func _initialize() -> void:
 # ---------------------------------------------------------------- helpers
 
 ## Fresh state: meta ranks, no Field Cards, full health, no zombies, flag off.
+## §23: pick the Q ability the next reset() loads for `cls` (memory only; "" clears every pick back to defaults).
+func _equip_ability(cls: String, ability_id: String) -> void:
+	var ch := root.get_node_or_null("Characters")
+	if ch == null: # autoload line not in project.godot yet: an unbound instance still answers ability_for()
+		ch = load("res://scripts/autoload/characters.gd").new()
+		ch.name = "Characters"
+		root.add_child(ch)
+	if cls == "" or ability_id == "":
+		ch.abilities.clear()
+	else:
+		ch.abilities[cls] = ability_id
+	player.ability = null # apply_stats re-duplicates from the class
+
+
 func reset(meta: Dictionary = {}, cards: Array = [], cls: String = "soldier") -> void:
 	ProjectSettings.set_setting("skills/allow_time_scale", false)
 	if rs.offer_open:
@@ -59,6 +73,10 @@ func reset(meta: Dictionary = {}, cards: Array = [], cls: String = "soldier") ->
 		z.queue_free()
 	await wait(2)
 	rs.clear()
+	# §23: the starter class item now carries a class effect; numbers here assume none (classes_test covers them)
+	var ci = player.inventory.equipped.get("class_item")
+	if ci and "class_effect" in ci:
+		ci.class_effect = ""
 	prog.respec_allowed = true
 	prog.skill_ranks = meta.duplicate()
 	prog._recompute_spent()
@@ -152,7 +170,7 @@ func _run() -> void:
 func _data_checks() -> void:
 	var t: Dictionary = prog.tree
 	check(int(t.get("version", 0)) == 2 and t.has("grid"), "skill_tree.json is v2 with a grid")
-	check(prog.all_node_ids().size() == 35 and prog.branches().size() == 7, "35 nodes in 7 branches (%d / %d)" % [prog.all_node_ids().size(), prog.branches().size()])
+	check(prog.all_node_ids().size() == 109 and prog.branches().size() == 9, "109 nodes in 9 branches (%d / %d)" % [prog.all_node_ids().size(), prog.branches().size()])
 	var schema_ok := true
 	var text_ok := true
 	var draw_ok := true
@@ -206,7 +224,7 @@ func _data_checks() -> void:
 			leg += 1
 		else:
 			normal += 1
-	check(normal == 24 and leg == 16, "run_picks.json: 24 normal + 16 legendary cards (%d + %d)" % [normal, leg])
+	check(normal == 24 and leg == 20, "run_picks.json: 24 normal + 20 legendary cards (%d + %d)" % [normal, leg])
 	var names := {}
 	var dup := false
 	for id in prog.all_node_ids():
@@ -272,7 +290,7 @@ func _progress_checks() -> void:
 	runner.rebuild()
 	check(runner.effects_from("sc_ghost").is_empty(), "inactive class node contributes no effects")
 	prog.skill_ranks.erase("sc_ghost")
-	check(prog.branches().size() == 7 and prog.all_node_ids().size() == 35, "v2 data: 7 branches, 35 nodes via branches()/all_node_ids()")
+	check(prog.branches().size() == 9 and prog.all_node_ids().size() == 109, "v2 data: 9 branches, 109 nodes via branches()/all_node_ids()")
 	# respec
 	var earned: int = prog.skill_points_earned()
 	prog.respec_allowed = false
@@ -329,7 +347,7 @@ func _runstate_checks() -> void:
 	var rp: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/run_picks.json"))
 	for c in rp.cards:
 		sums_ok = sums_ok and str(c.get("summary", "")) != "" and str(c.summary).length() <= 60
-	check(sums_ok and rp.cards.size() == 40 and str(rp.cache_card.get("summary", "")) != "", "every Field Card (40 + Supply Cache) has a short summary one-liner")
+	check(sums_ok and rp.cards.size() == 44 and str(rp.cache_card.get("summary", "")) != "", "every Field Card (44 + Supply Cache) has a short summary one-liner")
 	check(int(rp.offer.skip_points_per_round) == 50 and int(rp.offer.cache_points_per_round) == 50 and rs.cache_points() == 50 * maxi(rs.offer_round, 1),
 		"halved card economy: skip and Supply Cache pay 50 x round")
 	# reroll economy
@@ -767,6 +785,7 @@ func _card_checks() -> void:
 	for id in prog.all_node_ids():
 		var n: Dictionary = prog.get_skill(id)
 		var cls: String = n.get("class", "")
+		_equip_ability(cls, str(n.get("ability", ""))) # §23: ability-path nodes only run with their Q ability
 		await reset({id: int(n.ranks)}, [], cls if cls != "" else "soldier")
 		var got: int = runner.effects_from(id).size()
 		check(got == n.effects.size() and got > 0, "node %s (%s): %d effect(s) wired" % [id, n.name, got])
@@ -776,6 +795,7 @@ func _card_checks() -> void:
 		var c: Dictionary = rs.card_def(id)
 		var cls: String = c.get("class", "")
 		var meta := {}
+		_equip_ability(cls, str(c.get("ability", "")))
 		await reset(meta, [], cls if cls != "" else "soldier")
 		for i in int(c.ranks):
 			rs.add_card(id)
@@ -792,6 +812,7 @@ func _card_checks() -> void:
 				var base := 1.0
 				moved = moved and not near(runner.modify(s, base), base, 0.0001)
 		check(ok and txt and moved, "card %s (%s): %d effect(s) at rank %d, text fills, stats move" % [id, c.name, got, int(c.ranks)])
+	_equip_ability("", "")
 	# specific card behaviour not covered above
 	await reset({})
 	player.health = 30

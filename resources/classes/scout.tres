@@ -2,21 +2,37 @@
 
 [ext_resource type="Script" path="res://scripts/classes/player_class.gd" id="1_pc"]
 [ext_resource type="Script" path="res://scripts/abilities/speed_boost_ability.gd" id="2_boost"]
+[ext_resource type="Script" path="res://scripts/abilities/chalk_mark_ability.gd" id="3_chalk"]
 
 [sub_resource type="Resource" id="Resource_boost"]
 script = ExtResource("2_boost")
 speed_multiplier = 1.6
 display_name = "Adrenaline"
+id = "adrenaline"
+kind = "movement"
+summary = "Run 60% faster for 4 seconds."
 cooldown = 10.0
 duration = 4.0
+
+[sub_resource type="Resource" id="Resource_chalk"]
+script = ExtResource("3_chalk")
+display_name = "Chalk Mark"
+id = "chalk_mark"
+kind = "mark"
+summary = "Mark up to 8 zombies ahead: they take 25% more damage for 8 seconds."
+cooldown = 12.0
+duration = 0.0
 
 [resource]
 script = ExtResource("1_pc")
 display_name = "Scout"
-description = "Fragile but fast. Q: Adrenaline speed boost. G: Tremor Charge."
+id = "scout"
+role = "Flanker"
+description = "Fragile but fast. Q: Adrenaline or Chalk Mark. G: Tremor Charge."
 max_health = 75
 walk_speed = 5.8
 sprint_speed = 9.5
 jump_velocity = 5.5
 grenade_id = "pulse"
 ability = SubResource("Resource_boost")
+abilities = Array[Resource]([SubResource("Resource_boost"), SubResource("Resource_chalk")])

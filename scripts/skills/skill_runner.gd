@@ -1,7 +1,9 @@
 class_name SkillRunner
 extends Node
 ## Lives on the Player (created in player._ready as "SkillRunner"). Holds one flat effect list =
-## owned meta-tree nodes (Progress.skill_ranks, class-gated) + this match's Field Cards (RunState.cards).
+## owned meta-tree nodes (Progress.skill_ranks, class-gated, and ability-gated: a node with "ability": "<id>" only runs
+## while that Q ability is equipped) + this match's Field Cards (RunState.cards) + Armory parts + the equipped class
+## item's effect (+ its synergy effects when the paired keystone is owned; DESIGN §23.3).
 ##  - events: GameEvents.event(name, ctx) -> every effect hooked to `name` whose wants(ctx) is true.
 ##  - stats:  modify(stat, base, ctx) folds base through every effect answering `stat`
 ##            (additive priority 0 first, then multiplicative priority 10).
@@ -27,6 +29,10 @@ func setup(p: Node) -> void:
 	var bus := get_node_or_null("/root/GameEvents")
 	if bus and not bus.event.is_connected(_on_event):
 		bus.event.connect(_on_event)
+	# §23.3: swapping the class item mid-match swaps its effect (only those effects; the rest keep their state).
+	var inv = p.get("inventory") if p else null
+	if inv and inv.has_signal("armor_changed") and not inv.armor_changed.is_connected(refresh_class_item):
+		inv.armor_changed.connect(refresh_class_item)
 
 
 func now() -> float:
@@ -49,7 +55,7 @@ func rebuild() -> void:
 	if prog:
 		for id in prog.all_node_ids():
 			var r: int = prog.rank(id)
-			if r > 0 and prog.class_active(id):
+			if r > 0 and prog.class_active(id) and ability_active_for(prog.get_skill(id)):
 				_add_def(prog.get_skill(id), r, id, "meta")
 	var rs := get_node_or_null("/root/RunState")
 	if rs:
@@ -57,6 +63,43 @@ func rebuild() -> void:
 			if rs.card_class_ok(id):
 				_add_def(rs.card_def(id), int(rs.cards[id]), id, "card")
 	_add_armory()
+	_add_class_item()
+	_index()
+
+
+## Id of the Q ability the player holds ("" without one / legacy resources).
+func ability_id() -> String:
+	var a = player.get("ability") if player else null
+	return str(a.id) if a is Ability else ""
+
+
+## Skill node gate: no "ability" field, or it names the equipped Q ability.
+func ability_active_for(def: Dictionary) -> bool:
+	var need := str(def.get("ability", ""))
+	return need == "" or need == ability_id()
+
+
+## The equipped class item (inventory slot class_item) -> its class effect, rank = rarity + 1, active only when the
+## item's class is the class being played; its synergy effects join when the paired keystone is owned.
+func _add_class_item() -> void:
+	var inv = player.get("inventory") if player else null
+	if inv == null:
+		return
+	var item = inv.equipped.get("class_item") if "equipped" in inv else null
+	for d in ClassItems.active_defs(item):
+		_add_def(d.def, int(d.rank), str(d.source), "class_item")
+
+
+## Re-read the equipped class item without touching other effects (Inventory.armor_changed).
+func refresh_class_item() -> void:
+	var keep: Array = []
+	for e in effects:
+		if e.source_kind == "class_item":
+			e.detach()
+		else:
+			keep.append(e)
+	effects = keep
+	_add_class_item()
 	_index()
 
 
@@ -221,7 +264,38 @@ func cond(name: String, ctx: Dictionary, p: Dictionary = {}) -> bool:
 			return pl != null and pl.is_ability_active()
 		"health_below":
 			return pl != null and float(pl.health) / maxf(float(pl.max_health), 1.0) < float(p.get("threshold", 0.5))
+		"health_above": # §23: at or above params.threshold of max health
+			return pl != null and float(pl.health) / maxf(float(pl.max_health), 1.0) >= float(p.get("threshold", 0.8))
+		"target_burning", "target_slowed", "target_branded":
+			var ts = ctx.get("target")
+			var sid: String = {"target_burning": "burn", "target_slowed": "slow", "target_branded": "brand"}[name]
+			return ts != null and is_instance_valid(ts) and ts.has_method("has_status") and ts.has_status(sid)
+		"target_close": # §23: target within params.range metres of the player (measured, not ctx.distance)
+			var tc = ctx.get("target")
+			return pl != null and tc is Node3D and is_instance_valid(tc) and \
+				(tc as Node3D).global_position.distance_to(pl.global_position) <= float(p.get("range", 6.0))
+		"target_far": # §23: target farther than params.range metres from the player
+			var tfar = ctx.get("target")
+			return pl != null and tfar is Node3D and is_instance_valid(tfar) and \
+				(tfar as Node3D).global_position.distance_to(pl.global_position) > float(p.get("range", 15.0))
+		"in_field": # §23: the player stands inside one of their own placed ability objects (banner, stone, candle)
+			return pl != null and _in_own_field(pl.global_position)
+		"target_in_field":
+			var tf = ctx.get("target")
+			return pl != null and tf is Node3D and is_instance_valid(tf) and _in_own_field((tf as Node3D).global_position)
+		"ability_source": # §23: the hit / kill came from a class ability
+			return str(ctx.get("source", "")) == "ability"
 	push_warning("SkillRunner: unknown condition '%s'" % name)
+	return false
+
+
+func _in_own_field(pos: Vector3) -> bool:
+	if player == null or not player.is_inside_tree():
+		return false
+	for f in player.get_tree().get_nodes_in_group("ability_fields"):
+		if is_instance_valid(f) and f.get("player") == player and float(f.get("radius")) > 0.0 \
+				and Vector2(pos.x - f.global_position.x, pos.z - f.global_position.z).length() <= float(f.radius):
+			return true
 	return false
 
 

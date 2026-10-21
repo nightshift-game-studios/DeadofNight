@@ -8,6 +8,9 @@ const STAT_LABELS := {"agility": "Agility", "toughness": "Toughness", "vitality"
 	"ordnance": "Ordnance", "focus": "Focus", "brawn": "Brawn"}
 
 var slot_label: String = "Armor"
+## Class items only (DESIGN §23.3): the effect id in data/class_items.json and the class it works for.
+var class_effect: String = ""
+var class_id: String = ""
 
 
 func _init() -> void:
@@ -44,10 +47,35 @@ func card_stats() -> Array:
 
 
 func get_summary() -> String:
-	return "%s %s  |  %s  |  Total %d" % [rarity_name(), type_name(), manufacturer, stat_total()]
+	var s := "%s %s  |  %s  |  Total %d" % [rarity_name(), type_name(), manufacturer, stat_total()]
+	var l := class_line()
+	return s + ("\n" + l if l != "" else "")
+
+
+## The class item's one-line effect with this item's numbers ("" for other armor). See ClassItems.
+func class_line() -> String:
+	return ClassItems.line(self) if class_effect != "" else ""
+
+
+## "With <keystone>: ..." synergy sentence ("" for other armor).
+func class_synergy_line() -> String:
+	return ClassItems.synergy_line(self) if class_effect != "" else ""
 
 
 func to_dict() -> Dictionary:
 	var d := super.to_dict()
 	d["class"] = "armor"
+	if class_effect != "":
+		d["class_effect"] = class_effect
+		d["class_id"] = class_id
 	return d
+
+
+func apply_dict(d: Dictionary) -> void:
+	super.apply_dict(d)
+	class_effect = str(d.get("class_effect", ""))
+	class_id = str(d.get("class_id", ""))
+	if slot == "class_item" and (class_effect == "" or ClassItems.def(class_effect).is_empty()):
+		# pre-Batch C class item: give it an effect for the class being played (deterministic per item)
+		var prog = Engine.get_main_loop().root.get_node_or_null("Progress") if Engine.get_main_loop() is SceneTree else null
+		ClassItems.legacy_assign(self, str(prog.selected_class) if prog else "soldier")

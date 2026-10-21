@@ -96,9 +96,24 @@ func _class() -> String:
 	return str(prog.selected_class) if prog else "soldier"
 
 
+## Class gate, plus (DESIGN §23.1) an optional "ability" gate: a card with "ability": "<id>" is only offered / active
+## while that Q ability is equipped (Dash cards stay off a Rally Banner Soldier).
 func card_class_ok(id: String) -> bool:
-	var c: String = str(card_def(id).get("class", ""))
-	return c == "" or c == _class()
+	var def := card_def(id)
+	var c: String = str(def.get("class", ""))
+	if not (c == "" or c == _class()):
+		return false
+	var need := str(def.get("ability", ""))
+	return need == "" or need == _ability_id()
+
+
+func _ability_id() -> String:
+	if player and is_instance_valid(player) and player.get("ability") is Ability:
+		return str(player.ability.id)
+	var chars := get_node_or_null("/root/Characters")
+	if chars and chars.has_method("ability_for"):
+		return str(chars.ability_for(_class()))
+	return ClassRoster.default_ability(_class())
 
 
 ## Meta gate: every requires_meta node owned (rank >= 1).

@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="PlayerClass" format=3]
+
+[ext_resource type="Script" path="res://scripts/classes/player_class.gd" id="1_pc"]
+[ext_resource type="Script" path="res://scripts/abilities/grave_bell_ability.gd" id="2_bell"]
+[ext_resource type="Script" path="res://scripts/abilities/headstone_ability.gd" id="3_stone"]
+
+[sub_resource type="Resource" id="Resource_bell"]
+script = ExtResource("2_bell")
+display_name = "Grave Bell"
+id = "grave_bell"
+kind = "aura"
+summary = "Toll a bell 4 times: hits, shoves and slows nearby zombies and heals you per zombie hit."
+cooldown = 14.0
+duration = 3.0
+
+[sub_resource type="Resource" id="Resource_stone"]
+script = ExtResource("3_stone")
+display_name = "Headstone"
+id = "headstone"
+kind = "deployable"
+summary = "Set a ward stone: zombies near it are slowed by half and take 20% more damage."
+cooldown = 18.0
+duration = 0.0
+
+[resource]
+script = ExtResource("1_pc")
+display_name = "Sexton"
+id = "sexton"
+role = "Holds the line"
+description = "Slow and hard to kill; keeps zombies at bay. Q: Grave Bell or Headstone. G: Frag Grenade."
+max_health = 125
+walk_speed = 4.7
+sprint_speed = 8.0
+jump_velocity = 4.8
+grenade_id = "frag"
+ability = SubResource("Resource_bell")
+abilities = Array[Resource]([SubResource("Resource_bell"), SubResource("Resource_stone")])

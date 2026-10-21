@@ -13,6 +13,10 @@ const SAVE_FILES := ["progress.cfg", "settings.cfg"]
 ## (a crash can leave progress.cfg missing), and they only ever come from the dir that supplied progress.cfg, so an
 ## older dir's .bak never pairs up with a newer dir's progress.cfg.
 const RECOVERY_FILES := ["progress.cfg.bak", "progress.cfg.tmp"]
+## Character slots (DESIGN §23.5): user://characters/ (index.cfg + char_<id>.cfg). Copied with the dir tree, but, like
+## RECOVERY_FILES, only from the dir that supplied progress.cfg (characters must match the account file next to them).
+## A dir holding only characters/index.cfg still counts as a save.
+const CHARACTER_DIR := "characters"
 
 var migrated_from: String = "" ## newest old dir copied from this launch ("" = nothing to do)
 var migrated_dirs: Array = [] ## every old dir that contributed at least one file, in copy order
@@ -49,7 +53,7 @@ static func migrate_all(srcs: Array, dst: String) -> Dictionary:
 		var skip: Array = []
 		for f in ["progress.cfg"] + RECOVERY_FILES:
 			if FileAccess.file_exists(dst.path_join(f)):
-				skip = RECOVERY_FILES # progress.cfg (or its recovery set) already came from a newer dir
+				skip = RECOVERY_FILES + [CHARACTER_DIR] # progress.cfg (or its recovery set) already came from a newer dir
 		var n := _copy_tree(str(c.src), dst, skip)
 		if n > 0:
 			out.copied += n
@@ -71,7 +75,7 @@ static func _has_save(dir: String) -> bool:
 	for f in SAVE_FILES + RECOVERY_FILES:
 		if FileAccess.file_exists(dir.path_join(f)):
 			return true
-	return false
+	return FileAccess.file_exists(dir.path_join(CHARACTER_DIR).path_join("index.cfg"))
 
 
 ## Copies everything under `src` into `dst` when `dst` has none of SAVE_FILES and `src` exists.
@@ -101,5 +105,7 @@ static func _copy_tree(src: String, dst: String, skip: Array = []) -> int:
 		if DirAccess.copy_absolute(src.path_join(f), to) == OK:
 			n += 1
 	for d in DirAccess.get_directories_at(src):
+		if d in skip:
+			continue
 		n += _copy_tree(src.path_join(d), dst.path_join(d))
 	return n

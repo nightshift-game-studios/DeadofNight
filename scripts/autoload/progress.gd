@@ -39,6 +39,9 @@ signal stash_saved ## the gear stash was captured from the live Inventory and wr
 signal currency_changed(balance: int) ## Gravemark balance changed (earned in a match, spent in the Armory, loaded)
 signal gravemark_gained(amount: int, source: String) ## a drop paid out (source: boss/elite/special/regular/chest/milestone)
 signal armory_changed(kind: String, id: String) ## kind: "purchase" / "upgrade" / "equip" / "unequip" / "load"
+## save_data() finished writing save_path (DESIGN §23.5: the Characters autoload mirrors the active character into its own
+## file on this; Progress itself stays one account file).
+signal saved(path: String)
 
 const SAVE_VERSION := 5 ## 1 = v1 skills, 2 = skill ranks, 3 = + persistent gear stash, 4 = + armory / Gravemark / item_id, 5 = + merchant, crash-safe writes
 const MERCHANT_SAVE_VERSION := 1 ## [merchant] version (Progress.migrate_merchant)
@@ -306,6 +309,7 @@ func save_data() -> void:
 	var err := write_atomic(cfg, save_path)
 	if err != OK:
 		push_warning("Could not save progress (error %d)" % err)
+	saved.emit(save_path)
 
 
 ## Intentional wipe (tests, a future "reset progress" button): removes the save AND its crash-safe siblings
@@ -485,11 +489,9 @@ func get_level() -> int:
 	return 1 + skill_points_earned()
 
 
+## The class this character plays, with its chosen Q ability (ClassRoster, DESIGN §23.1). Unknown ids load the Soldier.
 func load_selected_class() -> PlayerClass:
-	var path := "res://resources/classes/%s.tres" % selected_class
-	if ResourceLoader.exists(path):
-		return load(path) as PlayerClass
-	return load("res://resources/classes/soldier.tres") as PlayerClass
+	return load("res://scripts/classes/class_roster.gd").load_for_progress(self)
 
 
 # ---------------------------------------------------------------- skill tree data
