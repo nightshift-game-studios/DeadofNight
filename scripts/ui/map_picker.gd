@@ -258,6 +258,7 @@ func select_row(id: String) -> void:
 	_preview_img.texture = img
 	_preview.visible = img == null
 	_preview.meta = m
+	_preview.walls = map_walls(id)
 	_preview.title = _name.text
 	_preview.queue_redraw()
 	for c in _hint.get_children():
@@ -430,6 +431,123 @@ static func map_meta(id: String) -> Dictionary:
 	return out
 
 
+## Top-down wall / floor footprints for the schematic (playtest #26: the preview drew only markers, never walls).
+## Parsed from the map scene's text (no instancing, nothing loaded): every CollisionShape3D with a BoxShape3D under a
+## StaticBody3D, with the parent chain's transforms composed. Clip / NavCarves / Doors / Decor / Props are skipped
+## (invisible clip caps, nav obstacles, doors drawn separately, dressing). The arena (scene "") reads main.tscn's
+## NavigationRegion3D only. Returns [{poly: PackedVector2Array (x, z), kind: "floor" | "wall", top: float, h: float}].
+static var _walls_cache: Dictionary = {}
+const WALL_SKIP_ROOTS := ["Clip", "Decor", "Props", "Dressing", "Merged", "NightKit", "Lights", "Occluders"]
+
+static func map_walls(id: String) -> Array:
+	if _walls_cache.has(id):
+		return _walls_cache[id]
+	var scene_path := str(MapRegistry.get_info(id).get("scene", ""))
+	var only_prefix := ""
+	if scene_path == "":
+		scene_path = "res://scenes/main.tscn"
+		only_prefix = "NavigationRegion3D"
+	var out: Array = []
+	if FileAccess.file_exists(scene_path):
+		out = walls_from_text(FileAccess.get_file_as_string(scene_path), only_prefix)
+	_walls_cache[id] = out
+	return out
+
+
+static func _parse_tf(n: PackedStringArray) -> Transform3D:
+	return Transform3D(Vector3(float(n[0]), float(n[1]), float(n[2])), Vector3(float(n[3]), float(n[4]), float(n[5])),
+		Vector3(float(n[6]), float(n[7]), float(n[8])), Vector3(float(n[9]), float(n[10]), float(n[11])))
+
+
+static func walls_from_text(txt: String, only_prefix: String = "") -> Array:
+	var boxes := {} # sub_resource id -> Vector3 size
+	var re_sub := RegEx.create_from_string("\\[sub_resource type=\"BoxShape3D\" id=\"([^\"]+)\"\\]\\s*\\nsize = Vector3\\(([^)]*)\\)")
+	for m in re_sub.search_all(txt):
+		var v := m.get_string(2).split(",")
+		if v.size() == 3:
+			boxes[m.get_string(1)] = Vector3(float(v[0]), float(v[1]), float(v[2]))
+	var re_head := RegEx.create_from_string("^name=\"([^\"]*)\"(?: type=\"([^\"]*)\")?(?: parent=\"([^\"]*)\")?")
+	var re_t := RegEx.create_from_string("\ntransform = Transform3D\\(([^)]*)\\)")
+	var re_shape := RegEx.create_from_string("\nshape = SubResource\\(\"([^\"]+)\"\\)")
+	var local := {} # path -> Transform3D
+	var types := {} # path -> type
+	var shapes: Array = [] # [path, parent, box id]
+	var blocks := txt.split("\n[node ")
+	for bi in range(1, blocks.size()):
+		var block: String = blocks[bi]
+		var mh := re_head.search(block)
+		if mh == null:
+			continue
+		var nm := mh.get_string(1)
+		var parent := mh.get_string(3)
+		var has_parent := block.contains(" parent=\"")
+		var path := "." if not has_parent else (nm if parent == "." else parent + "/" + nm)
+		var tf := Transform3D.IDENTITY
+		var head_end := block.find("\n[")
+		var body := block if head_end < 0 else block.substr(0, head_end)
+		var mt := re_t.search(body)
+		if mt:
+			var n := mt.get_string(1).split(",")
+			if n.size() == 12:
+				tf = _parse_tf(n)
+		local[path] = tf
+		types[path] = mh.get_string(2)
+		if mh.get_string(2) == "CollisionShape3D":
+			var ms := re_shape.search(body)
+			if ms and boxes.has(ms.get_string(1)):
+				shapes.append([path, parent, ms.get_string(1)])
+	var out: Array = []
+	for sh in shapes:
+		var path: String = sh[0]
+		var parent: String = sh[1]
+		var root_name := path.split("/")[0]
+		if root_name in WALL_SKIP_ROOTS or path.contains("/NavCarves/") or path.contains("/Doors/"):
+			continue
+		if only_prefix != "" and not path.begins_with(only_prefix + "/"):
+			continue
+		if str(types.get(parent, "")) != "StaticBody3D":
+			continue
+		# compose parent chain (skip shapes whose ancestors are not in this file, e.g. inside instanced scenes)
+		var g: Transform3D = local[path]
+		var cur := parent
+		var ok := true
+		while cur != "." and cur != "":
+			if not local.has(cur):
+				ok = false
+				break
+			g = local[cur] * g
+			var cut := cur.rfind("/")
+			cur = "." if cut < 0 else cur.substr(0, cut)
+		if not ok:
+			continue
+		var half: Vector3 = boxes[sh[2]] * 0.5
+		var poly := PackedVector2Array()
+		var ys: Array = []
+		for c in [Vector3(-1, 0, -1), Vector3(1, 0, -1), Vector3(1, 0, 1), Vector3(-1, 0, 1)]:
+			var w: Vector3 = g * (c * half)
+			poly.append(Vector2(w.x, w.z))
+		for sy in [-1.0, 1.0]:
+			ys.append((g * Vector3(0, sy * half.y, 0)).y)
+		var axis_h := (g.basis * Vector3(0, half.y * 2.0, 0)).length()
+		var top: float = maxf(ys[0], ys[1])
+		var kind := "floor" if axis_h <= 1.2 else "wall" # slabs / decks vs walls, blocks, tanks
+		out.append({"poly": poly, "kind": kind, "top": top, "h": axis_h})
+	return out
+
+
+static func walls_bounds(walls: Array) -> Rect2:
+	var b := Rect2()
+	var first := true
+	for w in walls:
+		for p in w.poly:
+			if first:
+				b = Rect2(p, Vector2.ZERO)
+				first = false
+			else:
+				b = b.expand(p)
+	return b
+
+
 static func area_name(a: String) -> String:
 	return "Start area" if a == "start" else a.replace("_", " ").capitalize()
 
@@ -478,6 +596,26 @@ class _Schematic extends Control:
 		Color(0.55, 0.62, 0.70), Color(0.56, 0.36, 0.74)]
 	var meta: Dictionary = {}
 	var title: String = ""
+	var walls: Array = [] ## map_walls(id): wall / floor footprints (x, z)
+	var wall_count: int = 0 ## walls drawn last frame (tests)
+
+	static func _bounds_of(ws: Array) -> Rect2:
+		var bb := Rect2()
+		var first := true
+		for w in ws:
+			for p in w.poly:
+				if first:
+					bb = Rect2(p, Vector2.ZERO)
+					first = false
+				else:
+					bb = bb.expand(p)
+		return bb
+
+	static func _xf(poly: PackedVector2Array, to: Callable) -> PackedVector2Array:
+		var o := PackedVector2Array()
+		for p in poly:
+			o.append(to.call(p))
+		return o
 
 	func _draw() -> void:
 		var r := Rect2(Vector2.ZERO, size)
@@ -496,6 +634,8 @@ class _Schematic extends Control:
 		if meta.is_empty():
 			return
 		var b: Rect2 = meta.bounds
+		if b.size == Vector2.ZERO and not walls.is_empty():
+			b = _bounds_of(walls).grow(2.0)
 		var pts: Array = []
 		for a in meta.areas:
 			pts += meta.areas[a]
@@ -516,7 +656,20 @@ class _Schematic extends Control:
 		var sc := minf((size.x - pad * 2) / b.size.x, (size.y - pad * 2) / b.size.y)
 		var off := (size - b.size * sc) * 0.5
 		var to := func(p: Vector2) -> Vector2: return off + (p - b.position) * sc
-		draw_rect(Rect2(off, b.size * sc), Color(UIStyle.BONE_DIM, 0.35), false, 1.5)
+		# map edge: the perimeter is invisible clip walls in the scene (skipped), so the bounds frame stands in for it
+		draw_rect(Rect2(off, b.size * sc), Color(UIStyle.BONE, 0.55) if not walls.is_empty() else Color(UIStyle.BONE_DIM, 0.35),
+			false, 3.0 if not walls.is_empty() else 1.5)
+		# floors / decks first (faint), then walls and solid blocks on top (bone) so the layout reads
+		for w in walls:
+			if w.kind == "floor" and float(w.top) <= 6.5: # roofs (high slabs) would hide the rooms
+				draw_colored_polygon(_xf(w.poly, to), Color(0.37, 0.61, 0.58, 0.10 if float(w.top) < 0.6 else 0.22))
+		for w in walls:
+			if w.kind == "wall":
+				var q := _xf(w.poly, to)
+				draw_colored_polygon(q, Color(UIStyle.BONE, 0.62 if float(w.h) >= 2.5 else 0.38))
+				q.append(q[0])
+				draw_polyline(q, Color(UIStyle.INK, 0.8), 1.0)
+		wall_count = walls.filter(func(w): return w.kind == "wall").size()
 		var i := 0
 		var names: Array = meta.areas.keys()
 		for a in names:
@@ -540,4 +693,4 @@ class _Schematic extends Control:
 		if meta.has_spawn:
 			var sp: Vector2 = to.call(meta.spawn)
 			draw_colored_polygon(PackedVector2Array([sp + Vector2(0, -7), sp + Vector2(6, 5), sp + Vector2(-6, 5)]), UIStyle.BONE)
-		draw_string(f, Vector2(10, size.y - 10), "SCHEMATIC // ■ SPAWNS + CHESTS BY AREA   ▬ DOORS (COST)   ▲ YOU", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(UIStyle.BONE_DIM, 0.75))
+		draw_string(f, Vector2(10, size.y - 10), "SCHEMATIC // █ WALLS   ■ SPAWNS + CHESTS BY AREA   ▬ DOORS (COST)   ▲ YOU", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(UIStyle.BONE_DIM, 0.75))
