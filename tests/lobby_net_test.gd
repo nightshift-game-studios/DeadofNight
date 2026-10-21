@@ -41,7 +41,13 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	for a in OS.get_cmdline_user_args():
+	var args := Array(OS.get_cmdline_user_args())
+	if not args.any(func(a): return str(a).begins_with("--role=")):
+		# two-process test: a bare single-process run (suite lists) has no host to join
+		print("lobby_net_test: SKIP (two-process; run /workspace/gooey-ui/coop/run_lobby_net.sh <project>)")
+		quit(0)
+		return
+	for a in args:
 		if a.begins_with("--role="):
 			role = a.substr(7)
 		elif a.begins_with("--port="):
