@@ -790,7 +790,7 @@ func _run() -> void:
 	var total_streams := 0
 	for k in sfx.bank:
 		total_streams += sfx.bank[k].size()
-	check(total_streams == 159, "all 159 audio files load into the bank (%d)" % total_streams)
+	check(total_streams == 224, "all 224 audio files load into the bank (%d)" % total_streams)
 	var keys_missing := []
 	for k in ["sidearm_fire", "hand_cannon_fire", "auto_rifle_fire", "scout_rifle_fire", "smg_fire", "shotgun_fire",
 			"pulse_rifle_burst", "sniper_fire", "rocket_launcher_fire", "rocket_explosion", "reload_mag_out", "reload_mag_in",

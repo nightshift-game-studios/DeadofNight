@@ -27,6 +27,21 @@ Treyarch/Call of Duty audio or music.
 | sfx/world/bile_glob_impact_01..03.wav | tools/gen_gallspitter.py | bile_glob impact: splat, spray, droplets, short acid sizzle |
 | sfx/world/gall_puddle_sizzle_01.wav | tools/gen_gallspitter.py | gall puddle: 4.0 s one-shot sizzle/bubbling with built-in fade-out |
 | sfx/world/gall_puddle_sizzle_loop.wav | tools/gen_gallspitter.py | gall puddle: seamless 2.0 s mono sizzle loop (for non-4 s puddles) |
+| sfx/zombies/gallspitter_idle/aggro/hurt/death/swipe_01..02.wav | tools/gen_gallspitter.py | Gallspitter voice set (Skillz VOICE_KEYS): higher, wetter throat + gular sac blub; death = sac rupture + bubbling drain |
+| sfx/player/grenade_pickup_01..02.wav | tools/gen_grenades_rare.py | shared grenade pickup: palm slap, casing ring, pin/spoon rattle, clip onto rig |
+| sfx/player/grenade_throw_01..02.wav | tools/gen_grenades_rare.py | shared grenade throw/release: spoon ping + arm whoosh |
+| sfx/player/grenade_rarity_common/uncommon/rare/legendary/mythic.wav | tools/gen_grenades_rare.py | rarity sweetener layered on pickup/throw (loot-chime harmonic family) |
+| sfx/world/grenade_cinderjar_detonate_01..03.wav | tools/gen_grenades_rare.py | Cinderjar: glass jar shatter + fuel whoomp ignition |
+| sfx/world/grenade_cinderjar_fire_01.wav, grenade_cinderjar_fire_loop.wav | tools/gen_grenades_rare.py | Cinderjar fire patch: 5.0 s one-shot with fade-out, and seamless 5.0 s loop |
+| sfx/world/grenade_shiverglass_detonate_01..03.wav | tools/gen_grenades_rare.py | Shiverglass crystal burst: cold crack, ice shatter, glassy chime |
+| sfx/world/grenade_shiverglass_frost_01..02.wav | tools/gen_grenades_rare.py | Shiverglass frost puff + ice ticking over the 3 s slow |
+| sfx/world/grenade_tallyhook_stick/charge/arc/detonate_*.wav | tools/gen_grenades_rare.py | Tallyhook: stick thunk (x2), 1.0 s charge whine, chain arc (x3), shock discharge (x3) |
+| sfx/world/grenade_rookery_detonate_01..03.wav, grenade_rookery_bomblet_01..04.wav | tools/gen_grenades_rare.py | Rookery split pop + scatter; small bomblet blasts |
+| sfx/world/grenade_gravewell_vortex_loop.wav, grenade_gravewell_detonate_01..03.wav | tools/gen_grenades_rare.py | Gravewell: seamless 2.5 s vortex loop; implode-then-blast |
+| sfx/world/grenade_leechbell_detonate_01..03.wav, grenade_leechbell_orb_loop.wav | tools/gen_grenades_rare.py | Leechbell: blast with dark bell ring; seamless 2.0 s orb hum loop |
+| sfx/player/grenade_leechbell_heal_01..02.wav | tools/gen_grenades_rare.py | Leechbell heal-orb pickup chime |
+| sfx/world/grenade_requiem_bell_bounce/detonate_01..03.wav | tools/gen_grenades_rare.py | Requiem Bell: bell-metal bounce clank; small per-bounce blast |
+| sfx/world/grenade_requiem_bell_toll_01..02.wav, grenade_requiem_bell_mark_01..02.wav | tools/gen_grenades_rare.py | Requiem Bell: deep final toll (~5 s); mark-applied ping |
 
 Shared code: `tools/dsp.py`, `tools/synth.py`. Regenerate everything with `tools/build_all.sh`.
 The seeds are fixed, so the decoded audio is bit-identical on every run (OGG container serial
