@@ -80,7 +80,7 @@ func _hold_still(delta: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if _dead:
+	if _dead or not is_multiplayer_authority(): # NET B1: co-op client puppet -> phases come from the host (net_apply_boss_state); solo: always authority
 		super._physics_process(delta)
 		return
 	if not _enraged and health <= float(max_health) * float(_tg.get("enrage_hp_frac", 0.5)):
@@ -153,13 +153,19 @@ func _start_slam() -> void:
 	_slam_center = global_position
 	if target:
 		_slam_center = Vector3(target.global_position.x, global_position.y, target.global_position.z)
-	# The circle stays up until the smash connects (windup + slam_hit_time into SlamImpact).
+	_show_slam_windup()
+
+
+## Windup visuals (host and co-op puppets, NET B3). The circle stays up until the smash connects (windup +
+## slam_hit_time into SlamImpact).
+func _show_slam_windup() -> void:
+	var t := float(_tg.get("slam_windup", 1.2))
 	Telegraph.spawn_circle(get_parent() if get_parent() else self, _slam_center, float(_tg.get("slam_radius", 3.5)),
-		_phase_t + slam_hit_time() / _clip_speed())
+		t + slam_hit_time() / _clip_speed())
 	if not Art.has_clip(self, "slam_windup"):
 		_play("attack", 0.1)
 	else:
-		_play_fit("slam_windup", _phase_t)
+		_play_fit("slam_windup", t)
 	_say("zombie_aggro_scream", 2)
 
 
@@ -173,27 +179,41 @@ func _start_impact() -> void:
 func _resolve_slam() -> void:
 	var rad := float(_tg.get("slam_radius", 3.5))
 	var dmg := Catalog.attack_damage(boss_id, round_n, 10, 2, float(_tg.get("slam_damage_mult", 2.2)))
-	if target and is_instance_valid(target) and target.is_in_group("player"):
-		var flat := Vector3(target.global_position.x, 0, target.global_position.z) - Vector3(_slam_center.x, 0, _slam_center.z)
-		if flat.length() <= rad and absf(target.global_position.y - _slam_center.y) < 2.5:
-			target.call("take_damage", dmg, self)
+	# NET B4: co-op = every player body in the circle (remote avatars forward the hit to their owner); solo: the target.
+	var bodies = NetGate.players_or_null()
+	if bodies == null:
+		bodies = [target] if target and is_instance_valid(target) and target.is_in_group("player") else []
+	for b in bodies:
+		if b == null or not is_instance_valid(b) or not b.has_method("take_damage"):
+			continue
+		var flat := Vector3(b.global_position.x, 0, b.global_position.z) - Vector3(_slam_center.x, 0, _slam_center.z)
+		if flat.length() <= rad and absf(b.global_position.y - _slam_center.y) < 2.5:
+			b.call("take_damage", dmg, self)
 	phase = Phase.STUNNED
-	# SlamImpact plays out its follow-through (ends low), then Stun (slam_stun seconds) - the punish window.
-	var rest := 0.0
-	if Art.has_clip(self, "slam_impact"):
-		rest = maxf(Art.clip_length(self, "slam_impact") - slam_hit_time(), 0.0) / _clip_speed()
-	_stun_clip_t = rest if Art.has_clip(self, "stun") else -1.0
-	_phase_t = rest + float(_tg.get("slam_stun", 1.0))
+	_phase_t = _stun_rest() + float(_tg.get("slam_stun", 1.0))
+	_stun_clip_t = _stun_rest() if Art.has_clip(self, "stun") else -1.0
+
+
+## SlamImpact plays out its follow-through (ends low), then Stun (slam_stun seconds) - the punish window.
+func _stun_rest() -> float:
+	if not Art.has_clip(self, "slam_impact"):
+		return 0.0
+	return maxf(Art.clip_length(self, "slam_impact") - slam_hit_time(), 0.0) / _clip_speed()
 
 
 func _start_charge() -> void:
 	phase = Phase.CHARGE_WINDUP
 	_phase_t = float(_tg.get("charge_windup", 0.7))
 	_charge_dir = Common.flat_dir_to(global_position, target.global_position)
-	var look := atan2(-_charge_dir.x, -_charge_dir.z)
-	rotation.y = look
-	Telegraph.spawn_line(get_parent() if get_parent() else self, global_position, _charge_dir, 9.0, _phase_t, Color(1.0, 0.12, 0.08, 0.6))
-	_play_fit("charge_windup", _phase_t)
+	_show_charge_windup()
+
+
+## Charge windup visuals (host and co-op puppets, NET B3).
+func _show_charge_windup() -> void:
+	var t := float(_tg.get("charge_windup", 0.7))
+	rotation.y = atan2(-_charge_dir.x, -_charge_dir.z)
+	Telegraph.spawn_line(get_parent() if get_parent() else self, global_position, _charge_dir, 9.0, t, Color(1.0, 0.12, 0.08, 0.6))
+	_play_fit("charge_windup", t)
 	_say("zombie_aggro_scream", 2)
 
 
@@ -206,3 +226,51 @@ func _try_charge_hit() -> void:
 		target.call("take_damage", dmg, self)
 		phase = Phase.IDLE
 		_cd = float(_tg.get("charge_cooldown", 4.5))
+
+
+# ------------------------------------------------------------------ NET B2 / B3: co-op boss state (Netz phase 3b)
+## B2 (host): what a client puppet needs to show this boss's attacks. NetWorld polls it every physics frame and
+## sends it on change. [phase, enraged, slam center, charge dir]
+func net_boss_state() -> Array:
+	return [int(phase), _enraged, _slam_center, _charge_dir]
+
+
+## B3 (client puppet): play the phase the host just entered. Clips, telegraphs, bell glow, voice; never damage
+## (B1 keeps the phase machine off on puppets). The puppet's position / yaw / hp still come from the snapshots.
+func net_apply_boss_state(st: Array) -> void:
+	if st.size() < 4:
+		return
+	if bool(st[1]) and not _enraged:
+		_set_enraged()
+	var ph := int(st[0])
+	if ph == int(phase):
+		return
+	phase = ph as Phase
+	_slam_center = st[2] if st[2] is Vector3 else global_position
+	_charge_dir = st[3] if st[3] is Vector3 else Vector3.FORWARD
+	match phase:
+		Phase.SLAM_WINDUP:
+			_show_slam_windup()
+			_attack_anim_t = float(_tg.get("slam_windup", 1.2))
+		Phase.SLAM_IMPACT:
+			Art.play(self, "slam_impact", 0.05, _clip_speed())
+			_attack_anim_t = slam_hit_time() / _clip_speed() + 0.05
+		Phase.STUNNED:
+			var rest := _stun_rest()
+			_attack_anim_t = rest + float(_tg.get("slam_stun", 1.0))
+			if Art.has_clip(self, "stun"):
+				get_tree().create_timer(rest).timeout.connect(func():
+					if is_instance_valid(self) and phase == Phase.STUNNED and not _dead:
+						_play_fit("stun", float(_tg.get("slam_stun", 1.0)))
+						_attack_anim_t = float(_tg.get("slam_stun", 1.0)))
+		Phase.CHARGE_WINDUP:
+			_show_charge_windup()
+			_attack_anim_t = float(_tg.get("charge_windup", 0.7))
+		Phase.CHARGING:
+			if not Art.play(self, "charge_run", 0.05, _clip_speed()):
+				_play("run", 0.05)
+			_attack_anim_t = float(_tg.get("charge_duration", 0.85))
+		_:
+			_attack_anim_t = 0.0
+			if _anim:
+				_anim.speed_scale = 1.0

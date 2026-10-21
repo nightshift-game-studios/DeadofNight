@@ -24,6 +24,7 @@ var _fails := 0
 var main: Node
 var pl: CharacterBody3D
 var G: GDScript # gallspitter.gd (statics)
+var TP: GDScript ## thrown_projectile.gd, loaded in _run: a ThrownProjectile reference here would compile it (-> grenade -> explosion -> weapon_item, which needs the GearDB autoload) before the autoloads exist
 
 
 func check(cond: bool, what: String) -> void:
@@ -48,6 +49,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	TP = load("res://scripts/projectiles/thrown_projectile.gd")
 	var progress = root.get_node("Progress")
 	progress.save_path = "user://progress_ranged_enemy_test.cfg"
 	progress.reset_skills()
@@ -161,23 +163,23 @@ func _fake_player(pos: Vector3) -> CharacterBody3D:
 
 
 func _spawn_glob(from: Vector3, aim: Vector3, extra: Dictionary = {}) -> Node:
-	var spec := {"type_id": &"bile_glob", "variant": &"", "rarity": 0, "pos": from, "vel": ThrownProjectile.lob_velocity(from, aim),
+	var spec := {"type_id": &"bile_glob", "variant": &"", "rarity": 0, "pos": from, "vel": TP.lob_velocity(from, aim),
 		"owner_id": 0, "seed": 7}
 	spec.merge(extra, true)
-	return ThrownProjectile.spawn(spec)
+	return TP.spawn(spec)
 
 
 # ------------------------------------------------------------------ data (no scene)
 
 func _data_checks() -> void:
-	var d := ThrownProjectile.type_def(&"bile_glob")
+	var d: Dictionary = TP.type_def(&"bile_glob")
 	check(is_equal_approx(float(d.visual_radius), 0.18) and is_equal_approx(float(d.collision_radius), 0.25) and is_equal_approx(float(d.launch_speed), 9.0),
 		"projectiles.json bile_glob: visual r 0.18, collision r 0.25, launch speed 9 m/s (locked)")
 	var imp: Dictionary = d.get("impact", {})
 	check(str(imp.hazard) == "gall_puddle" and is_equal_approx(float(imp.radius), 2.5) and is_equal_approx(float(imp.duration), 4.0)
 		and is_equal_approx(float(imp.slow), 0.25) and float(imp.dps) > 0.0 and float(imp.dps) <= 5.0,
 		"impact: gall puddle 2.5 m, 4 s, 25%% slow, light DoT %.1f/s" % float(imp.dps))
-	check(ThrownProjectile.type_def(&"nope").is_empty(), "unknown type_id -> {}")
+	check(TP.type_def(&"nope").is_empty(), "unknown type_id -> {}")
 	var v := ZombieVariants.get_variant("gallspitter")
 	check(bool(v.get("special")) and ZombieVariants.script_path("gallspitter") == SPITTER and str(v.get("model", "")).ends_with("gallspitter.glb")
 		and float(v.damage_mult) < 1.0 and float(v.health_mult) < 1.0 and not bool(v.get("runner", true)),
@@ -221,11 +223,11 @@ func _data_checks() -> void:
 func _contract_checks() -> void:
 	await _clear()
 	_place_player(Vector3(30, 0.1, -25), true)
-	check(ThrownProjectile.spawn({"type_id": &"nope", "pos": Vector3.ZERO}) == null, "spawn(): unknown type -> null")
-	var n0 := ThrownProjectile.spawned_total
+	check(TP.spawn({"type_id": &"nope", "pos": Vector3.ZERO}) == null, "spawn(): unknown type -> null")
+	var n0: int = TP.spawned_total
 	var p = _spawn_glob(Vector3(30, 1.5, -10), Vector3(31, 0.5, -10), {"seed": 42, "owner_id": 1234})
-	check(p is ThrownProjectile and p.type_id == &"bile_glob" and p.variant == &"" and p.rarity == 0 and p.seed_value == 42 and p.owner_id == 1234
-		and not p.is_visual_only and ThrownProjectile.spawned_total == n0 + 1 and p.get_parent() == current_scene,
+	check(p != null and p.get_script() == TP and p.type_id == &"bile_glob" and p.variant == &"" and p.rarity == 0 and p.seed_value == 42 and p.owner_id == 1234
+		and not p.is_visual_only and TP.spawned_total == n0 + 1 and p.get_parent() == current_scene,
 		"spawn(spec): ThrownProjectile with the spec's type_id / variant / rarity / seed / owner_id, under the current scene")
 	await wait(secs(1.0))
 	# visual-only copy (a co-op client): flies, splashes, leaves the puddle visual, but no damage / slow
@@ -250,9 +252,9 @@ func _projectile_checks() -> void:
 	for r in [8.0, 14.0, 22.0]:
 		var from := Vector3(28, 1.45, -6)
 		var to := from + Vector3(0, -0.95, -r)
-		var v := ThrownProjectile.lob_velocity(from, to)
+		var v: Vector3 = TP.lob_velocity(from, to)
 		var t: float = r / 9.0
-		var pts := ThrownProjectile.lob_points(from, v, t)
+		var pts: PackedVector3Array = TP.lob_points(from, v, t)
 		var apex := 0.0
 		for q in pts:
 			apex = maxf(apex, q.y - from.y)
@@ -338,7 +340,7 @@ func _puddle_checks() -> void:
 		await physics_frame
 		pl.global_position = ppos
 	var lost: int = hp0 - pl.health
-	var dps := float(ThrownProjectile.type_def(&"bile_glob").impact.dps)
+	var dps := float(TP.type_def(&"bile_glob").impact.dps)
 	check(lost >= int(dps * 3.5) and lost <= int(dps * 4.0) + 2, "standing in it for its 4 s: %d HP (DoT %.0f/s)" % [lost, dps])
 	check(not is_instance_valid(puddle), "the puddle is gone after 4 s")
 	await wait(secs(0.5))
@@ -347,10 +349,10 @@ func _puddle_checks() -> void:
 	await _clear()
 	_place_player(ppos, true)
 	var hp2: int = pl.health
-	var imp: Dictionary = ThrownProjectile.type_def(&"bile_glob").impact
+	var imp: Dictionary = TP.type_def(&"bile_glob").impact
 	var Hz = load("res://scripts/projectiles/gall_puddle.gd")
-	Hz.spawn(current_scene, ppos + Vector3(0.5, 0, 0), imp, ThrownProjectile.type_def(&"bile_glob"), null, false)
-	Hz.spawn(current_scene, ppos + Vector3(-0.5, 0, 0), imp, ThrownProjectile.type_def(&"bile_glob"), null, false)
+	Hz.spawn(current_scene, ppos + Vector3(0.5, 0, 0), imp, TP.type_def(&"bile_glob"), null, false)
+	Hz.spawn(current_scene, ppos + Vector3(-0.5, 0, 0), imp, TP.type_def(&"bile_glob"), null, false)
 	for i in secs(4.5):
 		await physics_frame
 		pl.global_position = ppos
