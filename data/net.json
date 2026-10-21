@@ -57,7 +57,11 @@
 		"_help": "Phase 3b (NetProjectiles): host checks on a client's own throw (ThrownProjectile spec). Too far from the thrower's avatar (m), too fast (m/s) or more than max_throws_per_s are refused and logged, never kicked.",
 		"max_throw_dist": 4.0,
 		"max_throw_speed": 45.0,
-		"max_throws_per_s": 4
+		"max_throws_per_s": 4,
+		"_help_grenades": "cooldown_types: player-thrown type_ids on a cooldown; a second throw within grenade_min_interval_s is refused (Ordnance etc. shorten the real cooldown, so this is a loose floor). heal_max_per_s: most HP the host relays to one player per second (Leechbell orbs etc.); more is clipped and logged.",
+		"cooldown_types": ["grenade"],
+		"grenade_min_interval_s": 2.0,
+		"heal_max_per_s": 120
 	},
 	"drops": {
 		"shared_world_drops": true,

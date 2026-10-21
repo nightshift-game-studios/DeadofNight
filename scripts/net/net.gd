@@ -1230,8 +1230,45 @@ func spawn_zombie(main: Node, spec: Dictionary, base_pos: Vector3, jitter: float
 ## Host: the peer whose damage is being applied right now. A client's accepted hit claim sets it for the duration
 ## of take_damage (hit / died fire synchronously inside it); anything else on the host is the host's own damage.
 ## (DoT ticks from a client's burn / rot are credited to the host in A; phase B maps the status source avatar.)
-func last_hitter(_zombie: Node = null) -> int:
-	return _claim_peer if _claim_peer > 0 else local_peer_id()
+func last_hitter(zombie: Node = null) -> int:
+	if _claim_peer > 0:
+		return _claim_peer
+	if zombie and zombie.has_meta("net_src_peer"): # E7: host-side damage from something a remote player owns
+		var pid := int(zombie.get_meta("net_src_peer"))
+		if pid == local_peer_id() or match_players.avatars.has(pid):
+			return pid
+	return local_peer_id()
+
+
+## E7 (host): `source` hit `zombie` (inside its take_damage / apply_status). A remote avatar, or a node it owns
+## (meta net_owner_peer, or a ThrownProjectile / hazard whose owner_id is an avatar), makes that peer the credited
+## one for this hit and the DoT ticks after it; the host's own player resets it. null (DoT tick): unchanged.
+func note_damage_source(zombie: Node, source: Node) -> void:
+	if zombie == null or source == null or not is_instance_valid(source):
+		return
+	var pid := _owner_peer(source)
+	if pid > 0:
+		zombie.set_meta("net_src_peer", pid)
+
+
+func _owner_peer(src: Node, depth: int = 0) -> int:
+	if depth > 3:
+		return 0
+	if src == match_players._player:
+		return local_peer_id()
+	if src is NetRemoteAvatar:
+		return (src as NetRemoteAvatar).peer_id
+	if src.has_meta("net_owner_peer"):
+		return int(src.get_meta("net_owner_peer"))
+	var oid = src.get("owner_id")
+	if oid is int and oid != 0:
+		var o := instance_from_id(oid)
+		if o is Node and o != src and is_instance_valid(o):
+			return _owner_peer(o as Node, depth + 1)
+	var on = src.get("owner_node")
+	if on is Node and on != src and is_instance_valid(on):
+		return _owner_peer(on as Node, depth + 1)
+	return 0
 
 
 func _last_hit_crit() -> bool:

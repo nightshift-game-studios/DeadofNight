@@ -1,34 +1,56 @@
 class_name NetProjectiles
 extends Node
-## Thrown projectile + grenade sync (Netz phase 3b). Lives at /root/Net/Projectiles on every peer.
+## Thrown projectile + grenade sync (Netz phase 3b + grenades). Lives at /root/Net/Projectiles on every peer.
 ## Contract (Skillz, locked): ThrownProjectile (scripts/projectiles/thrown_projectile.gd), created only through
 ## ThrownProjectile.spawn(spec), spec = {type_id: StringName, variant: StringName, rarity: int, pos: Vector3,
 ## vel: Vector3, owner_id: int, seed: int}; types by type_id in data/projectiles.json; a client copy is
 ## visual-only (spec "visual_only" = true -> ThrownProjectile.is_visual_only).
-##   * host: hook P1 in spawn() (MAIN_HOOKS §22) calls NetGate.projectile_spawned(spec) after the authoritative copy
-##     exists -> host_spawned() broadcasts the spec; every client runs spawn(spec + visual_only) for the same flight.
-##   * a client's own throw (grenades, later): request_throw(spec) shows a visual copy at once and asks the host;
-##     the host checks it (known type, near the thrower, sane speed, rate) and spawns the real one, whose P1
-##     broadcast skips the thrower (it already has its copy).
-## Nothing here knows a type id: anything registered in data/projectiles.json syncs. Until ThrownProjectile is on
-## main (script missing) every entry point is a safe no-op.
+##   * host: hook P1 at the end of spawn() calls NetGate.projectile_spawned(spec, p) -> host_spawned() gives the
+##     projectile a net id and broadcasts the spec; every client spawns a visual-only copy under the same id.
+##     Children (Rookery bomblets) are just more host spawn() calls, so each one replicates the same way.
+##   * host gameplay moments (detonate, stick, bounce, orbs, ...): NetGate.projectile_event(p, kind, data) ->
+##     every copy of that projectile gets net_event(kind, data). Node values in data (zombies, players, avatars) are
+##     mapped to the matching node on each machine. What a kind means is the projectile script's business.
+##   * a client's own throw: request_throw(spec) shows a visual copy at once and asks the host; the host checks it
+##     (known type/variant, rarity matches the variant, near the thrower, sane speed, rate / grenade interval) and
+##     spawns the real one. Its P1 broadcast skips the thrower, whose local copy is bound to the same net id.
+##   * heals decided on the host (Leechbell orbs): NetGate.grant_heal(target, amount, reason) -> the owner's machine
+##     heals its own player (NetPlayers.host_heal), like damage.
+## Nothing here knows a type id or variant: anything registered in data/projectiles.json syncs.
 ## owner_id is an instance id, so it never goes over the wire as is: it becomes owner_z (zombie name) or owner_peer
 ## (net peer) and is mapped back to the local puppet / player / avatar on arrival.
 
 signal projectile_rx(spec: Dictionary) ## client: a host projectile's visual copy was spawned here
+signal event_rx(net_id: int, kind: String, data: Dictionary) ## client: a host projectile event reached its copy
 signal throw_refused(peer_id: int, reason: String) ## host: a client throw was rejected (logged, never a kick)
 
 var script_path := "res://scripts/projectiles/thrown_projectile.gd" ## tests swap in a fake
 var net: Node
-var stats := {"tx": 0, "rx": 0, "throw_req": 0, "throw_ok": 0, "throw_refused": 0}
+var stats := {"tx": 0, "rx": 0, "throw_req": 0, "throw_ok": 0, "throw_refused": 0, "ev_tx": 0, "ev_rx": 0, "ev_lost": 0}
 var _thrower := 0 ## host: the peer whose request is being spawned right now (its P1 broadcast skips it)
+var _thrower_req := 0 ## host: that request's token (bound to the new net id on the thrower)
 var _throw_t: Dictionary = {} ## host: peer -> [msec of recent throws]
+var _grenade_t: Dictionary = {} ## host: peer -> msec of the last throw whose type has a cooldown
+var _next_id := 0 ## host: projectile net ids
+var _by_id: Dictionary = {} ## every peer: net id -> projectile (weak: freed ones are skipped)
+var _req_seq := 0 ## client: throw request tokens
+var _pending_req: Dictionary = {} ## client: token -> its local visual copy, until the host binds a net id
 var _script: Script = null
 
 
 func _ready() -> void:
 	net = get_parent()
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	if net.has_signal("returned_to_lobby"):
+		net.returned_to_lobby.connect(clear)
+
+
+func clear() -> void:
+	_by_id.clear()
+	_pending_req.clear()
+	_throw_t.clear()
+	_grenade_t.clear()
+	_next_id = 0
 
 
 func proj_script() -> Script:
@@ -50,7 +72,80 @@ func _main() -> Node:
 	return m if m and is_instance_valid(m) else null
 
 
-# ------------------------------------------------------------------ owner mapping
+func projectile(net_id: int) -> Node:
+	var p = _by_id.get(net_id)
+	return p if p != null and is_instance_valid(p) else null
+
+
+func _register(net_id: int, p: Node) -> void:
+	if p == null or net_id <= 0:
+		return
+	p.set_meta("net_id", net_id)
+	_by_id[net_id] = p
+	if _by_id.size() > 256: # drop freed ones now and then
+		for k in _by_id.keys():
+			if not is_instance_valid(_by_id[k]):
+				_by_id.erase(k)
+
+
+# ------------------------------------------------------------------ node <-> wire mapping
+## A node -> "z:<zombie name>" / "p:<peer>" / "" (not mappable).
+func node_tx(n: Object) -> String:
+	if not (n is Node) or not is_instance_valid(n):
+		return ""
+	var node := n as Node
+	var m := _main()
+	var zroot: Node = m.get("zombies_root") if m else null
+	if zroot and node.get_parent() == zroot:
+		return "z:" + str(node.name)
+	if node.is_in_group("player"):
+		return "p:%d" % net.local_peer_id()
+	if node.get("peer_id") != null and node.is_in_group("net_avatar"):
+		return "p:%d" % int(node.get("peer_id"))
+	return ""
+
+
+func node_rx(ref: String) -> Node:
+	var m := _main()
+	if m == null or ref.length() < 3:
+		return null
+	if ref.begins_with("z:"):
+		var zroot: Node = m.get("zombies_root")
+		var zn := ref.substr(2)
+		return zroot.get_node_or_null(NodePath(zn)) if zroot and zn.is_valid_filename() else null
+	if ref.begins_with("p:"):
+		var pid := int(ref.substr(2))
+		return m.get("player") if pid == net.local_peer_id() else net.match_players.avatar(pid)
+	return null
+
+
+## Event / spec data -> plain Variants: Node values become {"@n": ref}, arrays of nodes likewise.
+func data_tx(v: Variant) -> Variant:
+	if v is Object:
+		return {"@n": node_tx(v)}
+	if v is Array:
+		return (v as Array).map(func(e): return data_tx(e))
+	if v is Dictionary:
+		var out := {}
+		for k in v:
+			out[k] = data_tx(v[k])
+		return out
+	return v
+
+
+func data_rx(v: Variant) -> Variant:
+	if v is Dictionary:
+		if v.size() == 1 and v.has("@n"):
+			return node_rx(str(v["@n"]))
+		var out := {}
+		for k in v:
+			out[k] = data_rx(v[k])
+		return out
+	if v is Array:
+		return (v as Array).map(func(e): return data_rx(e))
+	return v
+
+
 ## Spec -> wire form: plain Variants, owner as a zombie name or a peer id.
 func spec_tx(spec: Dictionary) -> Dictionary:
 	var tx := {}
@@ -58,17 +153,11 @@ func spec_tx(spec: Dictionary) -> Dictionary:
 		if spec.has(k):
 			tx[k] = spec[k]
 	var oid := int(spec.get("owner_id", 0))
-	var o: Object = instance_from_id(oid) if oid != 0 else null
-	if o is Node and is_instance_valid(o):
-		var n := o as Node
-		var m := _main()
-		var zroot: Node = m.get("zombies_root") if m else null
-		if zroot and n.get_parent() == zroot:
-			tx["owner_z"] = str(n.name)
-		elif n.is_in_group("player"):
-			tx["owner_peer"] = net.local_peer_id()
-		elif n.get("peer_id") != null:
-			tx["owner_peer"] = int(n.get("peer_id"))
+	var ref := node_tx(instance_from_id(oid) if oid != 0 else null)
+	if ref.begins_with("z:"):
+		tx["owner_z"] = ref.substr(2)
+	elif ref.begins_with("p:"):
+		tx["owner_peer"] = int(ref.substr(2))
 	return tx
 
 
@@ -85,29 +174,25 @@ func spec_rx(tx: Dictionary) -> Dictionary:
 	}
 	var owner: Node = null
 	if tx.has("owner_z"):
-		var m := _main()
-		var zroot: Node = m.get("zombies_root") if m else null
-		var zn := str(tx.owner_z)
-		owner = zroot.get_node_or_null(NodePath(zn)) if zroot and zn.is_valid_filename() else null
+		owner = node_rx("z:" + str(tx.owner_z))
 	elif tx.has("owner_peer"):
-		var pid := int(tx.owner_peer)
-		if pid == net.local_peer_id():
-			var m := _main()
-			owner = m.get("player") if m else null
-		else:
-			owner = net.match_players.avatar(pid)
+		owner = node_rx("p:%d" % int(tx.owner_peer))
 	if owner:
 		spec.owner_id = owner.get_instance_id()
 	return spec
 
 
 # ------------------------------------------------------------------ host spawns (hook P1)
-## P1 (host): the authoritative projectile exists; every client gets a visual copy. Solo / client / visual copies:
-## nothing. Returns true if it was broadcast.
-func host_spawned(spec: Dictionary) -> bool:
+## P1 (host): the authoritative projectile `p` exists; every client gets a visual copy under a new net id. Solo /
+## client / visual copies: nothing. Returns the net id (0 = not broadcast).
+func host_spawned(spec: Dictionary, p: Node = null) -> int:
 	if not net.is_networked() or not net.is_host() or bool(spec.get("visual_only", false)):
-		return false
+		return 0
+	_next_id += 1
+	var nid := _next_id
+	_register(nid, p)
 	var tx := spec_tx(spec)
+	tx["net_id"] = nid
 	stats.tx += 1
 	if _thrower == 0:
 		_rpc_projectile.rpc(tx)
@@ -115,7 +200,8 @@ func host_spawned(spec: Dictionary) -> bool:
 		for pid in multiplayer.get_peers():
 			if pid != _thrower:
 				_rpc_projectile.rpc_id(pid, tx)
-	return true
+		_rpc_bind.rpc_id(_thrower, _thrower_req, nid)
+	return nid
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -132,12 +218,61 @@ func receive_projectile(tx: Dictionary) -> Node:
 	spec["visual_only"] = true
 	var p: Node = S.spawn(spec)
 	if p:
+		_register(int(tx.get("net_id", 0)), p)
 		stats.rx += 1
 		projectile_rx.emit(spec)
 	return p
 
 
-# ------------------------------------------------------------------ client throws (grenades, later)
+## Thrower: the host spawned our request as `net_id`; our local copy answers to it from now on.
+@rpc("authority", "call_remote", "reliable")
+func _rpc_bind(req: int, net_id: int) -> void:
+	bind_request(req, net_id)
+
+
+func bind_request(req: int, net_id: int) -> void:
+	var p = _pending_req.get(req)
+	_pending_req.erase(req)
+	if p != null and is_instance_valid(p):
+		_register(net_id, p)
+
+
+# ------------------------------------------------------------------ host projectile events
+## Host gameplay moment on projectile `p` (Skillz's code, the authoritative copy only) -> every client copy runs
+## p.net_event(kind, data). Solo / client / a projectile the host never broadcast: false (nothing to do).
+func host_event(p: Node, kind: String, data: Dictionary = {}) -> bool:
+	if p == null or not net.is_networked() or not net.is_host() or not p.has_meta("net_id"):
+		return false
+	stats.ev_tx += 1
+	_rpc_event.rpc(int(p.get_meta("net_id")), kind, data_tx(data))
+	return true
+
+
+@rpc("authority", "call_remote", "reliable")
+func _rpc_event(net_id: int, kind: String, data: Dictionary) -> void:
+	receive_event(net_id, kind, data)
+
+
+func receive_event(net_id: int, kind: String, data: Dictionary) -> bool:
+	var p := projectile(net_id)
+	if p == null or kind.length() > 32:
+		stats.ev_lost += 1 # landed / freed here already, or never shown (late join): nothing to update
+		return false
+	stats.ev_rx += 1
+	var d: Dictionary = data_rx(data)
+	if p.has_method("net_event"):
+		p.net_event(kind, d)
+	event_rx.emit(net_id, kind, d)
+	return true
+
+
+# ------------------------------------------------------------------ client throws (grenades)
+## data/net.json projectiles.cooldown_types: player-thrown types on a cooldown (grenades) -> grenade_min_interval_s.
+func _cooldown_type(type_id: StringName) -> bool:
+	var lst = NetConfig.get_value("projectiles.cooldown_types", ["grenade"])
+	return lst is Array and (lst as Array).has(str(type_id))
+
+
 ## Any peer's own throw. Solo / host: spawn() straight away (the host's P1 broadcasts it). Client: a visual copy now
 ## + a request to the host, which spawns the real one. Returns the local projectile (or null).
 func request_throw(spec: Dictionary) -> Node:
@@ -149,8 +284,13 @@ func request_throw(spec: Dictionary) -> Node:
 	var mine := spec.duplicate()
 	mine["visual_only"] = true
 	var p: Node = S.spawn(mine)
+	_req_seq += 1
+	if p:
+		_pending_req[_req_seq] = p
 	stats.throw_req += 1
-	_rpc_throw.rpc_id(1, spec_tx(spec))
+	var tx := spec_tx(spec)
+	tx["req"] = _req_seq
+	_rpc_throw.rpc_id(1, tx)
 	return p
 
 
@@ -161,24 +301,34 @@ func _rpc_throw(tx: Dictionary) -> void:
 
 
 ## Host: check a client's throw, then spawn the real projectile owned by that player's avatar. Reject + log (never
-## kick): unknown type/variant, too far from the thrower, too fast, too many per second.
+## kick): unknown type / variant, rarity not the variant's, too far from the thrower, too fast, too many per second,
+## or a cooldown type (grenades) thrown again within grenade_min_interval_s.
 func host_throw(peer_id: int, tx: Dictionary) -> String:
 	var S := proj_script()
 	var why := ""
 	var spec := spec_rx(tx) if tx is Dictionary else {}
 	var av: Node3D = net.match_players.avatar(peer_id)
+	var def: Dictionary = S.type_def(spec.type_id, spec.variant) if S and not spec.is_empty() else {}
+	var now := Time.get_ticks_msec()
 	if S == null:
 		why = "no_projectiles"
-	elif spec.is_empty() or S.type_def(spec.type_id, spec.variant).is_empty():
+	elif def.is_empty():
 		why = "unknown_type"
+	elif spec.variant != &"" and not (def.get("variants", {}) as Dictionary).has(str(spec.variant)):
+		why = "unknown_variant"
+	elif def.has("rarity") and int(def.rarity) != int(spec.rarity):
+		why = "wrong_rarity"
+	elif int(spec.rarity) < 0 or int(spec.rarity) >= Rarity.IDS.size():
+		why = "wrong_rarity"
 	elif av == null:
 		why = "no_avatar"
 	elif (spec.pos as Vector3).distance_to(av.global_position) > _cfg("max_throw_dist", 4.0):
 		why = "too_far"
 	elif (spec.vel as Vector3).length() > _cfg("max_throw_speed", 45.0):
 		why = "too_fast"
+	elif _cooldown_type(spec.type_id) and now - int(_grenade_t.get(peer_id, -999999)) < int(_cfg("grenade_min_interval_s", 2.0) * 1000.0):
+		why = "grenade_interval"
 	else:
-		var now := Time.get_ticks_msec()
 		var recent: Array = (_throw_t.get(peer_id, []) as Array).filter(func(t): return now - int(t) < 1000)
 		if recent.size() >= int(_cfg("max_throws_per_s", 4.0)):
 			why = "rate"
@@ -190,9 +340,13 @@ func host_throw(peer_id: int, tx: Dictionary) -> String:
 		push_warning("NetProjectiles: refused a throw from peer %d (%s)" % [peer_id, why])
 		throw_refused.emit(peer_id, why)
 		return why
+	if _cooldown_type(spec.type_id):
+		_grenade_t[peer_id] = now
 	spec.owner_id = av.get_instance_id()
 	stats.throw_ok += 1
 	_thrower = peer_id
-	S.spawn(spec) # P1 -> host_spawned (skips the thrower)
+	_thrower_req = int(tx.get("req", 0))
+	S.spawn(spec) # P1 -> host_spawned (skips the thrower, binds its copy)
 	_thrower = 0
+	_thrower_req = 0
 	return ""

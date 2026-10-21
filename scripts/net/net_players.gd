@@ -34,7 +34,8 @@ var avatars: Dictionary = {} ## peer_id -> NetRemoteAvatar
 var life: Dictionary = {} ## peer_id -> alive | downed | dead (every peer's view, from the host)
 var downed: Dictionary = {} ## host: peer_id -> {bleed, reviver, progress}
 var body_kind := "" ## "" = data/net.json avatar.body; tests force "capsule" / "desi"
-var stats := {"state_rx": 0, "state_clamped": 0, "events_rx": 0, "damage_fwd": 0, "damage_rx": 0}
+var stats := {"state_rx": 0, "state_clamped": 0, "events_rx": 0, "damage_fwd": 0, "damage_rx": 0, "heal_tx": 0, "heal_rx": 0, "heal_clipped": 0}
+var _heal_window: Dictionary = {} ## host: peer -> [window start msec, HP relayed in it]
 var _player: Node3D
 var _root: Node
 var _send_t := 0.0
@@ -581,3 +582,50 @@ func _local_revive_input() -> void:
 		_hold_target = want
 		if want != 0:
 			set_revive_hold(want, true)
+
+
+# ------------------------------------------------------------------ host-decided heals (Leechbell orbs, ...)
+## Host: heal `target` (local player or a remote avatar) by `amount`. The owner's machine applies it to its own
+## player (Player.heal), like damage. Capped per player per second (projectiles.heal_max_per_s; the rest is
+## clipped and logged). Returns the HP sent (0 = nothing: downed / dead / not a player / cap used up).
+func host_heal(target: Node, amount: int, reason: String = "") -> int:
+	var net := get_parent()
+	if target == null or amount <= 0 or not net.is_host():
+		return 0
+	var pid := 0
+	if target == _player:
+		pid = net.local_peer_id()
+	elif target is NetRemoteAvatar:
+		pid = (target as NetRemoteAvatar).peer_id
+	if pid == 0 or life_of(pid) != LIFE_ALIVE:
+		return 0
+	var now := Time.get_ticks_msec()
+	var w: Array = _heal_window.get(pid, [now, 0])
+	if now - int(w[0]) >= 1000:
+		w = [now, 0]
+	var cap := int(NetConfig.get_value("projectiles.heal_max_per_s", 120))
+	var give := mini(amount, maxi(cap - int(w[1]), 0))
+	if give < amount:
+		stats.heal_clipped += 1
+		push_warning("NetPlayers: heal for peer %d clipped %d -> %d (%s)" % [pid, amount, give, reason])
+	w[1] = int(w[1]) + give
+	_heal_window[pid] = w
+	if give <= 0:
+		return 0
+	stats.heal_tx += 1
+	if pid == net.local_peer_id():
+		_apply_heal(give)
+	else:
+		_rpc_heal.rpc_id(pid, give, reason)
+	return give
+
+
+@rpc("authority", "call_remote", "reliable")
+func _rpc_heal(amount: int, _reason: String) -> void:
+	_apply_heal(amount)
+
+
+func _apply_heal(amount: int) -> void:
+	stats.heal_rx += 1
+	if _player and is_instance_valid(_player) and _player.has_method("heal") and amount > 0:
+		_player.heal(mini(amount, 1000))
