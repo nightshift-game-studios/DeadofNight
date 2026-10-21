@@ -210,6 +210,8 @@ func bind(n: Node) -> void:
 	LAPI.psig(n, "life_changed", _on_life)
 	LAPI.psig(n, "revive_changed", _on_revive_changed)
 	LAPI.psig(n, "all_down", _on_all_down)
+	LAPI.psig(n, "spectate_changed", _on_spectate_changed)
+	LAPI.sig(n, "late_join_synced", _on_late_synced)
 	LAPI.wsig(n, "spend_result", _on_spend_result)
 	LAPI.wsig(n, "door_refused", _on_door_refused)
 	_on_party(LAPI.call_api(n, "get_party") if LAPI.call_api(n, "get_party") is Array else [])
@@ -255,6 +257,13 @@ func _on_game_event(event_id: StringName, peer_id: int, data: Dictionary) -> voi
 			_on_revived(peer_id)
 		LAPI.EV_REVIVE_PROGRESS:
 			_on_revive_progress(int(data.get("reviver_peer", -1)), peer_id, float(data.get("progress", -1.0)))
+		LAPI.EV_JOINED_LATE:
+			if peer_id != local_peer:
+				show_toast("%s JOINED%s" % [_name_of(peer_id).to_upper(), "  //  SPECTATING UNTIL THE BREAK" if bool(data.get("spectating", false)) else ""], 3.0, UIStyle.BONE)
+		LAPI.EV_RESPAWNED:
+			if peer_id == local_peer:
+				local_late = false
+				set_spectating(0, "")
 
 
 func _on_downed(peer: int, bleed_s: float) -> void:
@@ -412,8 +421,9 @@ func _on_door_refused(_door_id: String, reason: String) -> void:
 			show_toast("CAN'T OPEN THAT DOOR")
 
 
-func show_toast(text: String, secs: float = 2.5) -> void:
+func show_toast(text: String, secs: float = 2.5, col: Color = UIStyle.BAD) -> void:
 	last_toast = text
+	_toast.add_theme_color_override("font_color", col)
 	_toast.text = text
 	_toast.visible = true
 	_toast_t = secs
@@ -437,6 +447,8 @@ func _on_host_left() -> void:
 
 func _on_match_reset() -> void:
 	_life.clear()
+	local_late = false
+	set_spectating(0, "")
 	_points.clear()
 	_hp.clear()
 	_mate_bleed.clear()
@@ -565,7 +577,7 @@ func _refresh_bleed() -> void:
 
 
 func _update_visibility() -> void:
-	var on := (networked() and (not entries.is_empty() or local_downed or local_dead or revive_role != "")) or host_left_t >= 0.0 or (_toast_t > 0.0 and networked())
+	var on := (networked() and (not entries.is_empty() or local_downed or local_dead or revive_role != "" or spectate_peer != 0)) or host_left_t >= 0.0 or (_toast_t > 0.0 and networked())
 	visible = on
 	_list.visible = on and not entries.is_empty()
 
@@ -593,6 +605,11 @@ func _mate_row(e: Dictionary) -> PanelContainer:
 		st = LAPI.P_DEAD
 	elif lf == LAPI.LIFE_ALIVE and st in [LAPI.P_DOWNED, LAPI.P_DEAD]:
 		st = LAPI.P_ALIVE
+	if lf == "" and bool(e.get(LAPI.K_LATE, false)) and st == LAPI.P_ALIVE and str(e.get(LAPI.K_LIFE, "")) != LAPI.LIFE_ALIVE:
+		st = LAPI.P_SPECTATING # late joiner whose life hasn't arrived yet
+	if lf != "":
+		e = e.duplicate()
+		e[LAPI.K_LIFE] = lf
 	var tint := LAPI.tint_of(e, int(e.get("_slot", 0)))
 	var row := PanelContainer.new()
 	row.name = "Mate_%d" % peer
@@ -623,7 +640,8 @@ func _mate_row(e: Dictionary) -> PanelContainer:
 	top.add_child(nl)
 	if st != LAPI.P_ALIVE:
 		var being := not revive_active.is_empty() and int(revive_active.target) == peer
-		var tag_txt := "BLED OUT" if st == LAPI.P_DEAD else ("REVIVING" if being else st.to_upper())
+		var late := bool(e.get(LAPI.K_LATE, false)) and st in [LAPI.P_DEAD, LAPI.P_SPECTATING]
+		var tag_txt := "REVIVING" if being else ("JOINED LATE" if late else ("BLED OUT" if st == LAPI.P_DEAD else st.to_upper()))
 		var tag := UIStyle.label(tag_txt, 11, UIStyle.BAD if st == LAPI.P_DOWNED and not being else (UIStyle.OLIVE.lightened(0.4) if being else UIStyle.BONE_DIM), true, 3)
 		tag.name = "MateState"
 		top.add_child(tag)
@@ -656,6 +674,87 @@ func _mate_row(e: Dictionary) -> PanelContainer:
 	fill.color = UIStyle.BLOOD.lightened(0.2) if st == LAPI.P_DOWNED or hp < 0.3 else tint.lerp(UIStyle.BONE, 0.2)
 	bar.add_child(fill)
 	return row
+
+
+# ------------------------------------------------------------------ spectating (Netz phase 3a: NetSpectate)
+
+var spectate_peer: int = 0
+var spectate_name: String = ""
+var local_late: bool = false ## joined a running match; spectating until the next break
+var _spec_banner: PanelContainer
+var _spec_label: Label
+
+
+## NetPlayers.spectate_changed(target_peer, target_name): 0 / "" = camera back on you.
+func _on_spectate_changed(peer: int, nm: String) -> void:
+	set_spectating(peer, nm)
+
+
+## Net.late_join_synced(spectating): this machine joined mid-round.
+func _on_late_synced(spectating: bool) -> void:
+	local_late = spectating
+	if spectating:
+		show_toast("JOINED LATE  //  YOU'RE IN AT THE NEXT BREAK", 3.5, UIStyle.BONE)
+	_refresh_spec_banner()
+
+
+func set_spectating(peer: int, nm: String = "") -> void:
+	spectate_peer = peer
+	spectate_name = nm if nm != "" or peer == 0 else _name_of(peer)
+	_refresh_spec_banner()
+
+
+static func spectate_keys() -> String:
+	var nx := str(NetConfig.get_value("spectate.next_action", "shoot"))
+	var pv := str(NetConfig.get_value("spectate.prev_action", "ads"))
+	return "%s / %s  SWITCH" % [_action_key(pv), _action_key(nx)]
+
+
+static func _action_key(action: String) -> String:
+	var evs := InputMap.action_get_events(action) if InputMap.has_action(action) else []
+	for ev in evs:
+		if ev is InputEventMouseButton:
+			return {MOUSE_BUTTON_LEFT: "LMB", MOUSE_BUTTON_RIGHT: "RMB"}.get(ev.button_index, "MOUSE")
+		if ev is InputEventKey:
+			return OS.get_keycode_string(ev.physical_keycode if ev.physical_keycode != 0 else ev.keycode)
+	return action.to_upper()
+
+
+func spectate_banner_text() -> String:
+	if spectate_peer == 0:
+		return ""
+	var why := "JOINED LATE  //  " if local_late else ("BLED OUT  //  " if local_dead else ("DOWNED  //  " if local_downed else ""))
+	return "%sSPECTATING  %s     %s" % [why, spectate_name.to_upper(), spectate_keys()]
+
+
+func _refresh_spec_banner() -> void:
+	if _spec_banner == null:
+		var cc := CenterContainer.new()
+		cc.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		cc.offset_top = 64
+		cc.offset_left = -400
+		cc.offset_right = 400
+		add_child(cc)
+		ignore_mouse(cc)
+		_spec_banner = PanelContainer.new()
+		_spec_banner.name = "SpectateBanner"
+		var bs := UIStyle.cut_box(Color(UIStyle.INK, 0.82), UIStyle.BONE_DIM, 2, 8)
+		bs.set_content_margin_all(6)
+		bs.content_margin_left = 14
+		bs.content_margin_right = 14
+		_spec_banner.add_theme_stylebox_override("panel", bs)
+		cc.add_child(_spec_banner)
+		_spec_label = UIStyle.label("", 14, UIStyle.BONE, true, 3)
+		_spec_banner.add_child(_spec_label)
+		ignore_mouse(_spec_banner)
+	var t := spectate_banner_text()
+	_spec_label.text = t
+	_spec_banner.visible = t != ""
+	_update_visibility()
+
+
+func spectate_banner_visible() -> bool:
+	return _spec_banner != null and _spec_banner.visible and visible
 
 
 func mate_row(peer: int) -> Node:

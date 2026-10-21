@@ -1182,7 +1182,14 @@ func _fill_slot(slot: PanelContainer, e: Dictionary, i: int, me: int, _leader_vi
 	badge.add_theme_stylebox_override("panel", bs)
 	badge.custom_minimum_size.x = 120
 	badge.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var stat: Array = LAPI.status_of(e) # Netz 3a: in a running match the badge shows the player's state instead
 	var bl := UIStyle.label("READY" if r else "NOT READY", 13, UIStyle.OLIVE.lightened(0.55) if r else UIStyle.BONE_DIM, true)
+	if str(stat[0]) != "":
+		bl.text = str(stat[0])
+		bl.add_theme_color_override("font_color", UIStyle.BAD if stat[1] == "bad" else (UIStyle.OLIVE.lightened(0.55) if stat[1] == "ok" else UIStyle.BONE_DIM))
+		bl.add_theme_font_size_override("font_size", 11)
+		badge.custom_minimum_size.x = 200
+		badge.set_meta("status", str(stat[0]))
 	bl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	badge.add_child(bl)
 	h.add_child(badge)

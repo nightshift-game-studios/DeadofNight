@@ -73,6 +73,12 @@ const K_READY := "ready"
 const K_LEADER := "is_leader"
 const K_PING := "ping_ms"
 const K_STATE := "state"
+const K_LIFE := "life" ## Netz phase 3a: alive | downed | dead (in a match)
+const K_LATE := "late_join" ## Netz phase 3a: joined a running match (dropped once they respawn)
+const P_IN_MATCH := "in_match"
+const P_LOADING := "loading"
+const EV_JOINED_LATE := "player_joined_late" ## {spectating, round}
+const EV_RESPAWNED := "player_respawned" ## {late_join}
 const K_SLOT := "slot" ## Netz: party slot 0..3 (tint, spawn offset)
 const K_POINTS := "points" ## optional: in-match points (Netz: get_points(peer) / points_changed)
 const K_TINT := "tint" ## optional: Color or "#rrggbb"; UI falls back to slot_tints()[slot] (net.json avatar.tints)
@@ -285,6 +291,31 @@ static func effective_difficulty(net: Object) -> String:
 ## True when Net itself changes to main.tscn on match_starting (Netz auto_change_scene); home must not do it too.
 static func owns_scene_change(net: Object) -> bool:
 	return net != null and not is_stub(net) and bool(prop(net, "auto_change_scene", false))
+
+
+## One status word for a party entry, for the lobby badge and the co-op HUD tag (Netz phase 3a states):
+## [text, kind] with kind "ok" | "bad" | "dim". Lobby entries (no match keys) return ["", ""]: caller shows READY.
+static func status_of(e: Dictionary) -> Array:
+	var st := str(e.get(K_STATE, ""))
+	var lf := str(e.get(K_LIFE, ""))
+	var late := bool(e.get(K_LATE, false))
+	if st == P_DISCONNECTED:
+		return ["DISCONNECTED", "dim"]
+	if lf == LIFE_DOWNED or st == P_DOWNED:
+		return ["DOWNED", "bad"]
+	if late and (lf == LIFE_DEAD or st == P_SPECTATING):
+		return ["JOINED LATE  //  SPECTATING", "dim"]
+	if late:
+		return ["JOINING LATE", "dim"]
+	if lf == LIFE_DEAD or st == P_DEAD:
+		return ["BLED OUT  //  SPECTATING", "dim"]
+	if st == P_SPECTATING:
+		return ["SPECTATING", "dim"]
+	if st == P_LOADING:
+		return ["LOADING", "dim"]
+	if st == P_IN_MATCH:
+		return ["IN MATCH", "ok"]
+	return ["", ""]
 
 
 ## Party state strings that mean "alive / playing" for the HUD (Netz uses lobby | loading | in_match).
@@ -521,6 +552,7 @@ signal round_state_changed(round_number: int, phase: String, enemies_left: int)
 signal callout_received(event_id: String, player_name: String, is_local: bool)
 signal upnp_started
 signal teammate_health_changed(peer_id: int, hp: int, max_hp: int, hp_frac: float)
+signal late_join_synced(spectating: bool) ## Netz 3a: joiner got the host's world mid-match
 
 
 ## Stub of Net.match_players (NetPlayers): life + revive signals, life_of, set_revive_hold.
@@ -528,6 +560,7 @@ class StubPlayers extends Node:
 	signal life_changed(peer_id: int, state: String)
 	signal revive_changed(target_peer: int, reviver_peer: int, active: bool)
 	signal all_down
+	signal spectate_changed(target_peer: int, target_name: String)
 	var life: Dictionary = {}
 	var avatars: Dictionary = {} ## peer -> Node3D (tests: revive prompt range)
 	var holds: Array = [] ## [[target, holding], ...] set_revive_hold calls (tests)
@@ -982,6 +1015,9 @@ func sim_match_party(entries: Array) -> void:
 		d[K_STATE] = str(e.get(K_STATE, P_ALIVE))
 		if e.has(K_TINT):
 			d[K_TINT] = e[K_TINT]
+		for k in [K_LIFE, K_LATE]:
+			if e.has(k):
+				d[k] = e[k]
 		_party.append(d)
 	party_changed.emit(get_party())
 
@@ -1013,6 +1049,44 @@ func sim_dead(peer_id: int) -> void:
 ## Like NetPlayers._rpc_reviving(target, reviver, active): the UI animates progress over downed.revive_time_s.
 func sim_revive(target_peer: int, reviver_peer: int, active: bool) -> void:
 	match_players.revive_changed.emit(target_peer, reviver_peer, active)
+
+
+## Like Net._late_join on the host: peer joins a running match; mid-round it spectates until the break.
+func sim_late_join(n: String, spectating: bool = true) -> int:
+	var id := _next_peer
+	for pe in _party:
+		id = maxi(id, int(pe[K_PEER]) + 1)
+	_next_peer = id + 1
+	var d: Dictionary = _entry(id, n, false, true, 60)
+	d[K_HP] = 1.0
+	d[K_LATE] = true
+	d[K_STATE] = P_SPECTATING if spectating else P_IN_MATCH
+	d[K_LIFE] = LIFE_DEAD if spectating else LIFE_ALIVE
+	_party.append(d)
+	party_changed.emit(get_party())
+	game_event.emit(StringName(EV_JOINED_LATE), id, {"spectating": spectating, "round": 1})
+	return id
+
+
+## Like NetPlayers.finish_round_break: late spectators respawn (life alive, late_join dropped).
+func sim_late_respawn(peer_id: int) -> void:
+	for e in _party:
+		if int(e[K_PEER]) == peer_id:
+			e.erase(K_LATE)
+			e[K_STATE] = P_IN_MATCH
+			e[K_LIFE] = LIFE_ALIVE
+	match_players.sim_life(peer_id, LIFE_ALIVE)
+	party_changed.emit(get_party())
+	game_event.emit(StringName(EV_RESPAWNED), peer_id, {"late_join": false})
+
+
+## Like NetSpectate._set_target: the local spectate camera follows peer (0 = off).
+func sim_spectate(peer_id: int) -> void:
+	match_players.spectate_changed.emit(peer_id, get_player_name(peer_id) if peer_id != 0 else "")
+
+
+func sim_local_late(spectating: bool) -> void:
+	late_join_synced.emit(spectating)
 
 
 func sim_all_down() -> void:

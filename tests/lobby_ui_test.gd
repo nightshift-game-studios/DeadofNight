@@ -292,6 +292,27 @@ func _run() -> void:
 	await frames(1)
 	check(bool(slot(1).find_child("ReadyBadge", true, false).get_meta("ready")), "Jason READY badge")
 	check(not sb.disabled and lbl("StartReason") == "", "START enabled once every member is ready")
+	# Netz 9c4f1ec: in a running match the badge shows the player's state (downed / spectating / late join)
+	var jent: Dictionary = {}
+	for pe in net._party:
+		if int(pe.peer_id) == jid:
+			jent = pe
+	for st in [["downed", "downed", false, "DOWNED"], ["spectating", "dead", false, "BLED OUT  //  SPECTATING"], ["spectating", "dead", true, "JOINED LATE  //  SPECTATING"], ["in_match", "alive", false, "IN MATCH"]]:
+		var keep_state = jent.get("state", "lobby")
+		jent.state = st[0]
+		jent.life = st[1]
+		if st[2]:
+			jent.late_join = true
+		net.party_changed.emit(net.get_party())
+		await frames(1)
+		var bd = slot(1).find_child("ReadyBadge", true, false)
+		check(str(bd.get_meta("status", "")) == st[3], "lobby badge for %s/%s%s → %s (%s)" % [st[0], st[1], " late" if st[2] else "", st[3], bd.get_meta("status", "")])
+		jent.state = keep_state
+		jent.erase("life")
+		jent.erase("late_join")
+	net.party_changed.emit(net.get_party())
+	await frames(1)
+	check(not slot(1).find_child("ReadyBadge", true, false).has_meta("status"), "back in the lobby: READY badge again")
 	check(bool(lobby.my_entry().get("ready")) and "✓" in lbl("ReadyToggle"), "leader starts ready (Netz: START is the leader's ready)")
 	lobby.toggle_ready()
 	await frames(1)
