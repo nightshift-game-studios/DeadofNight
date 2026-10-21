@@ -155,6 +155,7 @@ func _run() -> void:
 	await _runstate_checks()
 	await _effect_checks()
 	await _card_checks()
+	await _card_type_checks()
 	await _refund_cap_checks()
 	await _time_scale_checks()
 	await _flow_checks()
@@ -224,7 +225,7 @@ func _data_checks() -> void:
 			leg += 1
 		else:
 			normal += 1
-	check(normal == 24 and leg == 20, "run_picks.json: 24 normal + 20 legendary cards (%d + %d)" % [normal, leg])
+	check(normal == 32 and leg == 20, "run_picks.json: 32 normal + 20 legendary cards (%d + %d)" % [normal, leg])
 	var names := {}
 	var dup := false
 	for id in prog.all_node_ids():
@@ -347,7 +348,7 @@ func _runstate_checks() -> void:
 	var rp: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/run_picks.json"))
 	for c in rp.cards:
 		sums_ok = sums_ok and str(c.get("summary", "")) != "" and str(c.summary).length() <= 60
-	check(sums_ok and rp.cards.size() == 44 and str(rp.cache_card.get("summary", "")) != "", "every Field Card (44 + Supply Cache) has a short summary one-liner")
+	check(sums_ok and rp.cards.size() == 52 and str(rp.cache_card.get("summary", "")) != "", "every Field Card (52 + Supply Cache) has a short summary one-liner")
 	check(int(rp.offer.skip_points_per_round) == 25 and int(rp.offer.cache_points_per_round) == 25 and rs.cache_points() == 25 * maxi(rs.offer_round, 1),
 		"Economy v2 card economy: skip and Supply Cache pay 25 x round (was 50)")
 	# reroll economy
@@ -967,3 +968,109 @@ func _flow_checks() -> void:
 		"offer closed -> unpaused, round break starts, skip paid 75 at r3 (25 x round)")
 	main._break_timer = 99999.0
 	main.current_round = z_hp_round
+
+
+# ---------------------------------------------------------------- playtest #13: Field Card types
+
+func _ev(name: StringName, extra: Dictionary = {}) -> void:
+	var p := {"player": player}
+	p.merge(extra, true)
+	bus.emit_event(name, p)
+
+
+func _card_type_checks() -> void:
+	var types := ["instant", "echo", "growing", "fleeting", "hoard", "wager", "counter", "reactive"]
+	var seen := {}
+	var label_ok := true
+	for c in rs.data.cards:
+		if str(c.get("type", "")) in types:
+			seen[str(c.type)] = true
+			var e: Dictionary = rs.offer_entry(str(c.id))
+			label_ok = label_ok and str(e.get("type_label", "")) != "" and str(e.get("type_hint", "")) != ""
+	check(seen.size() == 8 and label_ok, "8 new Field Card types each have a card, a type_label and a type_hint (%d)" % seen.size())
+
+	# Instant: pays once on pick, not again on a stat rebuild
+	await reset({})
+	var w = player.current_weapon()
+	w.ammo = 0
+	w.reserve = 0
+	rs.offer_round = 4
+	player._grenade_cd = 9.0
+	rs.add_card("t_hand_me_down")
+	check(w.ammo == w.mag_size() and w.reserve > 0 and player.points == 160 and player._grenade_cd <= 0.0,
+		"Hand-Me-Down (instant): mag+reserve filled, grenade ready, +40 x round points (%d pts, cd %.1f)" % [player.points, player._grenade_cd])
+	player.apply_stats()
+	check(player.points == 160, "Hand-Me-Down pays only on its own pick, not on a rebuild")
+
+	# Echo: ranks up an owned card; with nothing to rank it pays points
+	await reset({}, ["t_lantern_hours"])
+	rs.add_card("t_copycat_ink")
+	check(rs.cards.get("t_lantern_hours", 0) == 2, "Copycat Ink (echo) ranks up an owned card (rank %d)" % rs.cards.get("t_lantern_hours", 0))
+	await reset({})
+	rs.offer_round = 2
+	rs.add_card("t_copycat_ink")
+	check(player.points == 60, "Copycat Ink with nothing to rank pays 30 x round (%d)" % player.points)
+
+	# Growing
+	await reset({}, ["t_lantern_hours"])
+	var z := zombie(Vector3(0, 0, -4))
+	var d0: float = hit(z, 100.0).damage
+	for i in 3:
+		_ev(&"round_cleared", {"round": i + 1})
+	var d1: float = hit(z, 100.0).damage
+	check(near(d0, 100.0) and near(d1, 106.0), "Lantern Hours (growing): +2%% gun damage per cleared round (%.1f -> %.1f)" % [d0, d1])
+	for i in 20:
+		_ev(&"round_cleared", {"round": i + 4})
+	check(near(hit(z, 100.0).damage, 120.0), "Lantern Hours caps at +20% at rank 1")
+
+	# Fleeting: strong, then removed after 2 cleared rounds
+	await reset({}, ["t_borrowed_hour"])
+	z = zombie(Vector3(0, 0, -4))
+	var ws: float = player.walk_speed
+	var fd: float = hit(z, 100.0).damage
+	_ev(&"round_cleared", {"round": 1})
+	var left := -9
+	for oc in rs.owned_cards():
+		if oc.id == "t_borrowed_hour":
+			left = int(oc.get("rounds_left", -9))
+	_ev(&"round_cleared", {"round": 2})
+	await wait(2)
+	check(near(fd, 150.0) and left == 1, "Borrowed Hour (fleeting): +50%% damage, owned_cards shows rounds_left (%.0f, %d)" % [fd, left])
+	check(not rs.cards.has("t_borrowed_hour") and near(hit(z, 100.0).damage, 100.0) and player.walk_speed < ws,
+		"Borrowed Hour expires after 2 rounds: card removed, damage and speed back to normal")
+
+	# Hoard
+	await reset({}, ["t_tithe_jar"])
+	player.points = 1000
+	_ev(&"round_started", {"round": 2})
+	var p1: int = player.points
+	player.points = 100000
+	_ev(&"round_started", {"round": 3})
+	check(p1 == 1050 and player.points == 100300, "Tithe Jar (hoard): 5%% interest at round start, capped at 300 (%d, %d)" % [p1, player.points])
+
+	# Wager
+	await reset({}, ["t_crooked_oath"])
+	z = zombie(Vector3(0, 0, -4))
+	check(near(hit(z, 100.0).damage, 130.0) and near(player.mod_stat("damage_in", 100.0, {}), 115.0) and rs.offer_entry("t_crooked_oath").drawback != "",
+		"Crooked Oath (wager): +30% damage dealt, +15% damage taken, drawback shown")
+
+	# Counter
+	await reset({}, ["t_toll_counter"])
+	var near_z := zombie(Vector3(2, 0, 0))
+	var hp0: float = near_z.health
+	for i in 14:
+		_ev(&"enemy_killed", {"source": "gun", "target": null})
+	var mid: float = near_z.health
+	_ev(&"enemy_killed", {"source": "gun", "target": null})
+	await wait(2)
+	check(near(mid, hp0) and near_z.health < hp0, "Toll Counter (counter): the 15th kill rings a shockwave (%.0f -> %.0f)" % [hp0, near_z.health])
+
+	# Reactive
+	await reset({}, ["t_empty_cradle"])
+	var ws0: float = player.walk_speed
+	_ev(&"reload_finished", {"weapon": player.current_weapon()})
+	var ws1: float = player.walk_speed
+	var fr: float = player.mod_stat("fire_rate_mult", 1.0, {})
+	for i in 200: # 3 s buff
+		await physics_frame
+	check(ws1 > ws0 * 1.1 and near(fr, 1.1) and near(player.walk_speed, ws0), "Empty Cradle (reactive): reload gives a 3 s speed + fire-rate burst that wears off (%.2f/%.2f/%.2f)" % [ws0, ws1, player.walk_speed])

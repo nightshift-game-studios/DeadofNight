@@ -1,6 +1,6 @@
 {
 	"version": 1,
-	"_help": "Field Cards (per-match run picks). Offer config + card pool. Same effect format as skill_tree.json.",
+	"_help": "Field Cards (per-match run picks). Offer config + card pool. Same effect format as skill_tree.json. Card types (playtest #13): passive / active plus instant, echo, growing, fleeting, hoard, wager, counter, reactive (card_types: UI label + hint; effects card_instant, card_echo, round_growth, card_fleeting, round_interest, stat_mod pairs, kill_counter, timed_buff).",
 	"offer": {
 		"size": 3,
 		"milestone_every": 5,
@@ -27,6 +27,49 @@
 		"description": "+{points} points.",
 		"values": {
 			"points": "25 x round"
+		}
+	},
+	"card_types": {
+		"_help": "Field Card types (playtest #13): label + one-line rule for the offer UI (RunState.offer_entry type_label / type_hint).",
+		"passive": {
+			"label": "Passive",
+			"hint": ""
+		},
+		"active": {
+			"label": "Active",
+			"hint": "Changes your class ability."
+		},
+		"instant": {
+			"label": "Instant",
+			"hint": "Pays out once, the moment you take it."
+		},
+		"echo": {
+			"label": "Echo",
+			"hint": "Copies: ranks up a card you already own."
+		},
+		"growing": {
+			"label": "Growing",
+			"hint": "Gets stronger every round you clear."
+		},
+		"fleeting": {
+			"label": "Fleeting",
+			"hint": "Strong, but expires after a few rounds."
+		},
+		"hoard": {
+			"label": "Hoard",
+			"hint": "Rewards banking points."
+		},
+		"wager": {
+			"label": "Wager",
+			"hint": "Big upside with a drawback."
+		},
+		"counter": {
+			"label": "Counter",
+			"hint": "Triggers every N kills."
+		},
+		"reactive": {
+			"label": "Reactive",
+			"hint": "A short buff after something you do."
 		}
 	},
 	"cards": [
@@ -1064,6 +1107,406 @@
 							0.06,
 							0.12,
 							0.18
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "t_hand_me_down",
+			"name": "Hand-Me-Down",
+			"tier": "normal",
+			"branch": "core",
+			"type": "instant",
+			"icon": "t_hand_me_down",
+			"ranks": 3,
+			"weight": 8,
+			"requires_meta": [],
+			"class": "",
+			"tags": [
+				"core",
+				"instant"
+			],
+			"summary": "Full ammo, a ready grenade and a purse, right now.",
+			"description": "Fill every magazine and reserve, ready every grenade charge and take +{points} points.",
+			"drawback": "",
+			"values": {
+				"points": "40 x round"
+			},
+			"effects": [
+				{
+					"script": "card_instant",
+					"params": {
+						"points_per_round": 40,
+						"refill_ammo": true,
+						"grenade": true
+					}
+				}
+			]
+		},
+		{
+			"id": "t_copycat_ink",
+			"name": "Copycat Ink",
+			"tier": "normal",
+			"branch": "core",
+			"type": "echo",
+			"icon": "t_copycat_ink",
+			"ranks": 2,
+			"weight": 6,
+			"requires_meta": [],
+			"class": "",
+			"tags": [
+				"core",
+				"echo"
+			],
+			"summary": "Ranks up a random Field Card you already own.",
+			"description": "Rank up {copies} random Field Card(s) you own. Nothing to rank up: +{points} points.",
+			"drawback": "",
+			"values": {
+				"copies": [
+					1,
+					2
+				],
+				"points": "30 x round"
+			},
+			"effects": [
+				{
+					"script": "card_echo",
+					"params": {
+						"copies": [
+							1,
+							2
+						],
+						"fallback_points_per_round": 30
+					}
+				}
+			]
+		},
+		{
+			"id": "t_lantern_hours",
+			"name": "Lantern Hours",
+			"tier": "normal",
+			"branch": "core",
+			"type": "growing",
+			"icon": "t_lantern_hours",
+			"ranks": 3,
+			"weight": 8,
+			"requires_meta": [],
+			"class": "",
+			"tags": [
+				"core",
+				"growing"
+			],
+			"summary": "Gun damage that grows every round you survive.",
+			"description": "+{per_pct}% gun damage for every round you clear after taking this (max +{cap_pct}%).",
+			"drawback": "",
+			"values": {
+				"per_pct": [
+					2,
+					3,
+					4
+				],
+				"cap_pct": [
+					20,
+					30,
+					40
+				]
+			},
+			"effects": [
+				{
+					"script": "round_growth",
+					"params": {
+						"stat": "damage_out",
+						"per_round": [
+							0.02,
+							0.03,
+							0.04
+						],
+						"cap": [
+							0.2,
+							0.3,
+							0.4
+						],
+						"sources": [
+							"gun"
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "t_borrowed_hour",
+			"name": "Borrowed Hour",
+			"tier": "normal",
+			"branch": "core",
+			"type": "fleeting",
+			"icon": "t_borrowed_hour",
+			"ranks": 1,
+			"weight": 7,
+			"requires_meta": [],
+			"class": "",
+			"tags": [
+				"core",
+				"fleeting"
+			],
+			"summary": "Huge power for two rounds, then it's gone.",
+			"description": "+{dmg_pct}% damage and +{move_pct}% move speed for the next {rounds} rounds.",
+			"drawback": "",
+			"values": {
+				"dmg_pct": 50,
+				"move_pct": 20,
+				"rounds": 2
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "damage_out",
+						"mult": 1.5
+					}
+				},
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "move_speed",
+						"add": 0.2
+					}
+				},
+				{
+					"script": "card_fleeting",
+					"params": {
+						"rounds": 2
+					}
+				}
+			]
+		},
+		{
+			"id": "t_tithe_jar",
+			"name": "Tithe Jar",
+			"tier": "normal",
+			"branch": "core",
+			"type": "hoard",
+			"icon": "t_tithe_jar",
+			"ranks": 3,
+			"weight": 8,
+			"requires_meta": [],
+			"class": "",
+			"tags": [
+				"core",
+				"hoard"
+			],
+			"summary": "Banked points earn interest every round.",
+			"description": "At each round start gain {pct}% of your unspent points (max {cap} a round).",
+			"drawback": "",
+			"values": {
+				"pct": [
+					5,
+					8,
+					12
+				],
+				"cap": [
+					300,
+					500,
+					800
+				]
+			},
+			"effects": [
+				{
+					"script": "round_interest",
+					"params": {
+						"pct": [
+							0.05,
+							0.08,
+							0.12
+						],
+						"cap": [
+							300,
+							500,
+							800
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "t_crooked_oath",
+			"name": "Crooked Oath",
+			"tier": "normal",
+			"branch": "core",
+			"type": "wager",
+			"icon": "t_crooked_oath",
+			"ranks": 3,
+			"weight": 8,
+			"requires_meta": [],
+			"class": "",
+			"tags": [
+				"core",
+				"wager"
+			],
+			"summary": "Hit much harder, get hit harder.",
+			"description": "+{dmg_pct}% damage dealt.",
+			"drawback": "You take +{in_pct}% damage.",
+			"values": {
+				"dmg_pct": [
+					30,
+					45,
+					60
+				],
+				"in_pct": [
+					15,
+					20,
+					25
+				]
+			},
+			"effects": [
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "damage_out",
+						"mult": [
+							1.3,
+							1.45,
+							1.6
+						]
+					}
+				},
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "damage_in",
+						"mult": [
+							1.15,
+							1.2,
+							1.25
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "t_toll_counter",
+			"name": "Toll Counter",
+			"tier": "normal",
+			"branch": "core",
+			"type": "counter",
+			"icon": "t_toll_counter",
+			"ranks": 3,
+			"weight": 8,
+			"requires_meta": [],
+			"class": "",
+			"tags": [
+				"core",
+				"counter"
+			],
+			"summary": "Every so many kills, a shockwave rings out.",
+			"description": "Every {every}th kill rings a {damage} (+{per_round} x round) damage shockwave around you ({radius} m).",
+			"drawback": "",
+			"values": {
+				"every": [
+					15,
+					12,
+					10
+				],
+				"damage": [
+					150,
+					200,
+					260
+				],
+				"per_round": 10,
+				"radius": 5
+			},
+			"effects": [
+				{
+					"script": "kill_counter",
+					"params": {
+						"every": [
+							15,
+							12,
+							10
+						],
+						"damage": [
+							150.0,
+							200.0,
+							260.0
+						],
+						"damage_per_round": 10.0,
+						"radius": 5.0,
+						"knockback": 6.0
+					}
+				}
+			]
+		},
+		{
+			"id": "t_empty_cradle",
+			"name": "Empty Cradle",
+			"tier": "normal",
+			"branch": "core",
+			"type": "reactive",
+			"icon": "t_empty_cradle",
+			"ranks": 3,
+			"weight": 8,
+			"requires_meta": [],
+			"class": "",
+			"tags": [
+				"core",
+				"reactive"
+			],
+			"summary": "Every reload kicks you into a sprint.",
+			"description": "For {dur}s after each reload: +{move_pct}% move speed and +{rate_pct}% fire rate.",
+			"drawback": "",
+			"values": {
+				"dur": [
+					3,
+					4,
+					5
+				],
+				"move_pct": [
+					15,
+					20,
+					25
+				],
+				"rate_pct": [
+					10,
+					15,
+					20
+				]
+			},
+			"effects": [
+				{
+					"script": "timed_buff",
+					"on": [
+						"reload_finished"
+					],
+					"params": {
+						"stat": "move_speed",
+						"add": [
+							0.15,
+							0.2,
+							0.25
+						],
+						"duration": [
+							3.0,
+							4.0,
+							5.0
+						]
+					}
+				},
+				{
+					"script": "timed_buff",
+					"on": [
+						"reload_finished"
+					],
+					"params": {
+						"stat": "fire_rate_mult",
+						"mult": [
+							1.1,
+							1.15,
+							1.2
+						],
+						"duration": [
+							3.0,
+							4.0,
+							5.0
 						]
 					}
 				}

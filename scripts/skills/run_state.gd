@@ -259,7 +259,30 @@ func offer_entry(id: String) -> Dictionary:
 		"type": c.get("type", "passive"), "icon": c.get("icon", id), "ranks": int(c.get("ranks", 1)),
 		"rank_now": now_r, "rank_next": next_r, "summary": str(c.get("summary", "")), "description": desc,
 		"drawback": Progress.format_drawback(c, next_r) if str(c.get("drawback", "")) != "" else "",
-		"class": c.get("class", ""), "synergy": syn, "is_cache": id == CACHE_ID}
+		"class": c.get("class", ""), "synergy": syn, "is_cache": id == CACHE_ID,
+		"type_label": type_info(str(c.get("type", "passive"))).label, "type_hint": type_info(str(c.get("type", "passive"))).hint}
+
+
+## Card type label + one-line rule for the UI (run_picks.json card_types, playtest #13). Unknown -> the id capitalised.
+func type_info(t: String) -> Dictionary:
+	var d: Dictionary = data.get("card_types", {}).get(t, {})
+	return {"label": str(d.get("label", t.capitalize())), "hint": str(d.get("hint", ""))}
+
+
+## Drops card `id` from this match (Fleeting cards expire this way): effects detach, stats re-apply, and the card
+## can be offered again. Returns true if it was owned.
+func remove_card(id: String) -> bool:
+	if not cards.has(id):
+		return false
+	cards.erase(id)
+	if player and is_instance_valid(player) and player.get("skill_runner"):
+		player.skill_runner.remove_source(id)
+		player.recalc_stats()
+	cards_changed.emit()
+	var bus := get_node_or_null("/root/GameEvents")
+	if bus:
+		bus.emit_event(&"card_expired", {"player": player, "card_id": id})
+	return true
 
 
 func offer_entries() -> Array:
@@ -447,8 +470,18 @@ func owned_cards() -> Array:
 		var c := card_def(id)
 		out.append({"id": id, "name": c.get("name", id), "tier": c.get("tier", "normal"), "branch": c.get("branch", ""),
 			"icon": c.get("icon", id), "rank": cards[id], "ranks": int(c.get("ranks", 1)),
-			"description": Progress.format_description(c, cards[id])})
+			"description": Progress.format_description(c, cards[id]), "type": str(c.get("type", "passive")),
+			"rounds_left": _rounds_left(id)})
 	return out
+
+
+## Fleeting cards: rounds until the card expires; -1 = permanent.
+func _rounds_left(id: String) -> int:
+	if player and is_instance_valid(player) and player.get("skill_runner"):
+		for e in player.skill_runner.effects_from(id):
+			if e.has_method("rounds_left"):
+				return e.rounds_left()
+	return -1
 
 
 # ---------------------------------------------------------------- time scale (flagged)

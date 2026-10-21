@@ -32,6 +32,14 @@ const SCRIPTS := {
 	"unlock_cards": preload("res://scripts/skills/effects/unlock_cards.gd"),
 	"offer_weight": preload("res://scripts/skills/effects/offer_weight.gd"),
 	"offer_mod": preload("res://scripts/skills/effects/offer_mod.gd"),
+	# playtest #13 Field Card types
+	"card_instant": preload("res://scripts/skills/effects/card_instant.gd"),
+	"card_echo": preload("res://scripts/skills/effects/card_echo.gd"),
+	"round_growth": preload("res://scripts/skills/effects/round_growth.gd"),
+	"card_fleeting": preload("res://scripts/skills/effects/card_fleeting.gd"),
+	"round_interest": preload("res://scripts/skills/effects/round_interest.gd"),
+	"kill_counter": preload("res://scripts/skills/effects/kill_counter.gd"),
+	"timed_buff": preload("res://scripts/skills/effects/timed_buff.gd"),
 }
 
 
