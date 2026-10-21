@@ -369,10 +369,20 @@ func _make_card(i: int, e: Dictionary) -> Button:
 	ics.set_border_width_all(3)
 	icon.add_theme_stylebox_override("panel", ics)
 	icon.custom_minimum_size = Vector2(72, 72)
-	var gl := UIStyle.label("$" if bool(e.get("is_cache", false)) else UIStyle.initials(str(e.get("name", "?"))), 28, UIStyle.BONE, true)
-	gl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	gl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	icon.add_child(gl)
+	var card_tex: Texture2D = null if bool(e.get("is_cache", false)) else UIStyle.card_icon_tex(str(e.get("icon", e.get("id", ""))))
+	if card_tex != null: # Desi card_<icon>.png; initials as fallback
+		var tr := TextureRect.new()
+		tr.texture = card_tex
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.custom_minimum_size = Vector2(64, 64)
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon.add_child(tr)
+	else:
+		var gl := UIStyle.label("$" if bool(e.get("is_cache", false)) else UIStyle.initials(str(e.get("name", "?"))), 28, UIStyle.BONE, true)
+		gl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		gl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		icon.add_child(gl)
 	ic_c.add_child(icon)
 	# name + rank line
 	var nm := UIStyle.label(str(e.get("name", "?")).to_upper(), 19, UIStyle.BONE, true)

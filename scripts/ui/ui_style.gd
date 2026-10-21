@@ -463,6 +463,21 @@ static func class_item_icon_tex(item_id: String) -> Texture2D:
 	return null if item_id == "" else _icon_tex("res://assets/icons/%s.png" % item_id)
 
 
+## Weapon attribute (perk) icon by perks.json id: res://assets/icons/perk_<id>.png. Null if missing.
+static func perk_icon_tex(perk_id: String) -> Texture2D:
+	return null if perk_id == "" else _icon_tex("res://assets/icons/perk_%s.png" % perk_id)
+
+
+## Field Card icon by run_picks.json "icon" key (falls back to the card id): res://assets/icons/card_<icon>.png.
+static func card_icon_tex(icon_key: String) -> Texture2D:
+	return null if icon_key == "" else _icon_tex("res://assets/icons/card_%s.png" % icon_key)
+
+
+## Small 128px attribute row markers: "signature" or "playstyle" -> res://assets/icons/badge_<kind>.png.
+static func attr_badge_tex(kind: String) -> Texture2D:
+	return null if kind == "" else _icon_tex("res://assets/icons/badge_%s.png" % kind)
+
+
 # ------------------------------------------------------------------ attachment icons
 
 ## res://assets/icons/att_<id>.png when it exists, else null.
