@@ -107,6 +107,12 @@ func _run() -> void:
 	check(S.weapon_wants_scope(gear.roll_weapon("sniper_rifle", 2, 1)), "sniper_rifle wants the scope")
 	check(not S.weapon_wants_scope(null), "null weapon: no scope")
 
+	# 7c61cbe slot rule: the starter primary is an SMG, the sidearm sits in the secondary slot
+	var start_p = player.inventory.equipped.get("primary")
+	check(start_p != null and start_p.archetype == "smg" and not S.weapon_wants_scope(start_p), "starter SMG primary: no scope")
+	player.inventory.equip_weapon_slot("secondary")
+	await wait(2)
+	await wait_s(player.inventory.get_equipped_weapon().swap_time() + 0.05)
 	check(player.inventory.get_equipped_weapon() != null and player.inventory.get_equipped_weapon().archetype == "sidearm", "starter sidearm in hand")
 	await ads(true)
 	check(player.ads_active, "sidearm ADS active")
@@ -182,6 +188,7 @@ func _run() -> void:
 	# ---------------------------------------------------------------- Armory scope flag (Longwatch 6x on Scout)
 	var api = A.new()
 	prog.add_gravemark(500, "test")
+	prog.add_scrap(1000, "test") # 5fe0ff6 Economy v2: Armory reworks also cost Scrap
 	for i in 4:
 		api.purchase("upg_scout_rifle")
 	var lw_ok: bool = api.purchase("longwatch_6x") and api.equip_attachment("scout_rifle", "optic", "longwatch_6x")
