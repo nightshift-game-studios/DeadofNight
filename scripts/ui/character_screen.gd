@@ -14,6 +14,9 @@ const STAT_HINTS := {
 	"agility": "+%.0f%% move speed", "toughness": "-%.0f%% damage taken", "vitality": "regen after %.1fs",
 	"ordnance": "grenade %.1fs", "focus": "ability %.1fs", "brawn": "melee %.0f dmg"}
 const CARD_W := 360.0
+const StatPreviewScr := preload("res://scripts/ui/stat_preview.gd")
+var stat_preview: Dictionary = {} ## playtest #34: armor-stat totals being previewed (hovered armor / point allocation); {} = none
+var _stat_rows: Array = [] ## StatPreview.rows() of the last stats render (tests)
 
 var player: Node
 var _expanded: String = ""
@@ -664,25 +667,109 @@ func _initials(item: GearItem) -> String:
 	return map.get(item.slot, item.type_name().substr(0, 4).to_upper())
 
 
+## Playtest #34: each stat tile shows what the points do in real numbers (StatPreview mirrors player.gd's formulas):
+## the derived values now, and either the gain from the next point ("+1 PT") or, while previewing (hovering an armor
+## piece in the stash, or a stat-point allocator calling set_stat_preview), current -> previewed with green / red deltas.
 func _refresh_stats(inv: Inventory) -> void:
 	var t: Dictionary = inv.total_armor_stats()
-	for s in ArmorItem.STAT_ORDER:
+	_stat_rows = StatPreviewScr.rows(player, t, stat_preview)
+	for row in _stat_rows:
+		var s: String = row.stat
+		var pv: bool = row.previewing and int(row.next_value) != int(row.value)
 		var box := PanelContainer.new()
-		box.add_theme_stylebox_override("panel", UIStyle.cut_box(UIStyle.PANEL, Color(UIStyle.OLIVE, 0.8), 2, 8))
+		box.name = "Stat_" + s
+		var edge := Color(UIStyle.OLIVE, 0.8)
+		if pv:
+			edge = UIStyle.GOOD if int(row.next_value) > int(row.value) else UIStyle.BAD
+		box.add_theme_stylebox_override("panel", UIStyle.cut_box(UIStyle.PANEL, edge, 2, 8))
 		box.custom_minimum_size = Vector2(150, 0)
 		var v := VBoxContainer.new()
-		v.add_theme_constant_override("separation", 0)
+		v.add_theme_constant_override("separation", 1)
 		box.add_child(v)
 		var head := HBoxContainer.new()
 		head.add_child(UIStyle.label(ArmorItem.STAT_LABELS[s].to_upper(), 13, UIStyle.BONE_DIM))
 		var sp := Control.new()
 		sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(sp)
-		head.add_child(UIStyle.label(str(t[s]), 24, UIStyle.BONE, true))
+		var val := UIStyle.label(str(row.value), 24, UIStyle.BONE, true)
+		val.name = "Value"
+		head.add_child(val)
+		if pv:
+			var nv := UIStyle.label(" → %d" % int(row.next_value), 18,
+				UIStyle.GOOD if int(row.next_value) > int(row.value) else UIStyle.BAD, true)
+			nv.name = "PreviewValue"
+			nv.size_flags_vertical = Control.SIZE_SHRINK_END
+			head.add_child(nv)
 		v.add_child(head)
-		v.add_child(UIStyle.bar(t[s] / 100.0, UIStyle.RUST, 132, 5))
-		v.add_child(UIStyle.label(_stat_effect(s), 12, UIStyle.OLIVE.lightened(0.35)))
+		var ghost := float(row.next_value) / 100.0 if pv else -1.0
+		v.add_child(UIStyle.bar(float(row.value) / 100.0, UIStyle.RUST, 132, 5, ghost))
+		for ln in row.lines:
+			var lh := HBoxContainer.new()
+			lh.add_theme_constant_override("separation", 3)
+			lh.name = "Line_" + str(ln.key)
+			var ll := UIStyle.label(str(ln.label), 10, UIStyle.BONE_DIM)
+			lh.add_child(ll)
+			var lsp := Control.new()
+			lsp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			lh.add_child(lsp)
+			var cur := UIStyle.label(str(ln.now), 11, UIStyle.OLIVE.lightened(0.35))
+			cur.name = "Now"
+			lh.add_child(cur)
+			if int(ln.better) != 0:
+				var col := UIStyle.GOOD if int(ln.better) > 0 else UIStyle.BAD
+				var dl := UIStyle.label(("→ " + str(ln.next).split(" ")[0]) if pv else ("%s/pt" % str(ln.get("delta_text", ""))), 10,
+					col if pv else Color(col, 0.75))
+				dl.name = "Delta"
+				lh.add_child(dl)
+			v.add_child(lh)
 		_stats_grid.add_child(box)
+
+
+## Previews armor-stat totals on the stat tiles (absolute totals for the stats that change; {} clears).
+## Used by armor hover in the stash grid; a future stat-point allocator (Skillz) can call it per click / hover.
+func set_stat_preview(totals: Dictionary) -> void:
+	stat_preview = totals.duplicate()
+	_rebuild_stats()
+
+
+func clear_stat_preview() -> void:
+	if stat_preview.is_empty():
+		return
+	stat_preview = {}
+	_rebuild_stats()
+
+
+## Tests / screenshots: preview `n` extra points in `stat`.
+func debug_preview_stat(stat: String, n: int = 5) -> void:
+	if player == null:
+		return
+	var t: Dictionary = player.inventory.total_armor_stats()
+	set_stat_preview({stat: int(t.get(stat, 0)) + n})
+
+
+func _rebuild_stats() -> void:
+	if _stats_grid == null or player == null:
+		return
+	for c in _stats_grid.get_children():
+		_stats_grid.remove_child(c)
+		c.free()
+	_refresh_stats(player.inventory)
+
+
+## Totals if `item` replaced what is equipped in its slot (armor only; {} for anything else).
+func armor_swap_totals(item: GearItem) -> Dictionary:
+	if player == null or not (item is ArmorItem):
+		return {}
+	var inv = player.inventory
+	var t: Dictionary = inv.total_armor_stats()
+	var cur = inv.equipped.get(item.slot)
+	var out := t.duplicate()
+	for s in ArmorItem.STAT_ORDER:
+		var d := int((item as ArmorItem).stats.get(s, 0))
+		if cur is ArmorItem:
+			d -= int((cur as ArmorItem).stats.get(s, 0))
+		out[s] = int(t.get(s, 0)) + d
+	return out
 
 
 func _stat_effect(s: String) -> String:
@@ -1029,6 +1116,10 @@ func _refresh_tile_bangs(n: Node, inv: Inventory) -> void:
 
 func _on_tile_hover(item: GearItem, equipped: bool) -> void:
 	_show_tooltip(item, equipped)
+	if item is ArmorItem and not equipped:
+		set_stat_preview(armor_swap_totals(item))
+	else:
+		clear_stat_preview()
 	if item and not item.seen and player:
 		player.inventory.mark_seen(item) # seen_changed → _refresh_unseen_badges
 
@@ -1311,6 +1402,7 @@ func _place_tooltip() -> void:
 func _hide_tooltip() -> void:
 	if _tooltip:
 		_tooltip.visible = false
+	clear_stat_preview()
 
 
 ## For tests / screenshots: show the card for an item at a fixed position.
