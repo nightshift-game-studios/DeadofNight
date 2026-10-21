@@ -12,9 +12,9 @@ signal skill_unlocked(id: String) ## main.gd re-applies player stats on this (""
 
 const TILE := 44.0
 const KEY_TILE := 56.0
-const ROW_H := 88.0
+const ROW_H := 94.0 ## #14: room for a 2-line capstone name above a keystone
 const ORIGIN := Vector2(64, 40) ## canvas px of grid (0, 0)
-const MIN_PITCH := 96.0
+const MIN_PITCH := 76.0 ## playtest #14: the 15-column tree fits 1280 wide without side panning
 const CANVAS_H := 548.0
 const C_LOCKED := Color(0.17, 0.18, 0.14)
 const C_EXCL := Color(0.30, 0.18, 0.13)
@@ -51,12 +51,92 @@ var _last_bought := "" ## tests: id of the last node bought through the UI
 ## (nav_input is set by key / pad input and cleared by real mouse motion), the auto-focus on open does not.
 var nav_input := false
 var _hover_id := ""
+## Playtest #14: 109-node tree. General branches (rows 0-7) always show; ONE class dock shows under them
+## (class_view, default = your class); its rail tab / Q E switch the dock. Layout comes from Progress.tree.grid.
+var class_view := ""
+var _ids: Array = [] ## visible node ids, file order
+var _toast: Label
+var _toast_t := 0.0
 
 
 func _ready() -> void:
 	super._ready()
 	Progress.rank_changed.connect(_on_rank_changed)
 	Progress.ranks_changed.connect(_on_ranks_changed)
+
+
+## Skillz's SkillSpec (Characters.spec, SKILLTREE_API.md) when the Characters autoload is live, else null
+## (then the tree talks to Progress directly, as before Batch C).
+func spec() -> Node:
+	var c := get_node_or_null("/root/Characters")
+	if c == null or not ("spec" in c) or c.spec == null:
+		return null
+	if c.has_method("is_bound") and not c.is_bound():
+		return null
+	return c.spec
+
+
+func _connect_spec() -> void:
+	var sp := spec()
+	if sp and sp.has_signal("tree_changed") and not sp.tree_changed.is_connected(_on_ranks_changed):
+		sp.tree_changed.connect(_on_ranks_changed)
+
+
+func _class_x0(cls: String) -> float:
+	var x0 := 1e9
+	for id in Progress.all_node_ids():
+		var d := Progress.get_skill(id)
+		if str(d.get("class", "")) == cls:
+			x0 = minf(x0, float(d.get("x", 0)))
+	return 0.0 if x0 > 1e8 else x0
+
+
+## Visible node defs: every general node at its grid spot, plus class_view's dock moved under the general rows,
+## centred (the data puts the 4 class docks side by side in grid.class_rows).
+func _layout_defs() -> void:
+	_defs.clear()
+	_ids.clear()
+	if class_view == "":
+		class_view = str(Progress.selected_class)
+	var g: Dictionary = Progress.tree.get("grid", {})
+	var crow: Array = g.get("class_rows", [])
+	var gen_max_y := 0.0
+	var gen_max_x := 0.0
+	for id in Progress.all_node_ids():
+		var d := Progress.get_skill(id)
+		if str(d.get("class", "")) == "":
+			gen_max_y = maxf(gen_max_y, float(d.get("y", 0)))
+			gen_max_x = maxf(gen_max_x, float(d.get("x", 0)))
+	var cy0 := float(crow[0]) if crow.size() > 0 else gen_max_y + 2.0
+	var cx0 := _class_x0(class_view)
+	var cw := 0.0
+	for id in Progress.all_node_ids():
+		var d := Progress.get_skill(id)
+		if str(d.get("class", "")) == class_view:
+			cw = maxf(cw, float(d.get("x", 0)) - cx0)
+	var shift_x := roundf((gen_max_x - cw) * 0.5) - cx0
+	var shift_y := (gen_max_y + 1.75) - cy0
+	for id in Progress.all_node_ids():
+		var d := Progress.get_skill(id)
+		var cls := str(d.get("class", ""))
+		if cls != "" and cls != class_view:
+			continue
+		if cls != "":
+			d = d.duplicate()
+			d["x"] = float(d.get("x", 0)) + shift_x
+			d["y"] = float(d.get("y", 0)) + shift_y
+		_defs[id] = d
+		_ids.append(id)
+
+
+## Show another class's dock (rail tab / Q E). Rebuilds the canvas; keeps the pan on the dock.
+func view_class(cls: String) -> void:
+	if cls == class_view and _built:
+		return
+	class_view = cls
+	_focus_id = ""
+	_build()
+	_refresh_all()
 
 
 func refresh() -> void:
@@ -81,8 +161,10 @@ func _build() -> void:
 	clear_content()
 	_defs.clear()
 	_branch.clear()
-	for id in Progress.all_node_ids():
-		_defs[id] = Progress.get_skill(id)
+	_nodes.clear()
+	_rail_tabs.clear()
+	_connect_spec()
+	_layout_defs()
 	for b in Progress.branches():
 		_branch[str(b.id)] = b
 	_fit_panel()
@@ -91,6 +173,8 @@ func _build() -> void:
 	_build_rail()
 	_build_canvas()
 	_build_footer()
+	if _tooltip and is_instance_valid(_tooltip):
+		_tooltip.free()
 	_tooltip = PanelContainer.new()
 	_tooltip.visible = false
 	_tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -218,6 +302,7 @@ func _build_rail() -> void:
 		t.add_theme_color_override("font_hover_color", UIStyle.BONE)
 		t.pressed.connect(_jump_to_branch.bind(id))
 		t.mouse_entered.connect(_ui_snd.bind("ui_hover"))
+		t.name = "Tab_" + id
 		_rail.add_child(t)
 		_rail_tabs[id] = t
 
@@ -243,6 +328,17 @@ func _build_canvas() -> void:
 	_canvas = Control.new()
 	_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_clip.add_child(_canvas)
+	_toast = UIStyle.label("", 13, UIStyle.BAD.lightened(0.25), true, 3)
+	_toast.name = "PickToast"
+	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_toast.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_toast.anchor_left = 0.0
+	_toast.anchor_right = 1.0
+	_toast.offset_top = -30
+	_toast.offset_bottom = -8
+	_toast.modulate.a = 0.0
+	_toast.z_index = 5
+	_clip.add_child.call_deferred(_toast)
 	var g: Dictionary = Progress.tree.get("grid", {})
 	var max_x := 0.0
 	var max_y := 0.0
@@ -274,13 +370,13 @@ func _build_canvas() -> void:
 		dock.position = Vector2(x0 - _pitch * 0.9, y0 - ROW_H * 0.48)
 		dock.size = Vector2(x1 - x0 + _pitch * 1.65, y1 - y0 + ROW_H * 0.98)
 		_canvas.add_child(dock)
-		var dl := UIStyle.label(" CLASS LINES  //  ACTIVE ONLY WHILE PLAYING THAT CLASS ", 10, UIStyle.BONE_DIM)
+		var dl := UIStyle.label(" CLASS LINE  //  ACTIVE ONLY WHILE PLAYING THAT CLASS  //  OTHER CLASSES: RAIL TABS ", 10, UIStyle.BONE_DIM)
 		dl.position = dock.position + Vector2(10, -8)
 		var dlb := ColorRect.new()
 		dlb.color = Color(0.05, 0.05, 0.04, 1.0)
 		dlb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		dlb.position = dl.position + Vector2(0, 2)
-		dlb.size = Vector2(318, 13)
+		dlb.size = Vector2(UIStyle.body_bold().get_string_size(dl.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x + 4, 13)
 		_canvas.add_child(dlb)
 		_canvas.add_child(dl)
 		var seen := {}
@@ -290,13 +386,13 @@ func _build_canvas() -> void:
 				continue
 			seen[bid] = true
 			var rows := cls_ids.filter(func(j): return str(_defs[j].branch) == bid)
-			var y := _grid_pos(rows[0]).y
-			var l := UIStyle.label(str(_branch.get(bid, {}).get("name", bid)).to_upper(), 11, _accent(bid), true)
-			l.position = Vector2(dock.position.x + 8, y - 16)
+			var l := UIStyle.label(str(_branch.get(bid, {}).get("name", bid)).to_upper(), 14, _accent(bid), true)
+			l.name = "ClassDockName"
+			l.position = Vector2(dock.position.x + dock.size.x + 12, dock.position.y + 10)
 			l.set_meta("class_branch", bid)
 			_canvas.add_child(l)
-			var sub := UIStyle.label("", 9, UIStyle.BONE_DIM)
-			sub.position = Vector2(dock.position.x + 8, y + 2)
+			var sub := UIStyle.label("", 10, UIStyle.BONE_DIM)
+			sub.position = Vector2(dock.position.x + dock.size.x + 12, dock.position.y + 30)
 			sub.set_meta("class_sub", bid)
 			_canvas.add_child(sub)
 	_wires = Wires.new()
@@ -330,7 +426,7 @@ func _build_canvas() -> void:
 		ul.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_canvas.add_child(ul)
 	# nodes
-	for id in Progress.all_node_ids():
+	for id in _ids:
 		var t := SkillTile.new()
 		t.menu = self
 		t.id = id
@@ -352,12 +448,14 @@ func _build_footer() -> void:
 	var foot := HBoxContainer.new()
 	foot.add_theme_constant_override("separation", 6)
 	content.add_child(foot)
-	for spec in [["ARROWS", "D-PAD", "MOVE"], ["Q  E", "LB  RB", "BRANCH"], ["LMB", "A", "BUY RANK"],
-			["RMB DRAG", "R-STICK", "PAN"], ["R", "Y", "RESPEC"], ["K", "B", "CLOSE"]]:
-		foot.add_child(UIStyle.key_cap(spec[0], 10))
+	for ks in [["ARROWS", "D-PAD", "MOVE"], ["Q  E", "LB  RB", "BRANCH"], ["LMB", "A", "BUY RANK"],
+			["RMB DRAG", "R-STICK", "PAN"], ["U", "X", "UNDO"], ["R", "Y", "RESPEC"], ["K", "B", "CLOSE"]]:
+		if ks[2] == "UNDO" and self.spec() == null:
+			continue
+		foot.add_child(UIStyle.key_cap(ks[0], 10))
 		foot.add_child(UIStyle.label("/", 10, UIStyle.BONE_DIM))
-		foot.add_child(UIStyle.key_cap(spec[1], 10))
-		var l := UIStyle.label(spec[2], 11, UIStyle.BONE_DIM)
+		foot.add_child(UIStyle.key_cap(ks[1], 10))
+		var l := UIStyle.label(ks[2], 11, UIStyle.BONE_DIM)
 		l.custom_minimum_size.x = 0
 		foot.add_child(l)
 		var gap := Control.new()
@@ -366,7 +464,7 @@ func _build_footer() -> void:
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	foot.add_child(sp)
-	foot.add_child(UIStyle.label("Bonuses apply at match start  //  respec is free before round 1 and after game over", 11, UIStyle.BONE_DIM))
+	foot.add_child(UIStyle.label("Bonuses apply at match start  //  respec at home, round 0, game over", 11, UIStyle.BONE_DIM))
 
 
 ## Largest font size in [lo, hi] that fits `text` in `w` px (single line).
@@ -422,10 +520,11 @@ func _refresh_all() -> void:
 	for bid in _rail_tabs:
 		var spent := 0
 		var total := 0
-		for id in _defs:
-			if str(_defs[id].branch) != bid:
+		for id in Progress.all_node_ids():
+			var nd := Progress.get_skill(id)
+			if str(nd.branch) != bid:
 				continue
-			var costs: Array = _defs[id].get("cost", [1])
+			var costs: Array = nd.get("cost", [1])
 			for i in costs.size():
 				total += int(costs[i])
 				if i < Progress.rank(id):
@@ -434,7 +533,7 @@ func _refresh_all() -> void:
 		var cls := str(_branch[bid].get("class", ""))
 		var mark := "" if cls == "" else ("  *" if cls == Progress.selected_class else "  -")
 		t.text = "  %s%s   %d/%d" % [str(_branch[bid].name).to_upper(), mark, spent, total]
-		var on: bool = _focus_id != "" and str(_defs.get(_focus_id, {}).get("branch", "")) == bid
+		var on: bool = (_focus_id != "" and str(_defs.get(_focus_id, {}).get("branch", "")) == bid) or (cls != "" and cls == class_view)
 		var st := UIStyle.cut_box(Color(0.13, 0.135, 0.1, 0.95) if on else Color(0.07, 0.075, 0.06, 0.9),
 			Color(UIStyle.BONE, 0.8) if on else Color(UIStyle.BONE_DIM, 0.25), 1, 6)
 		st.border_width_left = 5
@@ -460,12 +559,12 @@ func _refresh_all() -> void:
 
 
 func _refresh_respec() -> void:
-	var ok := Progress.can_respec() and Progress.skill_points_spent > 0
-	_respec_btn.disabled = not ok
+	var rs := respec_state()
+	_respec_btn.disabled = not bool(rs.allowed)
 	if _respec_armed > 0.0:
 		_respec_btn.text = "CONFIRM RESPEC?  REFUNDS %d" % Progress.skill_points_spent
 	else:
-		_respec_btn.text = "[R] RESPEC  //  FREE" if Progress.can_respec() else "[R] RESPEC  //  ROUND 0 ONLY"
+		_respec_btn.text = str(rs.label)
 
 
 func _on_rank_changed(_id: String, _rank: int) -> void:
@@ -485,6 +584,9 @@ func _process(delta: float) -> void:
 		_respec_armed -= delta
 		if _respec_armed <= 0.0:
 			_refresh_respec()
+	if _toast_t > 0.0 and _toast:
+		_toast_t -= delta
+		_toast.modulate.a = clampf(_toast_t / 0.4, 0.0, 1.0)
 	var stick := Vector2(Input.get_joy_axis(0, JOY_AXIS_RIGHT_X), Input.get_joy_axis(0, JOY_AXIS_RIGHT_Y))
 	if stick.length() > 0.2:
 		_set_pan(_pan + stick * 600.0 * delta)
@@ -494,6 +596,16 @@ func _process(delta: float) -> void:
 
 ## Buy the next rank of `id` through Progress (also used by the tests).
 func buy(id: String) -> bool:
+	var sp := spec()
+	if sp:
+		var r: Dictionary = sp.pick(id)
+		if not bool(r.get("ok", false)):
+			show_toast(str(r.get("reason", "")))
+			return false
+		_last_bought = id
+		_ui_snd("ui_skill_unlock")
+		skill_unlocked.emit(id)
+		return true
 	if Progress.buy_rank(id):
 		_last_bought = id
 		_ui_snd("ui_skill_unlock")
@@ -506,15 +618,75 @@ func _on_tile_pressed(id: String) -> void:
 	buy(id)
 
 
+## Free undo of one rank picked this visit (SkillSpec session: home menu / tree page). Needs Characters.
+func refund(id: String) -> bool:
+	var sp := spec()
+	if sp == null or id == "":
+		return false
+	var chk: Dictionary = sp.can_refund(id)
+	if not bool(chk.get("ok", false)):
+		show_toast(str(chk.get("reason", "")))
+		return false
+	var r = sp.refund(id)
+	var ok: bool = r if r is bool else (bool(r.get("ok", false)) if r is Dictionary else false)
+	if ok:
+		_ui_snd("ui_scrap_dismantle")
+		skill_unlocked.emit("")
+	_refresh_all()
+	return ok
+
+
+func show_toast(text: String, secs: float = 2.6) -> void:
+	if _toast == null or text == "":
+		return
+	_toast.text = text.to_upper()
+	_toast.modulate.a = 1.0
+	_toast_t = secs
+
+
+func toast_text() -> String:
+	return _toast.text if _toast and _toast.modulate.a > 0.01 else ""
+
+
+## {allowed, label, reason}: what the respec button can do now (SkillSpec.respec_cost when live).
+func respec_state() -> Dictionary:
+	var spent := int(Progress.skill_points_spent)
+	var sp := spec()
+	if sp == null:
+		var ok0 := Progress.can_respec() and spent > 0
+		return {"allowed": ok0, "label": "[R] RESPEC  //  FREE" if Progress.can_respec() else "[R] RESPEC  //  ROUND 0 ONLY", "reason": ""}
+	var rc: Dictionary = sp.respec_cost()
+	var allowed := bool(rc.get("allowed", false))
+	var price := ""
+	if not allowed:
+		price = "HOME / ROUND 0 ONLY"
+	elif bool(rc.get("free", false)) or not bool(rc.get("currency_available", false)):
+		price = "FREE"
+	else:
+		price = "%d %s" % [int(rc.get("amount", 0)), str(rc.get("currency", "scrap")).to_upper()]
+		if not bool(rc.get("can_afford", true)):
+			allowed = false
+	return {"allowed": allowed and spent > 0, "label": "[R] RESPEC  //  " + price, "reason": str(rc.get("reason", ""))}
+
+
 func _on_respec_pressed() -> void:
-	if not Progress.can_respec() or Progress.skill_points_spent <= 0:
+	if not bool(respec_state().allowed):
+		show_toast(str(respec_state().reason))
 		return
 	if _respec_armed <= 0.0:
 		_respec_armed = 3.0
 		_refresh_respec()
 		return
 	_respec_armed = 0.0
-	if Progress.respec():
+	var sp := spec()
+	if sp:
+		var r: Dictionary = sp.respec()
+		if bool(r.get("ok", false)):
+			_ui_snd("ui_scrap_dismantle")
+			skill_unlocked.emit("")
+		else:
+			show_toast(str(r.get("reason", "")))
+	elif Progress.respec():
 		_ui_snd("ui_scrap_dismantle")
 		skill_unlocked.emit("")
 	_refresh_all()
@@ -586,18 +758,22 @@ func _focus_first() -> void:
 		return
 	var pick := _focus_id
 	if pick == "" or not _nodes.has(pick):
-		for id in Progress.all_node_ids():
+		pick = ""
+		for id in _ids:
 			if ui_state(id) in ["available", "owned"] and Progress.can_afford(id):
 				pick = id
 				break
 	if pick == "":
-		pick = Progress.all_node_ids()[0]
+		pick = _ids[0]
 	_nodes[pick].grab_focus()
 
 
 func _jump_to_branch(bid: String) -> void:
 	_ui_snd("ui_hover")
-	var ids := Progress.all_node_ids().filter(func(i): return str(_defs[i].branch) == bid)
+	var bcls := str(_branch.get(bid, {}).get("class", ""))
+	if bcls != "" and bcls != class_view:
+		view_class(bcls)
+	var ids := _ids.filter(func(i): return str(_defs[i].branch) == bid)
 	if ids.is_empty():
 		return
 	var pick: String = ids[0]
@@ -611,6 +787,9 @@ func _jump_to_branch(bid: String) -> void:
 func _branch_step(dir: int) -> void:
 	var order: Array = Progress.branches().map(func(b): return str(b.id))
 	var cur := order.find(str(_defs.get(_focus_id, {}).get("branch", order[0])))
+	var fb := str(_defs.get(_focus_id, {}).get("branch", ""))
+	if fb != "" and str(_branch.get(fb, {}).get("class", "")) != "" and str(_branch.get(fb, {}).get("class", "")) != class_view:
+		cur = order.find(class_view)
 	_jump_to_branch(order[posmod(cur + dir, order.size())])
 
 
@@ -625,6 +804,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				_branch_step(1)
 			KEY_R:
 				_on_respec_pressed()
+			KEY_U, KEY_BACKSPACE:
+				refund(_focus_id)
 			_:
 				super._unhandled_input(event)
 				return
@@ -638,6 +819,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				_branch_step(1)
 			JOY_BUTTON_Y:
 				_on_respec_pressed()
+			JOY_BUTTON_X:
+				refund(_focus_id)
 			JOY_BUTTON_B:
 				close()
 			_:
@@ -805,6 +988,7 @@ func _show_tooltip(id: String) -> void:
 			v.add_child(UIStyle.label("%s LINE  //  ACTIVE FOR YOUR CLASS" % cls.to_upper(), 10, _accent(str(d.branch))))
 		else:
 			v.add_child(UIStyle.label("%s ONLY  //  BUYABLE NOW, ACTIVE WHEN YOU PLAY %s" % [cls.to_upper(), cls.to_upper()], 10, _accent(str(d.branch)).lightened(0.2)))
+	_tip_spec_lines(v, id)
 	# footer
 	v.add_child(_tip_rule())
 	var f := HBoxContainer.new()
@@ -839,6 +1023,49 @@ func _show_tooltip(id: String) -> void:
 	_tooltip.reset_size()
 	_place_tooltip(id)
 	_place_tooltip.call_deferred(id)
+
+
+## SkillSpec extras (Characters live): stat before -> after for the next rank, why an owned node isn't running,
+## and the free-undo hint for picks made this visit.
+func _tip_spec_lines(v: VBoxContainer, id: String) -> void:
+	var sp := spec()
+	if sp == null:
+		return
+	var pv: Dictionary = sp.preview(id)
+	var lines: Array = pv.get("lines", [])
+	if not lines.is_empty():
+		v.add_child(_tip_rule())
+		for ln in lines:
+			var unit := str(ln.get("unit", ""))
+			var row := HBoxContainer.new()
+			row.name = "PreviewLine"
+			row.add_theme_constant_override("separation", 6)
+			var lab := UIStyle.label(str(ln.get("label", ln.get("stat", ""))), 11, UIStyle.BONE_DIM)
+			lab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			row.add_child(lab)
+			row.add_child(UIStyle.label("%s%s  →  %s%s" % [_num(ln.get("before", 0)), unit, _num(ln.get("after", 0)), unit], 11, UIStyle.GOOD))
+			v.add_child(row)
+	var why := str(sp.inactive_reason(id))
+	if why != "" and Progress.rank(id) > 0:
+		var w := UIStyle.label(why.to_upper(), 10, UIStyle.BAD.lightened(0.15))
+		w.name = "InactiveReason"
+		w.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		w.custom_minimum_size.x = 260
+		v.add_child(w)
+	elif why != "":
+		var w2 := UIStyle.label(why, 10, UIStyle.BONE_DIM)
+		w2.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		w2.custom_minimum_size.x = 260
+		v.add_child(w2)
+	if bool(sp.can_refund(id).get("ok", false)):
+		var u := UIStyle.label("U / X  UNDO THIS PICK (FREE THIS VISIT)", 10, UIStyle.OLIVE.lightened(0.4))
+		u.name = "UndoHint"
+		v.add_child(u)
+
+
+static func _num(x) -> String:
+	var f := float(x)
+	return str(int(f)) if is_equal_approx(f, roundf(f)) else ("%.2f" % f).rstrip("0").rstrip(".")
 
 
 func _tip_rule() -> ColorRect:
@@ -1078,13 +1305,11 @@ class Wires extends Control:
 		# keystone guide line (skips the class dock in the middle)
 		var ky := -1.0
 		for id in defs:
-			if str(defs[id].get("type", "")) == "keystone":
-				ky = menu._grid_pos(id).y
+			if str(defs[id].get("type", "")) == "keystone" and str(defs[id].get("class", "")) == "":
+				ky = maxf(ky, menu._grid_pos(id).y)
 		if ky > 0:
 			var y: float = ky - menu.ROW_H * 0.55
-			var lx: float = menu.ORIGIN.x + 3.05 * menu._pitch
-			var rx: float = menu.ORIGIN.x + 6.95 * menu._pitch
-			var kn: int = defs.keys().filter(func(i): return str(defs[i].get("type", "")) == "keystone").size()
+			var kn: int = defs.keys().filter(func(i): return str(defs[i].get("type", "")) == "keystone" and str(defs[i].get("class", "")) == "").size()
 			# playtest #29: the label used to sit on the guide line at x 14, right under column 0's name plate.
 			# It now runs vertically in the left margin beside the keystone row, where no tile or name reaches.
 			var ktxt := "KEYSTONE · PICK 1 OF %d" % kn
@@ -1093,8 +1318,7 @@ class Wires extends Control:
 			draw_string(bf, Vector2.ZERO, ktxt, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(0.8, 0.35, 0.28, 0.9))
 			draw_set_transform(Vector2.ZERO)
 			keystone_label_rect = Rect2(Vector2(13 - 9, ky - tw * 0.5), Vector2(11, tw))
-			_dash(Vector2(menu.ORIGIN.x - menu.KEY_TILE * 0.5 - 10, y), Vector2(lx, y), Color(0.7, 0.25, 0.2, 0.45), 1.0, 6, 4)
-			_dash(Vector2(rx, y), Vector2(size.x - 12, y), Color(0.7, 0.25, 0.2, 0.45), 1.0, 6, 4)
+			_dash(Vector2(menu.ORIGIN.x - menu.KEY_TILE * 0.5 - 10, y), Vector2(size.x - 12, y), Color(0.7, 0.25, 0.2, 0.45), 1.0, 6, 4)
 		var chips := []
 		for id in defs:
 			var d: Dictionary = defs[id]
