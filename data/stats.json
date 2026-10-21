@@ -1,0 +1,15 @@
+{
+	"version": 1,
+	"_help": "Armor stat effects (Skillz, Economy v2 / DESIGN §21, STATS_API.md). Read by scripts/combat/stat_effects.gd (StatEffects), which player.gd recalc_stats() uses (MAIN_HOOKS §21b). Each stat is the 5-piece total, capped at 100 (Inventory.total_armor_stats). effect = max x curve(stat / 100). curve 'ease_out' = 1 - (1 - x)^power (early points count most: 20 points already give 1 - 0.8^2 = 36% of max); 'linear' = x (the pre-v2 behaviour: 100 Agility = +20% speed, 100 Toughness = 30% damage reduction, ...). Jason v0.6.1: 'stat points don't visibly affect move speed, damage taken' - they did apply, but a typical 15-25 total moved speed 3-5% and damage 5-7%, which nobody can feel.",
+	"curve": "ease_out",
+	"power": 2.0,
+	"stats": {
+		"agility": {"name": "Agility", "effects": {"move_speed": 0.25}, "_note": "walk, sprint and crouch speed +25% at 100"},
+		"toughness": {"name": "Toughness", "effects": {"damage_reduction": 0.4}, "_note": "incoming damage -40% at 100"},
+		"vitality": {"name": "Vitality", "effects": {"regen_delay_cut": 2.5, "regen_rate_add": 20.0}, "_note": "regen starts 2.5 s sooner (floor 1.5 s), +20 HP/s at 100"},
+		"ordnance": {"name": "Ordnance", "effects": {"grenade_cooldown_cut": 0.5}, "_note": "grenade cooldown -50% at 100"},
+		"focus": {"name": "Focus", "effects": {"ability_cooldown_cut": 0.4}, "_note": "class ability cooldown -40% at 100 (floor 1 s)"},
+		"brawn": {"name": "Brawn", "effects": {"melee_damage": 0.6, "melee_cooldown_cut": 0.4}, "_note": "melee damage +60%, melee cooldown -40% at 100"}
+	},
+	"_previous": {"curve": "linear", "agility": {"move_speed": 0.2}, "toughness": {"damage_reduction": 0.3}, "vitality": {"regen_delay_cut": 2.0, "regen_rate_add": 20.0}, "ordnance": {"grenade_cooldown_cut": 0.5}, "focus": {"ability_cooldown_cut": 0.4}, "brawn": {"melee_damage": 0.6, "melee_cooldown_cut": 0.4}}
+}
