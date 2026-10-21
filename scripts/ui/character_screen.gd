@@ -593,6 +593,9 @@ func _tile(item: GearItem, sz: Vector2, equipped: bool) -> Button:
 	glow.stretch_mode = TextureRect.STRETCH_SCALE
 	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(glow)
+	if item is ArmorItem and str(item.get("class_effect")) != "" and str(ClassItems.state(item, Progress.selected_class)) == "wrong_class":
+		b.modulate = Color(0.6, 0.6, 0.6, 0.85) # #9: another class's item does nothing for you
+		b.set_meta("wrong_class", true)
 	var icon_path: String = ICON_DIR + item.archetype + ".png"
 	if not item is WeaponItem:
 		icon_path = armor_icon_path(item)
@@ -1136,6 +1139,33 @@ func _unhandled_input(event: InputEvent) -> void:
 	super._unhandled_input(event)
 
 
+## Playtest #9 class items (Skillz CHARACTER_API "Class items on item cards"): effect line, keystone synergy
+## (lit when you own it), and a WRONG CLASS warning when the item belongs to another class.
+func _class_item_block(b: VBoxContainer, item) -> void:
+	if not (item is ArmorItem) or str(item.get("class_effect")) == "" or not item.has_method("class_line"):
+		return
+	var st := str(ClassItems.state(item, Progress.selected_class))
+	b.add_child(_divider())
+	var head := UIStyle.label(("%s CLASS ITEM" % str(item.class_id).to_upper()) + ("  //  WRONG CLASS: NO EFFECT" if st == "wrong_class" else ""),
+		12, UIStyle.BAD.lightened(0.15) if st == "wrong_class" else UIStyle.TIER_LEGENDARY.lightened(0.4), true)
+	head.name = "ClassItemHead"
+	b.add_child(head)
+	var l := UIStyle.label(item.class_line(), 12, UIStyle.BONE if st == "active" else UIStyle.BONE_DIM)
+	l.name = "ClassItemLine"
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size.x = CARD_W - 30
+	b.add_child(l)
+	var syn := str(item.class_synergy_line())
+	if syn != "":
+		var kid := str(ClassItems.synergy_keystone(item))
+		var lit := kid != "" and int(Progress.rank(kid)) > 0 and st == "active"
+		var sl := UIStyle.label(syn + ("  (OWNED)" if lit else ""), 11, UIStyle.GOOD if lit else UIStyle.BONE_DIM)
+		sl.name = "ClassItemSynergy"
+		sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		sl.custom_minimum_size.x = CARD_W - 30
+		b.add_child(sl)
+
+
 func _show_tooltip(item: GearItem, equipped: bool) -> void:
 	_tooltip_fixed = false
 	_tooltip_item = item
@@ -1287,6 +1317,7 @@ func _show_tooltip(item: GearItem, equipped: bool) -> void:
 			pt.add_child(d)
 			pr.add_child(pt)
 			b.add_child(pr)
+	_class_item_block(b, item)
 	# Armory: Rework tier + equipped attachments (per weapon TYPE)
 	if w:
 		var ArmoryScr = load("res://scripts/armory/armory.gd")

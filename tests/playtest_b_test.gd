@@ -66,6 +66,7 @@ func _go() -> void:
 	chars.bind(SAVE)
 	await _tree_checks()
 	await _characters_screen()
+	await _class_item_card()
 	await _home_checks()
 	chars.unbind()
 	_wipe()
@@ -307,4 +308,36 @@ func _home_checks() -> void:
 	check(chars.spec.session_open, "#24 undo session open at home")
 	check(home.start_match("arena") and not chars.spec.session_open, "#24 start_match calls leave_home (picks become permanent)")
 	home.queue_free()
+	await frames(2)
+
+
+# ------------------------------------------------------------------ #9 class items on the kit item card
+func _class_item_card() -> void:
+	var gdb = root.get_node("GearDB")
+	var CI = load("res://scripts/classes/class_items.gd")
+	var item = gdb.roll_armor("chest", 3, 4) if gdb.has_method("roll_armor") else null
+	if item == null:
+		check(false, "#9 could not roll an armor piece")
+		return
+	CI.assign(item, "scout")
+	prog.selected_class = "soldier"
+	var ks = load("res://scripts/ui/character_screen.gd").new()
+	root.add_child(ks)
+	await frames(2)
+	var box := VBoxContainer.new()
+	ks._class_item_block(box, item)
+	var head: Label = box.find_child("ClassItemHead", true, false)
+	check(head != null and head.text.contains("WRONG CLASS") and box.find_child("ClassItemLine", true, false).text == item.class_line(),
+		"#9 class item card: effect line + WRONG CLASS when you're another class")
+	var t: Button = ks._tile(item, Vector2(64, 64), false)
+	check(t.has_meta("wrong_class") and t.modulate.r < 0.9, "#9 wrong-class item tile is greyed")
+	prog.selected_class = "scout"
+	var box2 := VBoxContainer.new()
+	ks._class_item_block(box2, item)
+	check(not box2.find_child("ClassItemHead", true, false).text.contains("WRONG"), "#9 right class: no warning")
+	prog.selected_class = "soldier"
+	t.free()
+	box.free()
+	box2.free()
+	ks.queue_free()
 	await frames(2)
