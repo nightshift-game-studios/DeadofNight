@@ -6,6 +6,9 @@ extends RigidBody3D
 ## Missing GLB -> the old dark sphere with an emissive tint. Collision stays SphereShape3D r 0.09 (GLB origin = body centre).
 
 const MODEL_PATH := "res://assets/models/pickups/grenade.glb"
+## Desi #25: per-variant models res://assets/models/grenades/<variant>.glb (frag, cinderjar, shiverglass, tallyhook, rookery,
+## gravewell, leechbell, requiem_bell). data "variant" (or "model") picks one; missing -> MODEL_PATH. FX helpers: GrenadeFX.
+const VARIANT_DIR := "res://assets/models/grenades/"
 static var model_path: String = MODEL_PATH ## tests point this at a missing file to exercise the sphere fallback
 
 var data: Dictionary = {}
@@ -20,6 +23,7 @@ var _bounce_cd: float = 0.0
 var _loop: AudioStreamPlayer3D ## Tremor Charge pulse loop
 var visual: Node3D ## grenade.glb instance (or the fallback sphere)
 var band_material: StandardMaterial3D ## Band override (null on the fallback sphere)
+var _trail: Node3D ## GrenadeFX flight trail (effect tint)
 
 
 static func throw_from(player: Node, grenade_data: Dictionary, origin: Vector3, dir: Vector3, inherit: Vector3) -> Grenade:
@@ -50,8 +54,9 @@ func _ready() -> void:
 	shape.shape = s
 	add_child(shape)
 	var c := _color()
-	visual = make_visual(c)
+	visual = make_visual(c, variant_of(data))
 	add_child(visual)
+	_trail = GrenadeFX.attach_trail(self, c)
 	band_material = visual.get_meta("band_material") if visual.has_meta("band_material") else null
 	_light = OmniLight3D.new()
 	_light.light_color = c
@@ -72,9 +77,12 @@ func _ready() -> void:
 
 ## Grenade visual tinted with `c`: grenade.glb with its Band recoloured (meta "band_material"), else the old sphere.
 ## Static so a held / viewmodel grenade can reuse it.
-static func make_visual(c: Color) -> Node3D:
-	if model_path != "" and ResourceLoader.exists(model_path):
-		var vis := (load(model_path) as PackedScene).instantiate() as Node3D
+static func make_visual(c: Color, variant: String = "") -> Node3D:
+	var path := model_path
+	if variant != "" and model_path == MODEL_PATH and ResourceLoader.exists(VARIANT_DIR + variant + ".glb"):
+		path = VARIANT_DIR + variant + ".glb"
+	if path != "" and ResourceLoader.exists(path):
+		var vis := (load(path) as PackedScene).instantiate() as Node3D
 		var band := vis.find_child("Band", true, false) as MeshInstance3D
 		if band:
 			var bm := StandardMaterial3D.new()
@@ -102,6 +110,11 @@ static func make_visual(c: Color) -> Node3D:
 	return mesh
 
 
+## Model variant id of a grenade data dict ("variant", else "model", else "").
+static func variant_of(d: Dictionary) -> String:
+	return str(d.get("variant", d.get("model", "")))
+
+
 func _sfx() -> Node:
 	return get_node_or_null("/root/Sfx")
 
@@ -110,6 +123,7 @@ func _on_bounce(_body: Node) -> void:
 	if _bounce_cd > 0.0 or linear_velocity.length() < 1.5 or freeze:
 		return
 	_bounce_cd = 0.12
+	GrenadeFX.toll(visual) # bells: clapper swing on every bounce (no-op on the others)
 	var a := _sfx()
 	if a:
 		a.play_at("frag_bounce", global_position, clampf(linear_velocity.length() - 8.0, -8.0, 0.0))
@@ -123,6 +137,7 @@ func _color() -> Color:
 func _physics_process(delta: float) -> void:
 	_t += delta
 	_bounce_cd = max(_bounce_cd - delta, 0.0)
+	GrenadeFX.update_trail(_trail, global_position, linear_velocity)
 	_light.light_energy = 0.5 + 1.5 * absf(sin(_t * 18.0))
 	if band_material:
 		band_material.emission_energy_multiplier = 1.0 + 3.0 * absf(sin(_t * 18.0))
