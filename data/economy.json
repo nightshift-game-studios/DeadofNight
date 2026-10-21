@@ -1,6 +1,6 @@
 {
 	"version": 2,
-	"_help": "Point economy (Skillz). Read by Progress (Progress.points_per_hit / points_per_kill / economy / chest_cfg()). main.gd copies points_per_hit / points_per_kill into its exports at _ready (MAIN_HOOKS). Ignite pays points_per_hit once when it lands (burn ticks pay nothing). Field Card skip/cache payouts live in data/run_picks.json -> offer. Door costs (750 / 1000 / 1250) are unchanged. chests (Economy v2, DESIGN §21): opening a chest costs `cost` points, +cost_step for every chest already bought this match (all chests share the count), capped at cost_max. A chest is NOT re-armed each round any more: after it is bought it waits relocate_delay seconds (loot pops, lid open), then moves to another chest spot (maps' ChestSpots markers, see /workspace/skillz/MAPZ_CHEST_SPOTS.md; fallback = the map's Chests/ markers) and is closed and buyable again. Relocation never picks the spot it is on, a spot another chest holds (occupied_radius), or a spot whose areas are all locked; hidden spots get weight x hidden_bias, spots nearer the player than min_player_distance get weight x near_player_mult. relocate false = the old behaviour (re-arm in place each round, still paid).",
+	"_help": "Point economy (Skillz). Read by Progress (Progress.points_per_hit / points_per_kill / economy / chest_cfg()). main.gd copies points_per_hit / points_per_kill into its exports at _ready (MAIN_HOOKS). Ignite pays points_per_hit once when it lands (burn ticks pay nothing). Field Card skip/cache payouts live in data/run_picks.json -> offer. Door costs (750 / 1000 / 1250) are unchanged. chests (Economy v2, DESIGN §21): opening a chest costs `cost` points, +cost_step for every chest already bought this match (all chests share the count), capped at cost_max. A chest is NOT re-armed each round any more: after it is bought it waits relocate_delay seconds (loot pops, lid open), then moves to another chest spot (maps' ChestSpots markers, see /workspace/skillz/MAPZ_CHEST_SPOTS.md; fallback = the map's Chests/ markers) and is closed and buyable again. Relocation never picks the spot it is on, a spot another chest holds (occupied_radius), or a spot whose areas are all locked; hidden spots get weight x hidden_bias, spots nearer the player than min_player_distance get weight x near_player_mult. Spots whose front (front_probe m out) is off the navmesh by more than nav_snap m (e.g. the arena Tower perch) are skipped while any on-navmesh spot is free (off_nav_mult 0). relocate false = the old behaviour (re-arm in place each round, still paid).",
 	"points_per_hit": 3,
 	"points_per_kill": 25,
 	"chests": {
@@ -12,7 +12,10 @@
 		"hidden_bias": 3.0,
 		"min_player_distance": 10.0,
 		"near_player_mult": 0.25,
-		"occupied_radius": 2.0
+		"occupied_radius": 2.0,
+		"off_nav_mult": 0.0,
+		"front_probe": 1.0,
+		"nav_snap": 0.6
 	},
 	"_previous": {
 		"_help": "Values before Economy v2 (2026-10-20, Jason v0.6.1 playtest: halve in-match points again, chests cost a lot), for reference only. Before 2026-10-19 it was 10 / 100 / 100 / 100.",
