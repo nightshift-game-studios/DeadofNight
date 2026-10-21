@@ -66,9 +66,17 @@ var _player_ref: Node ## bound via the "player" group (overshield / charges sign
 var _bind_t: float = 0.0
 
 const BAR_W := 230.0
+const RunStatsScript := preload("res://scripts/ui/run_stats.gd")
+const GameOverScreenScript := preload("res://scripts/ui/game_over_screen.gd")
+var run_stats: Node ## RunStatsTracker: per-match tally from GameEvents (playtest #8)
+var game_over_screen: CanvasLayer ## GameOverScreen: stats page shown at match end (sibling of the HUD)
 
 
 func _ready() -> void:
+	run_stats = RunStatsScript.new()
+	run_stats.name = "RunStats"
+	add_child(run_stats)
+	run_stats.finished.connect(show_game_over_stats)
 	var root := Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -420,6 +428,8 @@ func _bind_player() -> void:
 	if p == null:
 		return
 	_player_ref = p
+	if run_stats:
+		run_stats.player = p
 	if p.has_signal("overshield_changed"):
 		p.overshield_changed.connect(set_overshield)
 		set_overshield(float(p.get("overshield")), float(p.get("overshield_cap")))
@@ -808,6 +818,27 @@ func hide_message() -> void:
 
 
 func show_message(text: String, color: Color) -> void:
+	if game_over_screen_visible(): # main.gd re-sends its game-over text (menu closed / class pick): refresh the page
+		game_over_screen.refresh_footer()
+		_message.visible = false
+		return
 	_message.text = text
 	_message.modulate = color
 	_message.visible = true
+
+
+## Game-over stats page (playtest #8): opened when RunStatsTracker sees match_ended (after Progress.record_match).
+## Lives next to the HUD (main's child), so its buttons can take the mouse.
+func show_game_over_stats(stats: Dictionary) -> void:
+	if game_over_screen == null or not is_instance_valid(game_over_screen):
+		game_over_screen = GameOverScreenScript.new()
+		var host: Node = get_parent() if get_parent() else self
+		game_over_screen.main = host
+		host.add_child(game_over_screen)
+	game_over_screen.show_stats(stats)
+	_message.visible = false
+	_hint.modulate.a = 0.0
+
+
+func game_over_screen_visible() -> bool:
+	return game_over_screen != null and is_instance_valid(game_over_screen) and game_over_screen.visible

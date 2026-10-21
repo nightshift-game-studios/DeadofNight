@@ -22,6 +22,8 @@ const LobbyMenuScript := preload("res://scripts/ui/lobby_menu.gd")
 const NamePromptScript := preload("res://scripts/ui/name_prompt.gd")
 const LobbyAPIScript := preload("res://scripts/ui/lobby_api.gd")
 const ArmoryScr := preload("res://scripts/armory/armory.gd")
+const SkillTreeScript := preload("res://scripts/ui/skill_tree_menu.gd") ## playtest #24 / #14
+const CharacterSelectScript := preload("res://scripts/ui/character_select.gd") ## playtest #21 / #9
 const MAIN_SCENE := "res://scenes/main.tscn"
 const HARD_NOTE := "Hard: tougher zombies, better rare-currency drops."
 
@@ -48,6 +50,9 @@ var _kit_screen: MenuBase
 var _kit_proxy: Node
 var _armory_api: RefCounted ## Armory instance for live Gravemark balance
 var _focus_order: Array = [] ## button ids for keyboard wrap
+var _skills: MenuBase ## #24 meta skill tree at home (Characters.enter_home: respec window + free undo)
+var _characters: MenuBase ## #21 character slots + #9 class switcher
+var _char_chip: Button
 
 
 func _ready() -> void:
@@ -58,6 +63,15 @@ func _ready() -> void:
 	call_deferred("show_unequip_notice")
 	call_deferred("maybe_prompt_name")
 	call_deferred("resume_lobby")
+	_characters_hook("enter_home")
+
+
+## Skillz CHARACTER_API: enter_home() when home opens (respec window + free-undo session), leave_home() before a match.
+## No-op until the Characters autoload is installed.
+func _characters_hook(fn: String) -> void:
+	var c := get_node_or_null("/root/Characters")
+	if c and c.has_method(fn):
+		c.call(fn)
 
 
 ## One-time "parts moved back to your Armory" notice (Progress.armory_unequipped_on_load, ARMORY_HANDOFF 2b).
@@ -115,6 +129,20 @@ func _build() -> void:
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(sp)
+	_char_chip = Button.new() # #21: who you're playing; opens CHARACTERS
+	_char_chip.name = "CharacterChip"
+	_char_chip.focus_mode = Control.FOCUS_ALL
+	_char_chip.custom_minimum_size = Vector2(0, 44)
+	_char_chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_char_chip.add_theme_font_override("font", UIStyle.FONT_STENCIL)
+	_char_chip.add_theme_font_size_override("font_size", 15)
+	_char_chip.add_theme_color_override("font_color", UIStyle.BONE)
+	_char_chip.add_theme_color_override("font_focus_color", UIStyle.BONE)
+	_char_chip.add_theme_stylebox_override("normal", UIStyle.cut_box(Color(UIStyle.INK, 0.92), UIStyle.BONE_DIM, 2, 8))
+	_char_chip.add_theme_stylebox_override("hover", UIStyle.cut_box(Color(0.16, 0.12, 0.08, 0.96), UIStyle.RUST, 2, 8))
+	_char_chip.add_theme_stylebox_override("focus", UIStyle.cut_box(Color(0.16, 0.12, 0.08, 0.96), UIStyle.BONE, 3, 8))
+	_char_chip.pressed.connect(open_characters)
+	head.add_child(_char_chip)
 	_currency_chip = UIStyle.gravemark_chip(0, 26)
 	_currency_chip.name = "CurrencyChip"
 	_currency_chip.visible = true
@@ -133,6 +161,7 @@ func _build() -> void:
 	for id_lab in [
 		["play", "PLAY"],
 		["kit", "KIT / INVENTORY"],
+		["skills", "SKILLS"],
 		["armory", "ARMORY"],
 		["merchant", "MERCHANT"],
 		["settings", "SETTINGS"],
@@ -200,7 +229,53 @@ func _build() -> void:
 	if prog and prog.has_signal("currency_changed") and not prog.currency_changed.is_connected(_on_currency_changed):
 		prog.currency_changed.connect(_on_currency_changed)
 
+	_skills = SkillTreeScript.new()
+	_skills.name = "HomeSkills"
+	_skills.toggle_action = "skill_tree"
+	_skills.layer = 12
+	_skills.closed.connect(_on_sub_closed.bind("skills"))
+	add_child(_skills)
+
+	_characters = CharacterSelectScript.new()
+	_characters.name = "HomeCharacters"
+	_characters.closed.connect(_on_characters_closed)
+	add_child(_characters)
+	_refresh_char_chip.call_deferred()
+
 	_wire_focus_neighbors()
+
+
+## #24 SKILLS: the meta tree at home.
+func open_skills() -> MenuBase:
+	_skills.open()
+	return _skills
+
+
+## #21 CHARACTERS (header chip).
+func open_characters() -> MenuBase:
+	_ui_snd("ui_equip")
+	_characters.open()
+	return _characters
+
+
+func _on_characters_closed() -> void:
+	_refresh_char_chip()
+	if _skills and _skills.has_method("view_class"):
+		_skills.class_view = ""
+		_skills._built = false # character / class may have changed: rebuild the tree on next open
+	_on_currency_changed()
+	if _char_chip:
+		_char_chip.grab_focus()
+
+
+func _on_sub_closed(id: String) -> void:
+	if _btns.has(id):
+		(_btns[id] as Button).grab_focus()
+
+
+func _refresh_char_chip() -> void:
+	if _char_chip and _characters and _characters.has_method("chip_text"):
+		_char_chip.text = "  %s  ▸  " % _characters.chip_text()
 
 
 func _menu_btn(text: String) -> Button:
@@ -249,6 +324,8 @@ func _on_btn(id: String) -> void:
 			open_play()
 		"kit":
 			_open_kit()
+		"skills":
+			open_skills()
 		"armory":
 			_armory.open()
 		"merchant":
@@ -304,6 +381,7 @@ func _on_coop_start(map_id: String, difficulty_id: String) -> void:
 	if difficulty_id != "" and Difficulty.is_valid(difficulty_id):
 		Difficulty.set_active(difficulty_id)
 	var net: Node = _lobby.net if _lobby else null
+	_characters_hook("leave_home")
 	if LobbyAPIScript.owns_scene_change(net):
 		# Netz already did MapRegistry.select + change_scene (its M1 attach_match applies the difficulty override)
 		last_play_map = map_id
@@ -364,6 +442,7 @@ func start_match(map_id: String) -> bool:
 	if map_id == "" or not MapRegistry.is_valid(map_id):
 		return false
 	MapRegistry.select(map_id)
+	_characters_hook("leave_home")
 	last_play_map = map_id
 	play_requested.emit(map_id)
 	_ui_snd("ui_equip")
@@ -388,6 +467,7 @@ func _on_kit_closed() -> void:
 
 
 func request_quit() -> void:
+	_characters_hook("leave_home")
 	var prog := get_node_or_null("/root/Progress")
 	if prog and prog.has_method("save_stash"):
 		# Bind kit inventory if open so Quit persists kit edits too.
