@@ -116,7 +116,7 @@ func _spawn_model() -> void:
 	_attach_head_hitbox(m, s)
 	_anim = m.find_children("*", "AnimationPlayer", true, false).front() if m.find_children("*", "AnimationPlayer", true, false).size() else null
 	if _anim:
-		var wanted := {"walk": ["Walk"], "run": ["Run"], "attack": ["Attack", "Punch"], "death": ["Death"], "hit": ["HitRecieve", "HitReact"], "idle": ["Idle"]}
+		var wanted := {"walk": ["Walk"], "run": ["Run"], "attack": ["Attack", "Punch"], "death": ["Death"], "hit": ["HitRecieve", "HitReact", "Hit"], "idle": ["Idle"]}
 		for key in wanted:
 			for suffix in wanted[key]:
 				var n := _find_anim(suffix)
