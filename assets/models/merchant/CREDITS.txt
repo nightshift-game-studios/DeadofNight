@@ -1,0 +1,7 @@
+merchant.glb ("The Gravedigger", Gravecrew merchant) + assets/icons/merchant_portrait.png - Desi, built in Blender 4.5 (scripts in desi-models/merchant/_work/scripts).
+Sources (all CC0):
+- MakeHuman / MPFB base mesh, rig, male_worksuit01, shoes06, eyebrow002, low-poly eyes, old_lightskinned_male skin + grey_eye textures (CC0, MakeHuman assets released Sept 2020).
+- Animations: Quaternius Universal Animation Library (Idle_Loop, Idle_Talking_Loop, Interact, Idle_Torch_Loop grip) and Universal Animation Library 2 (Yes, UAL2 skeleton naming) - CC0.
+- Hood/cowl, apron, belt, pouches, beard shell, lantern: procedural geometry by Desi (CC0). Textures: procedural Cycles bake with the MH textures as detail.
+Rig: UAL2-named 65 joints, metres, faces -Z, feet at y=0. Clips: Idle, Talk, Nod, Point (all with the lantern held in the right hand).
+Sockets: InteractPoint (ground, 0.9 m in front), GroundDecal, NameTag (Head +0.30), FxChest (spine_03), LanternLight (hand_r, at the flame).
