@@ -93,6 +93,9 @@ var _player_spawn: Transform3D
 
 
 func _ready() -> void:
+	var chars := get_node_or_null("/root/Characters") # §23d: explicit match flag (no character create / switch / delete)
+	if chars and chars.has_method("begin_match"):
+		chars.begin_match()
 	# Economy (Skillz): data/economy.json via Progress. Halved for the playtest (10/100 -> 5/50).
 	var prog := get_node_or_null("/root/Progress")
 	if prog and "points_per_hit" in prog:
@@ -771,3 +774,10 @@ func respawn_zombie(z: Node3D) -> void:
 	z.velocity = Vector3.ZERO
 	if "knockback" in z:
 		z.knockback = Vector3.ZERO
+
+
+## §23d: the match scene is gone (restart, map change, back to home): character slots may change again.
+func _exit_tree() -> void:
+	var chars := get_node_or_null("/root/Characters")
+	if chars and chars.has_method("end_match"):
+		chars.end_match()
