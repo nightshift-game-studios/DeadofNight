@@ -334,6 +334,7 @@ func take_damage(amount: float, _hit_pos: Vector3 = Vector3.ZERO, _crit: bool = 
 		return NetGate.forward_zombie_damage(self, amount, _hit_pos, _crit, _source)
 	if _dead:
 		return false
+	NetGate.note_damage_source(self, _source) # NET E7: co-op host credits the player behind _source (avatar grenade / hazard / DoT); solo: no-op
 	amount *= damage_taken_mult()
 	health -= amount
 	if not _status_tick:
