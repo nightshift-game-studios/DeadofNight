@@ -7,6 +7,10 @@ extends Node3D
 ##           pos: Vector3, vel: Vector3, owner_id: int (enemy / player instance id, or net id), seed: int}
 ## is_visual_only: a client copy. It flies, splashes and leaves the puddle visual, but never damages, slows or
 ## collides with anyone (the host's copy does).
+## Grenades (Skillz, playtest #25): type "grenade" has body "grenade": spawn() makes a Grenade RigidBody (child, top_level)
+## that does the physics and the effect; this node carries the spec and follows it. Child specs the grenades spawn:
+## "grenade_bomblet" (Rookery: fuse s, then pops; settles where it lands) and "heal_orb" (Leechbell: homes on the owner,
+## no world collision; impacted(direct_hit = owner) on arrival, the host's handler heals). Same contract, so Netz syncs them.
 ## Motion: own gravity (types[].gravity), stepped in _physics_process. Each step sweeps prev -> next against the world
 ## (layer 1) and against every player's capsule (collision_radius), so a fast frame can't tunnel through.
 
@@ -41,6 +45,10 @@ var hazard: Node3D = null
 var start_pos: Vector3
 var _visual: Node3D
 var _loop: Node
+var body: Node3D = null ## type body "grenade": the Grenade RigidBody this projectile carries
+var fuse: float = 0.0 ## > 0: pops `fuse` s after spawn (bomblets); a world hit before that just settles it
+var _settled: bool = false
+var homing: bool = false ## heal orbs: steer at the owner, no world collision
 
 
 # ------------------------------------------------------------------ data
@@ -121,6 +129,8 @@ static func spawn(spec_in: Dictionary) -> ThrownProjectile:
 	p.global_position = spec_in.get("pos", Vector3.ZERO)
 	p.start_pos = p.global_position
 	spawned_total += 1
+	if str(d.get("body", "")) == "grenade": # playtest #25: the RigidBody grenade does the flight
+		p.body = Grenade.from_projectile(p)
 	return p
 
 
@@ -134,11 +144,27 @@ func _ready() -> void:
 	collision_radius = float(def.get("collision_radius", 0.25))
 	visual_radius = float(def.get("visual_radius", 0.18))
 	lifetime = float(def.get("lifetime", 6.0))
+	fuse = float(spec.get("fuse", def.get("fuse", 0.0)))
+	homing = bool(def.get("homing", false))
+	if str(def.get("body", "")) == "grenade":
+		return # the Grenade body brings its own visual, light and audio
 	_build_visual()
 	var a: Dictionary = def.get("audio", {})
 	var sfx := get_node_or_null("/root/Sfx")
-	if sfx and str(a.get("flight_loop", "")) != "":
+	if sfx and str(a.get("flight_loop", "")) != "" and _loop_room():
 		_loop = sfx.attach_loop(str(a.flight_loop), self)
+
+
+## loop_cap (data): at most that many live projectiles of this type play their flight loop (Leechbell orbs: ~4 voices).
+func _loop_room() -> bool:
+	var cap := int(def.get("loop_cap", 0))
+	if cap <= 0:
+		return true
+	var n := 0
+	for q in live:
+		if q != self and is_instance_valid(q) and q.type_id == type_id and q._loop != null and is_instance_valid(q._loop):
+			n += 1
+	return n < cap
 
 
 func _exit_tree() -> void:
@@ -174,19 +200,59 @@ func _build_visual() -> void:
 		_visual = mi
 	_visual.name = "Visual"
 	add_child(_visual)
+	var tint_c := _tint()
+	if tint_c.a > 0.0 and not (_visual is MeshInstance3D): # visual.tint_parts {node: "additive" | "emissive"} (heal orb)
+		var parts: Dictionary = v.get("tint_parts", {})
+		for part in parts:
+			var n := _visual.find_child(str(part), true, false)
+			if n:
+				for m in GrenadeFX.tint(n, tint_c, str(parts[part]) == "additive", float(v.get("tint_energy", 1.5))):
+					if str(parts[part]) != "additive":
+						m.emission_energy_multiplier = float(v.get("emission_energy", 4.0))
 	var light := OmniLight3D.new() # keeps it readable at night / at range
 	light.name = "Glow"
-	light.light_color = Color(0.55, 0.85, 0.2)
+	light.light_color = tint_c if tint_c.a > 0.0 else Color(0.55, 0.85, 0.2)
 	light.light_energy = 0.6
 	light.omni_range = 2.2
 	light.shadow_enabled = false
 	add_child(light)
 
 
+## visual.tint "grenade": the variant's grenades.json effect colour; "#hex": that; else transparent (no tint).
+func _tint() -> Color:
+	var t := str(def.get("visual", {}).get("tint", ""))
+	if t == "grenade":
+		return Grenade.color_of(Grenade.data_for_variant(str(variant)))
+	if t != "" and Color.html_is_valid(t):
+		return Color.html(t)
+	return Color(0, 0, 0, 0)
+
+
 func _physics_process(delta: float) -> void:
 	if done:
 		return
+	if body != null or str(def.get("body", "")) == "grenade":
+		if is_instance_valid(body):
+			global_position = body.global_position
+		else:
+			queue_free()
+		return
+	step(delta)
+
+
+## One motion step (tests call it directly).
+func step(delta: float) -> void:
+	if done:
+		return
 	age += delta
+	if fuse > 0.0 and age >= fuse:
+		_impact(global_position, null, Vector3.UP)
+		return
+	if _settled:
+		return
+	if homing:
+		_home(delta)
+		return
 	var from := global_position
 	var vel0 := velocity
 	velocity.y -= gravity * delta
@@ -197,8 +263,13 @@ func _physics_process(delta: float) -> void:
 		if pl:
 			_impact(_closest_on_segment(from, to, (pl as Node3D).global_position + Vector3(0, 0.9, 0)), pl, Vector3.UP)
 			return
-	var hit := _world_hit(from, to)
+	var hit := _world_hit(from, to) if bool(def.get("hits_world", true)) else {}
 	if not hit.is_empty():
+		if fuse > 0.0: # bomblet: lands and waits for its fuse
+			global_position = hit.position
+			velocity = Vector3.ZERO
+			_settled = true
+			return
 		_impact(hit.position, null, hit.normal)
 		return
 	global_position = to
@@ -206,6 +277,42 @@ func _physics_process(delta: float) -> void:
 		_visual.look_at(global_position + velocity, Vector3.UP if absf(velocity.normalized().y) < 0.99 else Vector3.FORWARD)
 	if age >= lifetime or global_position.y < -60.0:
 		_impact(global_position, null, Vector3.UP)
+
+
+## Heal orb: drift up a little, then steer at the owner's chest; arrival -> impacted(direct_hit = owner). No damage here.
+func _home(delta: float) -> void:
+	var o = instance_from_id(owner_id) if owner_id != 0 else null
+	if not (o is Node3D) or not is_instance_valid(o):
+		if age >= lifetime:
+			_impact(global_position, null, Vector3.UP)
+		else:
+			global_position += velocity * delta
+			velocity = velocity.lerp(Vector3.ZERO, clampf(2.0 * delta, 0.0, 1.0))
+		return
+	var goal: Vector3 = (o as Node3D).global_position + Vector3(0, float(def.get("home_height", 1.0)), 0)
+	var to := goal - global_position
+	var d := to.length()
+	if d <= float(def.get("arrive_radius", 0.6)) or age >= lifetime:
+		_arrive(o)
+		return
+	var sp := float(def.get("home_speed", 6.0)) * clampf(age / maxf(float(def.get("home_ramp", 0.35)), 0.01), 0.2, 1.0)
+	velocity = velocity.lerp(to / d * sp, clampf(float(def.get("home_turn", 6.0)) * delta, 0.0, 1.0))
+	global_position += velocity * delta
+
+
+func _arrive(target: Node) -> void:
+	done = true
+	impact_pos = global_position
+	direct_hit = target
+	var a: Dictionary = def.get("audio", {})
+	var sfx := get_node_or_null("/root/Sfx")
+	if sfx and str(a.get("arrive", "")) != "" and target is Node and (target as Node).is_in_group("player") \
+			and not (target as Node).get("is_remote"): # the chime is 2D, for the healed (local) player only
+		sfx.play(str(a.arrive))
+	impacted.emit(self, global_position, target)
+	if _loop and is_instance_valid(_loop):
+		_loop.queue_free()
+	queue_free()
 
 
 ## Sphere sweep from `a` to `b` against the world (layer 1), as a ray offset by the collision radius along the motion.
@@ -294,6 +401,8 @@ func _impact(where: Vector3, hit_player: Node, normal: Vector3) -> void:
 	if sfx and str(a.get("impact", "")) != "":
 		sfx.play_at(str(a.impact), where)
 	var imp: Dictionary = def.get("impact", {})
+	if bool(imp.get("vfx_blast", false)) and is_visual_only: # the host copy's handler blasts (with its own VFX)
+		Explosion.spawn_vfx(get_parent(), where, float(imp.get("vfx_radius", 2.5)), _tint() if _tint().a > 0.0 else Color.ORANGE)
 	if str(imp.get("hazard", "")) != "":
 		var ground := _ground_below(where, normal, float(imp.get("max_drop", 8.0)))
 		if ground != Vector3.INF:

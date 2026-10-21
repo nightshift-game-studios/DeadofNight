@@ -1,5 +1,5 @@
 {
-	"_help": "Thrown projectiles by type_id (Skillz, DESIGN §22 / MAIN_HOOKS §22). Spawned only through ThrownProjectile.spawn(spec) with spec = {type_id, variant, rarity, pos, vel, owner_id, seed} (Netz co-op contract; grenades will reuse it). Motion: ballistic, gravity m/s^2 (its own, not the world's: a slow, readable lob). launch_speed = horizontal speed in m/s, so flight time = range / launch_speed. collision_radius m: what touches the world and players; visual_radius m: the drawn glob. direct_damage: HP on a direct hit when the owner has no projectile_damage(type_id) (the Gallspitter scales it from its wave damage, zombies.json gallspitter.behavior.glob_damage_mult). lifetime s, then it pops where it is. impact.hazard: a ground hazard spawned where it lands (radius m, duration s, dps HP/s while inside, ticked every tick s; slow = player move speed -x, strongest slow wins; one gall puddle at a time damages a player). visual.model: Desi's GLB by path (placeholder sphere if missing); puddle_model_radius = the radius the puddle GLB is authored at (scaled to impact.radius); visual.color / emission: the placeholder. variants: per-variant overrides (none yet, grenades will add some).",
+	"_help": "Thrown projectiles by type_id (Skillz, DESIGN \u00a722 / MAIN_HOOKS \u00a722). Spawned only through ThrownProjectile.spawn(spec) with spec = {type_id, variant, rarity, pos, vel, owner_id, seed} (Netz co-op contract; grenades will reuse it). Motion: ballistic, gravity m/s^2 (its own, not the world's: a slow, readable lob). launch_speed = horizontal speed in m/s, so flight time = range / launch_speed. collision_radius m: what touches the world and players; visual_radius m: the drawn glob. direct_damage: HP on a direct hit when the owner has no projectile_damage(type_id) (the Gallspitter scales it from its wave damage, zombies.json gallspitter.behavior.glob_damage_mult). lifetime s, then it pops where it is. impact.hazard: a ground hazard spawned where it lands (radius m, duration s, dps HP/s while inside, ticked every tick s; slow = player move speed -x, strongest slow wins; one gall puddle at a time damages a player). visual.model: Desi's GLB by path (placeholder sphere if missing); puddle_model_radius = the radius the puddle GLB is authored at (scaled to impact.radius); visual.color / emission: the placeholder. variants: per-variant overrides (none yet, grenades will add some). Grenades (playtest #25): type 'grenade' has body 'grenade' (spawn() makes the Grenade RigidBody; numbers live in data/grenades.json by variant), variants = every grenades.json variant id. Child types: 'grenade_bomblet' (Rookery; fuse s then pops, settles on landing; the host blasts in its impacted handler, impact.vfx_blast = puppets draw the blast) and 'heal_orb' (Leechbell; homing: no gravity / world collision, home_speed m/s, arrive_radius m, impacted(direct_hit = owner) on arrival, the host heals; audio.arrive = 2D chime for the local player; loop_cap = max orbs humming).",
 	"types": {
 		"bile_glob": {
 			"display_name": "Bile Glob",
@@ -24,8 +24,17 @@
 				"model": "res://assets/models/zombies/bile_glob.glb",
 				"puddle_model": "res://assets/models/zombies/gall_puddle.glb",
 				"puddle_model_radius": 2.5,
-				"color": [0.62, 0.78, 0.16, 0.95],
-				"emission": [0.42, 0.62, 0.06],
+				"color": [
+					0.62,
+					0.78,
+					0.16,
+					0.95
+				],
+				"emission": [
+					0.42,
+					0.62,
+					0.06
+				],
 				"emission_energy": 1.6,
 				"trail": true
 			},
@@ -37,6 +46,107 @@
 				"puddle_loop": "gall_puddle_sizzle_loop"
 			},
 			"variants": {}
+		},
+		"grenade": {
+			"display_name": "Grenade",
+			"body": "grenade",
+			"hits_players": false,
+			"hits_enemies": true,
+			"lifetime": 12.0,
+			"variants": {
+				"frag": {},
+				"pulse": {},
+				"cinderjar": {},
+				"shiverglass": {},
+				"tallyhook": {},
+				"rookery": {},
+				"gravewell": {},
+				"leechbell": {},
+				"requiem_bell": {}
+			}
+		},
+		"grenade_bomblet": {
+			"display_name": "Rookery Bomblet",
+			"launch_speed": 5.0,
+			"gravity": 14.0,
+			"collision_radius": 0.06,
+			"visual_radius": 0.06,
+			"direct_damage": 0,
+			"lifetime": 2.0,
+			"fuse": 0.4,
+			"hits_players": false,
+			"hits_enemies": false,
+			"impact": {
+				"vfx_blast": true,
+				"vfx_radius": 2.5
+			},
+			"visual": {
+				"model": "res://assets/models/grenades/fx/rookery_bomblet.glb",
+				"tint": "grenade",
+				"color": [
+					0.2,
+					0.2,
+					0.2,
+					1.0
+				],
+				"emission": [
+					1.0,
+					0.82,
+					0.48
+				],
+				"emission_energy": 1.0
+			},
+			"audio": {
+				"impact": "grenade_rookery_bomblet"
+			},
+			"variants": {
+				"rookery": {}
+			}
+		},
+		"heal_orb": {
+			"display_name": "Leech Orb",
+			"gravity": 0.0,
+			"collision_radius": 0.1,
+			"visual_radius": 0.1,
+			"direct_damage": 0,
+			"lifetime": 4.0,
+			"hits_players": false,
+			"hits_enemies": false,
+			"hits_world": false,
+			"homing": true,
+			"home_speed": 6.0,
+			"home_turn": 6.0,
+			"home_ramp": 0.35,
+			"home_height": 1.0,
+			"arrive_radius": 0.6,
+			"loop_cap": 4,
+			"visual": {
+				"model": "res://assets/models/grenades/fx/fx_heal_orb.glb",
+				"tint": "grenade",
+				"tint_parts": {
+					"Glow": "additive",
+					"Orb": "emissive"
+				},
+				"color": [
+					0.88,
+					0.16,
+					0.24,
+					0.9
+				],
+				"emission": [
+					0.88,
+					0.16,
+					0.24
+				],
+				"emission_energy": 4.0
+			},
+			"audio": {
+				"flight_loop": "grenade_leechbell_orb_loop",
+				"arrive": "grenade_leechbell_heal"
+			},
+			"variants": {
+				"leechbell": {}
+			}
 		}
 	}
 }
