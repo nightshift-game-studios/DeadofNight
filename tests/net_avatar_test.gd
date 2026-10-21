@@ -168,6 +168,34 @@ func _run() -> void:
 	check(marks.size() == 2 and marks[1][0] == "throw_done" and absf(marks[1][1] - 1.333) < 0.15 and not b.weapon_stowed(), "throw_done at ~1.33 s (clip end) -> rifle shown again (%s)" % [marks])
 	marks.clear()
 
+	# ------------------------------------------------------------ aim pitch on the spine (NetAimPitch, after the tree)
+	var sk: Skeleton3D = b.skeleton
+	var hb := sk.find_bone("Head")
+	var head_fwd := func() -> float: # NameTag socket (BoneAttachment3D on Head: sees the modified pose) ahead of the body, m along -Z
+		return (b.name_socket.global_position - b.global_position).dot(-b.global_transform.basis.z)
+	b.rotation.y = 0.7 # facing doesn't matter: the axis is the avatar's own right
+	b.apply_state({"speed": 0.0, "crouch": 0.0, "airborne": false, "ads": false, "pitch": 0.0})
+	await _wait_s(0.5)
+	var f0: float = head_fwd.call()
+	b.apply_state({"pitch": 0.8})
+	await _wait_s(0.5)
+	var f_up: float = head_fwd.call()
+	b.apply_state({"pitch": -0.8})
+	await _wait_s(0.5)
+	var f_dn: float = head_fwd.call()
+	check(b.aim != null and b.aim.get_parent() == sk and hb >= 0, "NetAimPitch on Desi's Skeleton3D, Head bone found")
+	check(absf(b.aim.current + 0.8) < 0.05, "pitch reaches the target (smoothed; %.2f)" % b.aim.current)
+	check(f_up < f0 - 0.04 and f_dn > f0 + 0.04, "look up -> upper body leans back, look down -> forward (head ahead %.3f / up %.3f / down %.3f m)" % [f0, f_up, f_dn])
+	b.apply_state({"pitch": 3.0})
+	await _wait_s(0.5)
+	check(absf(b.aim.current - b.aim.max_rad()) < 0.05, "pitch clamped to avatar.aim_pitch.max_deg (%.2f rad)" % b.aim.current)
+	b.set_life("downed")
+	await _wait_s(0.5)
+	check(absf(b.aim.current) < 0.05, "no spine pitch while downed (%.2f)" % b.aim.current)
+	b.set_life("alive")
+	b.apply_state({"pitch": 0.0})
+	await _frames(2)
+
 	# ------------------------------------------------------------ full-body overrides
 	b.set_life("downed")
 	await _frames(2)

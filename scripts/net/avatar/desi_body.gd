@@ -22,6 +22,7 @@ var last_event := ""
 var _gun: Node3D
 var _revive_end_t := 0.0
 var _track_root := "player_rig/Skeleton3D"
+var aim: NetAimPitch ## remote aim pitch on spine_02 / spine_03 / neck_01 (after the tree)
 
 
 func _ready() -> void:
@@ -40,6 +41,11 @@ func _ready() -> void:
 	if skeleton:
 		_track_root = str(model.get_path_to(skeleton))
 	_build_tree()
+	if skeleton:
+		aim = NetAimPitch.new()
+		aim.name = "AimPitch"
+		aim.body = self
+		skeleton.add_child(aim)
 	set_slot(slot)
 	if weapon_id != "":
 		_apply_weapon(weapon_id)
@@ -233,6 +239,8 @@ func _apply_state() -> void:
 	var pb: AnimationNodeStateMachinePlayback = tree.get("parameters/upper/playback")
 	if pb:
 		pb.travel("ADS_Aim" if ads else "Hold_Rifle")
+	if aim:
+		aim.target = pitch
 
 
 ## Foot-slide fix: playback speed = game speed / the clip's measured foot speed, blended between the clips.
@@ -273,6 +281,8 @@ func _apply_life(prev: String, state: String) -> void:
 		if pb2:
 			pb2.start("ReviveStart")
 	tree.set("parameters/life/transition_request", state)
+	if aim:
+		aim.enabled_life = state == LIFE_ALIVE
 	if state != LIFE_ALIVE: # no one-shots under a full-body override
 		for os in ["fire", "reload", "throw", "land"]:
 			tree.set("parameters/%s/request" % os, AnimationNodeOneShot.ONE_SHOT_REQUEST_ABORT)
@@ -290,6 +300,8 @@ func _process(delta: float) -> void:
 			life = LIFE_ALIVE
 			if tree:
 				tree.set("parameters/life/transition_request", LIFE_ALIVE)
+			if aim:
+				aim.enabled_life = true
 
 
 func _on_air_start() -> void:

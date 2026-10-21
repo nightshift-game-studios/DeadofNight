@@ -204,6 +204,8 @@ func _host() -> void:
 		await _sleep(0.3)
 		check(Net.get_points(bob) >= bob_pts + int(NetConfig.points("kill_bonus")), "host: kill + hit points credited to Bob (%d -> %d)" % [bob_pts, Net.get_points(bob)])
 		check(main.kills == kills_before + 1, "host: match kill count +1")
+		var HS: Dictionary = Net.hit_check.stats
+		check(int(HS.gun) >= 1 and int(HS.other) >= 1 and int(HS.weapon_mismatch) == 0 and int(HS.rejected) == 0, "host: NetHitCheck saw Bob's gun round (held weapon matched) + the skill-sized hit, nothing refused (%s)" % [HS])
 	# --- shared drop: both clients grab at once, first wins
 	var removed: Array = []
 	W.drop_removed.connect(func(id, taker): removed.append([id, taker]))
@@ -518,10 +520,15 @@ func _do(c: Dictionary) -> void:
 			killed_zombie = str(c.zombie)
 			var z = main.zombies_root.get_node_or_null(NodePath(killed_zombie))
 			if check(z != null, "client: has zombie %s to shoot" % killed_zombie):
-				if z.has_method("play_death_visual"): # enemy.gd E1-E5 applied (draft branch): the real take_damage -> E3 claim
-					check(z.take_damage(99999.0, z.global_position + Vector3(0, 1.6, 0), true, main.player) == true, "client: E3 take_damage on a puppet predicts the kill")
-				else: # staging (enemy.gd unpatched): call the Net side of E3 directly
-					Net.forward_zombie_damage(z, 99999.0, z.global_position + Vector3(0, 1.6, 0), true, main.player)
+				# a gun-tagged round first (GameEvents shot_fired this frame -> NetHitCheck "gun" with the held weapon)
+				var w = main.player.current_weapon() if main.player.has_method("current_weapon") else null
+				var bus = root.get_node_or_null("GameEvents")
+				if w and bus:
+					bus.emit_event(&"shot_fired", {"player": main.player, "weapon": w})
+					z.take_damage(1.0, z.global_position + Vector3(0, 1.2, 0), false, main.player)
+				await process_frame
+				# then a big skill-sized hit (other_cap) that kills a round-1 zombie
+				check(z.take_damage(2000.0, z.global_position + Vector3(0, 1.6, 0), true, main.player) == true, "client: E3 take_damage on a puppet predicts the kill")
 		"grab":
 			my_drop = str(c.drop)
 			# the other client may already have won (drop gone before this command arrives): spawned here is enough

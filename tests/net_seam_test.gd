@@ -33,6 +33,8 @@ class StubZombie:
 	var seen_hitter := -1
 	var seen_crit := false
 	var net: Node
+	var _status_tick := false
+	var _statuses: Dictionary = {}
 	func damage_taken_mult() -> float:
 		return dmg_mult
 	func take_damage(amount: float, hit_pos: Vector3 = Vector3.ZERO, crit: bool = false, source: Node = null) -> bool:
@@ -52,8 +54,14 @@ class StubZombie:
 		death_visuals += 1
 
 
+class StubBody:
+	extends Node
+	var weapon_id := ""
+
+
 class StubPlayer:
 	extends Node3D
+	var body: Node = null
 	var dead := false
 	var downed := false
 	var peer_id := 0
@@ -185,11 +193,88 @@ func _run() -> void:
 	check(t[0] == 20.0 and t[1] == Vector3(1, 2, 3) and t[2] == true and t[3] == av, "claim -> take_damage(amount, hit_pos, crit, shooter's avatar)")
 	check(z.seen_hitter == 5 and z.seen_crit, "inside take_damage the hit / kill is credited to the claiming peer")
 	check(Net.last_hitter(z) == 1 and not Net._last_hit_crit(), "after the claim, the host's own hits are the host's again")
-	Net.handle_hit_claim(5, "Z7", 1.0e9, Vector3.ZERO, false)
-	check(z.taken[1][0] == 5000.0, "hit claim damage capped at validation.max_hit_damage (5000)")
+	Net.handle_hit_claim(5, "Z7", 4000.0, Vector3.ZERO, false, "aoe")
+	check(z.taken[1][0] == 4000.0, "aoe claim under max_hit_damage: applied as is")
+	check(Net.handle_hit_claim(5, "Z7", 1.0e9, Vector3.ZERO, false, "aoe") == false and z.taken.size() == 2, "hit claim past validation.max_hit_damage (aoe cap): refused")
 	z._dead = true
 	check(Net.handle_hit_claim(5, "Z7", 10.0, Vector3.ZERO, false) == false, "hit claim on a dead zombie: refused")
 	z._dead = false
+
+	# ------------------------------------------------------------ 3d: host hit claim checks (NetHitCheck)
+	var HC = Net.hit_check
+	HC.clear()
+	var wbody := StubBody.new()
+	wbody.weapon_id = "auto_rifle"
+	av.add_child(wbody)
+	av.body = wbody
+	var zpos0: Vector3 = z.global_position
+	z.global_position = Vector3(20, 0, 0)
+	z.health = 1.0e9
+	var ar: Dictionary = NetHitCheck.weapon_def("auto_rifle")
+	var sn: Dictionary = NetHitCheck.weapon_def("sniper_rifle")
+	check(not ar.is_empty() and not sn.is_empty() and NetHitCheck.gun_cap(ar) == float(ar.base_damage) * 2.0 * 12.0, "weapon numbers from data/weapons.json (auto_rifle cap %.0f, sniper cap %.0f)" % [NetHitCheck.gun_cap(ar), NetHitCheck.gun_cap(sn)])
+	var hp := Vector3(20, 1.2, 0)
+	var n0: int = z.taken.size()
+	check(Net.handle_hit_claim(5, "Z7", 30.0, hp, true, "gun", "auto_rifle") and z.taken.size() == n0 + 1, "gun claim with the held auto_rifle: applied")
+	check(not Net.handle_hit_claim(5, "Z7", NetHitCheck.gun_cap(ar) + 1.0, hp, false, "gun", "auto_rifle") and HC.stats.damage == 1, "gun claim past the auto_rifle cap: refused (damage)")
+	check(not Net.handle_hit_claim(5, "Z7", 2600.0, hp, false, "other") and HC.stats.damage == 2, "skill / melee claim past other_cap: refused")
+	check(not Net.handle_hit_claim(5, "Z7", 3000.0, hp, false, "gun", "sniper_rifle") and HC.stats.weapon_mismatch == 1, "claiming the sniper while holding the auto_rifle: counted as other (refused at 3000)")
+	wbody.weapon_id = "sniper_rifle"
+	check(Net.handle_hit_claim(5, "Z7", 3000.0, hp, true, "gun", "sniper_rifle"), "after the swap: a 3000 sniper headshot is fine (cap %.0f)" % NetHitCheck.gun_cap(sn))
+	check(Net.handle_hit_claim(5, "Z7", 30.0, hp, false, "gun", "auto_rifle") and HC.stats.weapon_mismatch == 1, "the previous weapon still counts within weapon_grace_s (swap latency)")
+	var far := Vector3(9.0 + NetHitCheck.gun_range(ar) + 5.0, 1.2, 0)
+	wbody.weapon_id = "auto_rifle"
+	z.global_position = far - Vector3(0, 1.2, 0)
+	check(not Net.handle_hit_claim(5, "Z7", 20.0, far, false, "gun", "auto_rifle") and HC.stats.range == 1, "auto_rifle claim beyond base_range x 4 x range_mult + slack (%.0f m): refused (range)" % NetHitCheck.gun_range(ar))
+	z.global_position = Vector3(20, 0, 0)
+	HC.clear()
+	wbody.weapon_id = "smg"
+	var smg: Dictionary = NetHitCheck.weapon_def("smg")
+	var lim := int(ceil(NetHitCheck.gun_rate(smg)))
+	var acc := 0
+	for i in lim + 10:
+		if Net.handle_hit_claim(5, "Z7", 5.0, hp, false, "gun", "smg"):
+			acc += 1
+	check(acc == lim and HC.stats.rate == 10, "smg: %d claims/s accepted (rpm %d x margin), the next 10 refused (rate)" % [lim, int(smg.rpm)])
+	HC.clear()
+	wbody.weapon_id = "auto_rifle"
+	var wall := StaticBody3D.new()
+	var wcs := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(0.5, 12.0, 12.0)
+	wcs.shape = box
+	wall.add_child(wcs)
+	wall.collision_layer = 1
+	root.add_child(wall)
+	wall.global_position = Vector3(14.5, 0, 0)
+	await physics_frame
+	await physics_frame
+	check(not Net.handle_hit_claim(5, "Z7", 20.0, hp, false, "gun", "auto_rifle") and HC.stats.los == 1, "gun claim through a wall (every LOS ray blocked): refused (los)")
+	check(Net.handle_hit_claim(5, "Z7", 20.0, hp, false, "aoe"), "an explosion's splash through the same wall: no LOS check, applied")
+	wall.global_position = Vector3(14.5, 0, 6.8) # wall beside the line: one offset ray is enough
+	await physics_frame
+	await physics_frame
+	check(Net.handle_hit_claim(5, "Z7", 20.0, hp, false, "gun", "auto_rifle"), "wall off the line of fire: applied")
+	wall.queue_free()
+	check(Net._party.has(5) and HC.per_peer.get(5, {}).get("los", 0) == 1, "refusals are counted per peer, nobody is kicked")
+	z.global_position = zpos0
+
+	# ------------------------------------------------------------ 3e: DoT kill credit to the peer who applied it
+	av.set_meta("net_owner_peer", 5) # a stub, not a NetRemoteAvatar: owned by peer 5
+	if not Net.match_players.avatars.has(5):
+		Net.match_players.avatars[5] = av
+	z._statuses = {"burn": {"t": 2.0, "dps": 10.0, "source": av}, "mark": {"t": 2.0, "amp": 0.25, "source": me}}
+	z._status_tick = true
+	check(Net.last_hitter(z) == 5, "burn tick: kill credit to the peer whose avatar applied the burn")
+	z._statuses.burn.source = me
+	check(Net.last_hitter(z) == 1, "burn applied by the host's player: the host")
+	z._statuses = {"rot": {"t": 2.0, "amp": 0.2, "source": av}}
+	check(Net.last_hitter(z) == 1, "no ticking status (rot / mark / frost only amplify): the hitter, not the applier")
+	z._status_tick = false
+	z._statuses = {}
+	if Net.match_players.avatars.get(5) == av:
+		Net.match_players.avatars.erase(5)
+	av.remove_meta("net_owner_peer")
 
 	var changes: Array = []
 	Net.points_changed.connect(func(p, tot): changes.append([p, tot]))

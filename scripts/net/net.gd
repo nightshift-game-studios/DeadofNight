@@ -74,6 +74,7 @@ var _match: Node = null ## the running main.gd (attach_match)
 var match_players: NetPlayers ## /root/Net/Players: avatars, player state, downed / revive (milestone B)
 var projectiles: NetProjectiles ## /root/Net/Projectiles: ThrownProjectile spec sync (hook P1), client throw requests
 var world: NetWorld ## /root/Net/World: zombie / drop replication, spend requests, client round state
+var hit_check := NetHitCheck.new() ## host: hit claim sanity checks (range / damage / rate / LOS); client: claim kind tags
 
 
 func _ready() -> void:
@@ -88,6 +89,8 @@ func _ready() -> void:
 	projectiles = NetProjectiles.new()
 	projectiles.name = "Projectiles"
 	add_child(projectiles)
+	hit_check.net = self
+	_bind_game_events.call_deferred()
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
@@ -1233,11 +1236,36 @@ func spawn_zombie(main: Node, spec: Dictionary, base_pos: Vector3, jitter: float
 func last_hitter(zombie: Node = null) -> int:
 	if _claim_peer > 0:
 		return _claim_peer
+	var dot := dot_peer(zombie)
+	if dot > 0:
+		return dot
 	if zombie and zombie.has_meta("net_src_peer"): # E7: host-side damage from something a remote player owns
 		var pid := int(zombie.get_meta("net_src_peer"))
 		if pid == local_peer_id() or match_players.avatars.has(pid):
 			return pid
 	return local_peer_id()
+
+
+## Phase 3e (host): inside a status tick (enemy.gd _status_tick: burn now, any status with dps later) the peer who
+## applied that status: the status "source" (a client's claim -> its avatar; a grenade fire patch -> the thrower).
+## Burn first, then any other ticking status. 0 = not a DoT tick / no known source.
+func dot_peer(zombie: Node) -> int:
+	if zombie == null or not is_instance_valid(zombie) or not bool(zombie.get("_status_tick")):
+		return 0
+	var st = zombie.get("_statuses")
+	if not (st is Dictionary):
+		return 0
+	var ids: Array = (st as Dictionary).keys()
+	ids.sort_custom(func(a, b): return str(a) == "burn" and str(b) != "burn")
+	for id in ids:
+		var e = st[id]
+		if e is Dictionary and float(e.get("dps", 0.0)) > 0.0:
+			var src = e.get("source")
+			if src is Node and is_instance_valid(src):
+				var pid := _owner_peer(src)
+				if pid == local_peer_id() or match_players.avatars.has(pid):
+					return pid
+	return 0
 
 
 ## E7 (host): `source` hit `zombie` (inside its take_damage / apply_status). A remote avatar, or a node it owns
@@ -1444,7 +1472,20 @@ func request_spend(amount: int, reason: String) -> void:
 	world.request_spend(amount, reason)
 
 
+## The local player's shots (GameEvents shot_fired) tag the hit claims of that round as "gun" (NetHitCheck).
+func _bind_game_events() -> void:
+	var bus := get_node_or_null("/root/GameEvents")
+	if bus and bus.has_signal("event") and not bus.event.is_connected(_on_game_bus):
+		bus.event.connect(_on_game_bus)
+
+
+func _on_game_bus(ev: StringName, ctx: Dictionary) -> void:
+	if ev == &"shot_fired" and is_networked() and not is_host() and ctx.get("player") == match_players._player:
+		hit_check.note_shot(ctx.get("weapon"))
+
+
 func _reset_match_state() -> void:
+	hit_check.clear()
 	_zombie_counter = 0
 	_points.clear()
 	_offers_closed.clear()
@@ -1504,7 +1545,8 @@ func forward_zombie_damage(enemy: Node, amount: float, hit_pos: Vector3 = Vector
 	var mult: float = enemy.damage_taken_mult() if enemy.has_method("damage_taken_mult") else 1.0
 	var predicted := float(enemy.get("health")) - amount * mult <= 0.0
 	if is_networked() and not is_host():
-		_rpc_hit_claim.rpc_id(1, str(enemy.name), amount, hit_pos, crit)
+		var tag: Array = hit_check.classify() # gun (this frame's round) / aoe (inside an Explosion) / other
+		_rpc_hit_claim.rpc_id(1, str(enemy.name), amount, hit_pos, crit, str(tag[0]), str(tag[1]))
 	return predicted
 
 
@@ -1521,9 +1563,9 @@ func forward_zombie_status(enemy: Node, id: String, p: Dictionary) -> void:
 
 
 @rpc("any_peer", "call_remote", "reliable")
-func _rpc_hit_claim(zombie_name: String, amount: float, hit_pos: Vector3, crit: bool) -> void:
+func _rpc_hit_claim(zombie_name: String, amount: float, hit_pos: Vector3, crit: bool, kind: String, weapon: String) -> void:
 	if is_host():
-		handle_hit_claim(multiplayer.get_remote_sender_id(), zombie_name, amount, hit_pos, crit)
+		handle_hit_claim(multiplayer.get_remote_sender_id(), zombie_name, amount, hit_pos, crit, kind.left(8), weapon.left(48))
 
 
 ## The enemy status ids a client may claim (data/net.json statuses.forwarded; Shiverglass "frost" included).
@@ -1542,15 +1584,17 @@ func _rpc_status_claim(zombie_name: String, id: String, p: Dictionary) -> void:
 		z.apply_status(id, p)
 
 
-## Host: validate + apply a hit claim. Returns true if it was applied. (Phase B adds range / fire-rate checks
-## against the shooter's avatar and weapon.)
-func handle_hit_claim(sender: int, zombie_name: String, amount: float, hit_pos: Vector3, crit: bool) -> bool:
+## Host: validate + apply a hit claim. Returns true if it was applied. NetHitCheck (phase 3d): range / damage cap /
+## rate per weapon from data/weapons.json + a light line of sight; a refused claim is counted and logged, never kicked.
+func handle_hit_claim(sender: int, zombie_name: String, amount: float, hit_pos: Vector3, crit: bool, kind: String = "other", weapon: String = "") -> bool:
 	if not _party.has(sender) and is_networked():
 		return false
 	if is_nan(amount) or is_inf(amount) or amount <= 0.0:
 		return false
 	var z := _find_zombie(zombie_name)
 	if z == null or bool(z.get("_dead")):
+		return false
+	if hit_check.check(sender, z as Node3D, amount, hit_pos, kind, weapon, _avatar_for(sender) as Node3D) != "":
 		return false
 	var cap := float(NetConfig.get_value("validation.max_hit_damage", 5000.0))
 	_claim_peer = sender
