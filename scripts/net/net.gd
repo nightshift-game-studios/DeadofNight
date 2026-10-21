@@ -72,6 +72,7 @@ var _match_go: bool = false
 var _refresh_t: float = 0.0
 var _match: Node = null ## the running main.gd (attach_match)
 var match_players: NetPlayers ## /root/Net/Players: avatars, player state, downed / revive (milestone B)
+var projectiles: NetProjectiles ## /root/Net/Projectiles: ThrownProjectile spec sync (hook P1), client throw requests
 var world: NetWorld ## /root/Net/World: zombie / drop replication, spend requests, client round state
 
 
@@ -84,6 +85,9 @@ func _ready() -> void:
 	world = NetWorld.new()
 	world.name = "World"
 	add_child(world)
+	projectiles = NetProjectiles.new()
+	projectiles.name = "Projectiles"
+	add_child(projectiles)
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
@@ -1433,6 +1437,12 @@ func zombie_puppet_tick(enemy: Node, delta: float) -> void:
 			enemy.set_meta("net_death_shown", true)
 			if enemy.has_method("play_death_visual"):
 				enemy.play_death_visual()
+		return
+	# A clip the puppet is playing on purpose (boss phase from net_apply_boss_state, attack) owns the animation until
+	# _attack_anim_t runs out. E2 returns before enemy.gd counts it down, so it's counted here.
+	var hold = enemy.get("_attack_anim_t")
+	if hold != null and float(hold) > 0.0:
+		enemy.set("_attack_anim_t", maxf(float(hold) - delta, 0.0))
 		return
 	var spd := Vector2(pos.x - last.x, pos.z - last.z).length() / maxf(delta, 0.0001)
 	var anim_key := "idle"

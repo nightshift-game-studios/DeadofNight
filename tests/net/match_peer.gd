@@ -23,6 +23,8 @@ var start_points := 0
 var killed_zombie := ""
 var my_drop := ""
 var seen_drops: Array = []
+var boss_phases: Dictionary = {} ## boss name -> phases the puppet entered (after net_apply_boss_state)
+var rx_visual: Array = [] ## per received host projectile: was the copy visual-only
 var health_before_dmg := -1
 var door_ops: Array = [] ## client: M13 results to check at t_finish
 var reroll_log: Array = []
@@ -266,6 +268,7 @@ func _host() -> void:
 	Net.broadcast_event(&"t_cmd", bob, {"op": "reroll"})
 	await _sleep(2.5)
 	check(Net.get_points(bob) == bob_r0 - 50, "host: Bob's round-1 reroll (50) charged once; the unaffordable one not (%d -> %d)" % [bob_r0, Net.get_points(bob)])
+	await _host_3b(bob, cara)
 	# --- zombie hit on an avatar -> the owner's own health
 	Net.broadcast_event(&"t_cmd", cara, {"op": "vulnerable"})
 	await _sleep(0.5)
@@ -308,6 +311,59 @@ func _host() -> void:
 
 
 # ================================================================== client
+## Phase 3b. Bosses: only with the boss_* patches (net_boss_state on the boss script); projectiles: only once
+## ThrownProjectile is in the tree. Each part prints SKIP otherwise, so this runs on main as it is.
+func _host_3b(bob: int, cara: int) -> void:
+	var W = Net.world
+	var Cat = load("res://scripts/enemies/boss_catalog.gd")
+	var bs: Script = load(Cat.script_path("bellwether"))
+	var patched := false
+	for m in bs.get_script_method_list():
+		patched = patched or m.name == "net_boss_state"
+	if not patched:
+		print("[%s] SKIP  bosses: boss_* patches not applied" % pname)
+	else:
+		main._spawn_boss("bellwether")
+		var boss: Node = null
+		for z in main.zombies_root.get_children():
+			if z.has_meta("is_boss") and not bool(z.get("_dead")):
+				boss = z
+		if check(boss != null, "host: Bellwether spawned"):
+			await _sleep(1.0)
+			var tx0: int = W.stats.boss_tx
+			boss.target = main.player
+			boss._start_slam()
+			await _sleep(0.3)
+			check(W.stats.boss_tx > tx0, "host: slam windup state sent (boss_tx %d -> %d)" % [tx0, W.stats.boss_tx])
+			for id in [bob, cara]:
+				Net.broadcast_event(&"t_cmd", id, {"op": "boss_check", "name": str(boss.name)})
+			await _sleep(3.0)
+			check(W.stats.boss_tx >= tx0 + 3, "host: windup -> impact -> stun -> idle all sent (%d)" % (W.stats.boss_tx - tx0))
+			boss.queue_free()
+			await _sleep(0.5)
+	var PS: Script = Net.projectiles.proj_script()
+	if PS == null:
+		print("[%s] SKIP  projectiles: ThrownProjectile not in this tree" % pname)
+		return
+	var tid: String = str(PS.data().get("types", {}).keys()[0])
+	var spec := {"type_id": StringName(tid), "variant": &"", "rarity": 0, "pos": main._player_spawn.origin + Vector3(6, 4, 6),
+		"vel": Vector3(0, 3, 0), "owner_id": 0, "seed": 7}
+	var tx1: int = Net.projectiles.stats.tx
+	var p = PS.spawn(spec)
+	check(p != null and not p.is_visual_only and Net.projectiles.stats.tx == tx1 + 1, "host: %s spawned for real + broadcast through P1" % tid)
+	for id in [bob, cara]:
+		Net.broadcast_event(&"t_cmd", id, {"op": "proj_check", "n": 1})
+	await _sleep(1.0)
+	Net.broadcast_event(&"t_cmd", bob, {"op": "throw", "type": tid})
+	check(await _wait(func(): return Net.projectiles.stats.throw_ok == 1, 3.0), "host: Bob's throw request accepted + spawned here")
+	check(await _wait(func(): return Net.projectiles.stats.throw_refused == 1, 3.0), "host: Bob's throw from 30 m away refused + logged, Bob still connected (%s)" % [Net.projectiles.stats])
+	check(Net.match_players.avatar(bob) != null, "host: no kick after a refused throw")
+	await _sleep(0.5)
+	Net.broadcast_event(&"t_cmd", cara, {"op": "proj_check", "n": 2}) # host's + Bob's
+	Net.broadcast_event(&"t_cmd", bob, {"op": "proj_check", "n": 1}) # his own throw isn't echoed back
+	await _sleep(0.8)
+
+
 func _client() -> void:
 	if not check(Net.join_by_address("127.0.0.1", port) == OK, "join"):
 		return finish("join")
@@ -319,6 +375,13 @@ func _client() -> void:
 		return finish("load")
 	_protect(true)
 	Net.world.drop_spawned.connect(func(id): seen_drops.append(str(id)))
+	Net.world.boss_state_applied.connect(func(zn, _st):
+		var b = main.zombies_root.get_node_or_null(NodePath(zn))
+		if b:
+			boss_phases[zn] = boss_phases.get(zn, []) + [int(b.phase)])
+	Net.projectiles.projectile_rx.connect(func(_spec):
+		var live: Array = Net.projectiles.proj_script().live
+		rx_visual.append(not live.is_empty() and live.back().is_visual_only))
 	_make_door("T1", 25)
 	Net.world.door_refused.connect(func(id, why): door_ops.append(["refused", str(id), why]))
 	start_points = int(main.player.points)
@@ -395,6 +458,27 @@ func _do(c: Dictionary) -> void:
 				check(old == null or inv.backpack[str(c.slot)].size() == bp_before + 1, "client: the old %s went to the backpack" % c.slot)
 				await _sleep(0.5)
 				check(main.pickups_root.get_node_or_null(NodePath(str(c.drop))) == null, "client: the drop is gone here")
+		"boss_check":
+			var b = main.zombies_root.get_node_or_null(NodePath(str(c.name)))
+			if check(b != null and b.has_meta("net_puppet"), "client: Bellwether puppet %s here" % c.name):
+				var zn := str(c.name)
+				await _wait(func(): var ph: Array = boss_phases.get(zn, []); return ph.has(3) and ph.back() == 0, 5.0)
+				var seen: Array = boss_phases.get(zn, [])
+				var i1 := seen.find(1)
+				check(i1 >= 0 and seen.slice(i1, i1 + 4) == [1, 2, 3, 0], "client: puppet played slam windup -> impact -> stun -> idle from the host (phases %s)" % [seen])
+				check(Net.world.stats.boss_rx >= 3, "client: boss states received (%d)" % Net.world.stats.boss_rx)
+		"proj_check":
+			check(Net.projectiles.stats.rx == int(c.n), "client: %d visual-only projectile copies here (%d)" % [int(c.n), Net.projectiles.stats.rx])
+			check(rx_visual.size() == int(c.n) and not rx_visual.has(false), "client: the copies are visual-only (%s)" % [rx_visual])
+		"throw":
+			var spec := {"type_id": StringName(str(c.type)), "variant": &"", "rarity": 0, "pos": main.player.global_position + Vector3(0, 1.5, 0),
+				"vel": Vector3(0, 4, 2), "owner_id": main.player.get_instance_id(), "seed": 11}
+			var mine = Net.projectiles.request_throw(spec)
+			check(mine != null and mine.is_visual_only, "client: my throw shows a visual copy at once")
+			var bad := spec.duplicate()
+			bad.pos = main.player.global_position + Vector3(30, 0, 0)
+			await _sleep(0.3)
+			Net.projectiles.request_throw(bad)
 		"spend":
 			Net.request_spend(999999, "test_door")
 			await _sleep(0.4)

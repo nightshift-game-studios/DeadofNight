@@ -9,12 +9,17 @@ extends Node
 ##     milestones and own Field Card offer
 ##   * late join (phase 3a): the host's full world for one joiner (live zombies from their specs + hp, untaken
 ##     drops; doors go through send_doors_to) and the round without round events
+##   * bosses (phase 3b): a boss that offers net_boss_state() -> Array is polled on the host every physics frame;
+##     each change goes to every client, whose puppet copy runs net_apply_boss_state(state) (clips, telegraphs,
+##     VFX, never damage). Boss scripts own both methods (hooks B1-B3 in NET_HOOKS / patches/boss_*.patch);
+##     a boss without them is just a puppet like any zombie.
 
 signal spend_result(ok: bool, amount: int, reason: String)
 signal drop_spawned(drop_id: String)
 signal drop_removed(drop_id: String, taker_peer: int)
 signal door_opened(key: String, opener_peer: int) ## M13, every peer, after the door's own open() ran here
 signal snapshot_applied(zombies: int, drops: int) ## late joiner: the host's world snapshot is in
+signal boss_state_applied(zombie_name: String, state: Array) ## client: a boss puppet got the host's state
 signal door_refused(door_id: String, reason: String) ## M13, requester only: "points" / "already_open" / "unknown_door" / "wrong_map" / "no_id"
 
 const ItemScr := preload("res://scripts/items/item.gd")
@@ -27,7 +32,7 @@ var _host_drops: Dictionary = {} ## host: drop_id -> {item: dict, taker: 0, pos}
 var _host_specs: Dictionary = {} ## host: zombie name -> its spawn spec (late-join snapshots rebuild from it)
 var _drop_counter := 0
 var _snap_t := 0.0
-var stats := {"snaps_tx": 0, "snaps_rx": 0, "spawns_rx": 0, "gone_rx": 0, "doors_rx": 0, "refunds": 0, "world_snaps_rx": 0, "grabs_equip": 0}
+var stats := {"snaps_tx": 0, "snaps_rx": 0, "spawns_rx": 0, "gone_rx": 0, "doors_rx": 0, "refunds": 0, "world_snaps_rx": 0, "grabs_equip": 0, "boss_tx": 0, "boss_rx": 0}
 ## M13 doors, every peer: "<map_id>/<door_id>" -> opener peer. Applied to the map on attach (late joiners) and kept
 ## for the match; never keyed on node paths.
 var doors_open: Dictionary = {}
@@ -37,6 +42,8 @@ var _pending_spends: Dictionary = {}
 var _spend_token := 0
 ## Host: peer -> {token: amount} charged and still refundable (last 32 per peer).
 var _charged: Dictionary = {}
+## Host: boss name -> last sent net_boss_state() (change detection + late-join snapshots).
+var _boss_last: Dictionary = {}
 
 
 func _ready() -> void:
@@ -55,6 +62,7 @@ func clear() -> void:
 	_door_req_t.clear()
 	_pending_spends.clear()
 	_charged.clear()
+	_boss_last.clear()
 
 
 func _process(_delta: float) -> void:
@@ -136,7 +144,7 @@ func host_snapshot() -> Array:
 	if root == null:
 		return out
 	for z in root.get_children():
-		if not (z is Node3D):
+		if not (z is Node3D) or not ("_dead" in z): # boss telegraphs live in zombies_root too
 			continue
 		var f := 0
 		if bool(z.get("_dead")):
@@ -158,6 +166,7 @@ func _physics_process(delta: float) -> void:
 			var left := int(m.get("_to_spawn")) + int(m.get("_alive")) if "_alive" in m else 0
 			stats.snaps_tx += 1
 			_rpc_zombie_snap.rpc(host_snapshot(), left)
+		host_boss_tick()
 		return
 	var root := _zroot()
 	if root == null:
@@ -402,6 +411,49 @@ func enemies_left() -> int:
 	return int(m.get("_to_spawn")) + int(m.get("_alive")) if m and "_alive" in m else 0
 
 
+# ------------------------------------------------------------------ bosses (phase 3b)
+## Host, every physics frame: send each boss's net_boss_state() when it changed (phases can be 0.17 s long, so
+## this doesn't wait for the zombie snapshot tick). Returns how many states went out.
+func host_boss_tick() -> int:
+	var root := _zroot()
+	var sent := 0
+	if root == null:
+		return 0
+	for z in root.get_children():
+		if not z.has_method("net_boss_state") or bool(z.get("_dead")):
+			continue
+		var st = z.net_boss_state()
+		var zn := str(z.name)
+		if not (st is Array) or _boss_last.get(zn) == st:
+			continue
+		_boss_last[zn] = st
+		stats.boss_tx += 1
+		sent += 1
+		if net.is_networked() and net.is_host():
+			_rpc_boss_state.rpc(zn, st)
+	for zn in _boss_last.keys():
+		if root.get_node_or_null(NodePath(str(zn))) == null:
+			_boss_last.erase(zn)
+	return sent
+
+
+@rpc("authority", "call_remote", "reliable")
+func _rpc_boss_state(zombie_name: String, st: Array) -> void:
+	apply_boss_state(zombie_name, st)
+
+
+## Client: hand the host's state to the boss puppet (a boss script without net_apply_boss_state ignores it).
+func apply_boss_state(zombie_name: String, st: Array) -> bool:
+	var root := _zroot()
+	var z: Node = root.get_node_or_null(NodePath(zombie_name)) if root and zombie_name.is_valid_filename() else null
+	if z == null or not z.has_method("net_apply_boss_state") or bool(z.get("_dead")):
+		return false
+	stats.boss_rx += 1
+	z.net_apply_boss_state(st)
+	boss_state_applied.emit(zombie_name, st)
+	return true
+
+
 ## Host -> one joiner (its match scene is ready): every live zombie (spec + pose + hp) and every untaken drop.
 ## Doors go separately (send_doors_to, M13 keys). Returns [zombies, drops] sent.
 func send_snapshot_to(peer_id: int) -> Array:
@@ -419,6 +471,8 @@ func send_snapshot_to(peer_id: int) -> Array:
 			ds.append([str(id), hd.item, hd.get("pos", Vector3.ZERO)])
 	if net.is_host() and peer_id != net.local_peer_id():
 		_rpc_world_snapshot.rpc_id(peer_id, zs, ds)
+		for zn in _boss_last: # bosses mid-attack: the joiner's puppets pick up the current phase
+			_rpc_boss_state.rpc_id(peer_id, str(zn), _boss_last[zn])
 	return [zs.size(), ds.size()]
 
 

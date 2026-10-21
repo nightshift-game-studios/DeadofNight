@@ -66,3 +66,20 @@ static func spend_with_callback(amount: int, reason: String, cb: Callable) -> vo
 		n.world.spend_with_callback(amount, reason, cb)
 	else:
 		cb.call(false, "no_net")
+
+
+## P1 (ThrownProjectile.spawn, MAIN_HOOKS §22): the host's authoritative projectile exists -> every client spawns a
+## visual-only copy of `spec`. Solo / client / a visual copy: no-op.
+static func projectile_spawned(spec: Dictionary) -> void:
+	var n := net()
+	if n and n.is_networked() and n.is_host():
+		n.projectiles.host_spawned(spec)
+
+
+## A player's own throw (grenades, later): co-op client -> visual copy + request to the host; solo / host -> null,
+## so the caller spawns as before (ThrownProjectile.spawn(spec)).
+static func request_throw(spec: Dictionary) -> Node:
+	var n := net()
+	if n and n.is_networked() and not n.is_host():
+		return n.projectiles.request_throw(spec)
+	return null

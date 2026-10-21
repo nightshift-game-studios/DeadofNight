@@ -53,6 +53,12 @@
 		"revive": 100,
 		"late_join_start": 500
 	},
+	"projectiles": {
+		"_help": "Phase 3b (NetProjectiles): host checks on a client's own throw (ThrownProjectile spec). Too far from the thrower's avatar (m), too fast (m/s) or more than max_throws_per_s are refused and logged, never kicked.",
+		"max_throw_dist": 4.0,
+		"max_throw_speed": 45.0,
+		"max_throws_per_s": 4
+	},
 	"drops": {
 		"shared_world_drops": true,
 		"first_grab_wins": true,
