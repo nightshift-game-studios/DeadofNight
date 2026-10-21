@@ -167,6 +167,15 @@ func _item_data_checks() -> void:
 	check(ClassItems.active_defs(it, "soldier").is_empty() and ClassItems.active_defs(it, "scout").size() == 1, "item only works for its own class")
 	prog.skill_ranks = {ClassItems.synergy_keystone(it): 1}
 	check(ClassItems.active_defs(it, "scout").size() == 2, "synergy joins when the paired keystone is owned")
+	# ClassItems.owned(class_id): the active character's stash, equipped first
+	var c2 = gdb.roll_armor("class_item", 1)
+	prog.selected_class = "chandler"
+	var c3 = gdb.roll_armor("class_item", 3)
+	prog.stash = {"version": 1, "equipped": {"class_item": it.to_dict()}, "backpack": {"class_item": [c2.to_dict(), c3.to_dict()]}}
+	var mine: Array = ClassItems.owned_rows("scout")
+	check(ClassItems.owned("scout").size() == 2 and mine[0].equipped and not mine[1].equipped and mine[0].line != "", "owned('scout'): 2 Scout items, equipped first, with lines")
+	check(ClassItems.owned("chandler").size() == 1 and ClassItems.owned("sexton").is_empty(), "owned() filters by class")
+	prog.stash = {}
 	prog.skill_ranks = {}
 	prog.selected_class = "soldier"
 
@@ -264,6 +273,16 @@ func _slot_checks() -> void:
 	prog.save_data()
 	check(chars.select(first).ok and prog.xp == 3000 and prog.selected_class == "scout", "select back: character 1's data restored")
 	check(chars.select(r.id).ok and prog.xp == 500 and chars.ability_for("sexton") == "headstone", "select Ada: her xp and Q pick restored")
+	prog.best_round = 7
+	prog.games_played = 3
+	prog.save_data()
+	chars.select(first)
+	var row_ada: Dictionary = chars.get_character(r.id)
+	check(row_ada.best_round == 7 and row_ada.games_played == 3 and row_ada.ability == "headstone" and row_ada.ability_name == "Headstone",
+		"list() rows: best_round, games_played, ability + ability_name (inactive character)")
+	var row_me: Dictionary = chars.get_character(first)
+	check(row_me.active and row_me.has("ability_name") and row_me.games_played == int(prog.games_played), "list() active row reads live Progress")
+	chars.select(r.id)
 	check(chars.rename(r.id, "  Ada Grey ").ok and chars.get_character(r.id).name == "Ada Grey", "rename (trimmed)")
 	check(not chars.delete(r.id, "bogus").ok, "delete without a confirm token refused")
 	var tok: Dictionary = chars.request_delete(r.id)
@@ -271,12 +290,42 @@ func _slot_checks() -> void:
 	check(chars.delete(r.id, tok.token).ok and chars.count() == 1 and chars.active_id() == first, "delete active character -> falls back to the other")
 	check(not FileAccess.file_exists(chars.char_path(r.id)) and not FileAccess.file_exists(chars.char_path(r.id) + ".bak"), "deleted character's files (and .bak) removed")
 	check(not chars.request_delete(first).ok, "can't delete the last character")
-	# mid-match guard
-	var fake := Node.new()
-	prog.bind_inventory(fake)
-	check(not chars.create("Mid", "scout").ok and not chars.select(first).ok or chars.blocked_reason() != "", "create / select refused mid-match")
+	# match guard: an explicit flag (begin_match / leave_home), not "some Inventory is bound"
+	chars.begin_match()
+	check(chars.blocked_reason() != "" and not chars.create("Mid", "scout").ok, "begin_match: create / select refused")
+	chars.end_match()
+	check(chars.blocked_reason() == "", "end_match: allowed again")
+	chars.leave_home()
+	check(chars.is_match_live() and not chars.select(first).ok, "leave_home (starting a match) blocks switching")
+	chars.enter_home()
+	check(not chars.is_match_live(), "enter_home clears the match flag")
+	var pl := Node3D.new() # a Player-owned Inventory still counts as a live match (scene loaded without begin_match)
+	pl.add_to_group("player")
+	var pinv := Node.new()
+	pl.add_child(pinv)
+	prog.bind_inventory(pinv)
+	check(chars.blocked_reason() != "", "a Player's bound Inventory still blocks")
 	prog.bind_inventory(null)
-	fake.free()
+	pl.free()
+	# Gooey #21: the home KIT binds its Inventory; that must not block, and must not leak gear across characters
+	var other: Dictionary = chars.create("Kit Check", "scout", false)
+	var ks := GDScript.new()
+	ks.source_code = "extends Node\nfunc to_save_dict() -> Dictionary:\n\treturn {\"version\": 1, \"equipped\": {\"helmet\": {\"kind\": \"gear\", \"id\": \"kit_marker\"}}, \"backpack\": {}}\n"
+	ks.reload()
+	var kit_parent := Control.new()
+	var kit = ks.new()
+	kit_parent.add_child(kit)
+	root.add_child(kit_parent)
+	prog.bind_inventory(kit)
+	var sw: Array = []
+	chars.switching.connect(func(a, b): sw.append([a, b]))
+	check(chars.blocked_reason() == "" and chars.request_delete(other.id).ok, "home kit Inventory bound: create / switch / delete allowed")
+	check(chars.select(other.id).ok and sw == [[first, other.id]] and prog.bound_inventory() == null, "switch: `switching(from, to)` fired, kit unbound")
+	check(prog.stash.is_empty(), "new character doesn't inherit the kit's gear")
+	check(chars.select(first).ok and str(prog.stash.get("equipped", {}).get("helmet", {}).get("id", "")) == "kit_marker", "kit gear was saved into the character it belonged to")
+	kit_parent.queue_free()
+	var tk: Dictionary = chars.request_delete(other.id)
+	chars.delete(other.id, tk.token)
 	for i in chars.MAX_CHARACTERS:
 		chars.create("Slot %d" % i, "scout", false)
 	check(chars.count() == chars.MAX_CHARACTERS and not chars.create("Extra", "scout").ok, "max %d characters" % chars.MAX_CHARACTERS)

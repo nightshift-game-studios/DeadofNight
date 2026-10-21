@@ -154,3 +154,47 @@ static func active_defs(item, class_id := "", prog: Node = null) -> Array:
 static func _prog() -> Node:
 	var ml := Engine.get_main_loop()
 	return (ml as SceneTree).root.get_node_or_null("Progress") if ml is SceneTree else null
+
+
+## Class items the active character owns for `class_id` (#9 loadout list): the live bound Inventory when one is open
+## (home kit or match), else the saved stash. Equipped first. Each: ArmorItem with class_id == class_id.
+static func owned(class_id: String) -> Array:
+	var out: Array = []
+	for r in owned_rows(class_id):
+		out.append(r.item)
+	return out
+
+
+## owned() as UI rows: [{item, equipped, name, rarity, line, synergy_line, synergy_keystone, synergy_owned, active}].
+## `active` = this class is the one being played.
+static func owned_rows(class_id: String) -> Array:
+	var prog = _prog()
+	if prog == null:
+		return []
+	var found: Array = [] # [item, equipped]
+	var inv = prog.bound_inventory() if prog.has_method("bound_inventory") else null
+	if inv != null and "equipped" in inv and "backpack" in inv:
+		var eq = inv.equipped.get("class_item")
+		if eq:
+			found.append([eq, true])
+		for it in inv.backpack.get("class_item", []):
+			found.append([it, false])
+	else:
+		var st: Dictionary = prog.stash
+		var gdb = (Engine.get_main_loop() as SceneTree).root.get_node_or_null("GearDB")
+		var eqd = st.get("equipped", {}).get("class_item")
+		if eqd is Dictionary and gdb:
+			found.append([gdb.item_from_dict(eqd), true])
+		for d in st.get("backpack", {}).get("class_item", []):
+			if d is Dictionary and gdb:
+				found.append([gdb.item_from_dict(d), false])
+	var out: Array = []
+	for f in found:
+		var it = f[0]
+		if it == null or str(it.get("class_id")) != class_id or str(it.get("class_effect")) == "":
+			continue
+		var ks := synergy_keystone(it)
+		out.append({"item": it, "equipped": bool(f[1]), "name": str(it.display_name), "rarity": int(it.rarity),
+			"line": line(it), "synergy_line": synergy_line(it), "synergy_keystone": ks,
+			"synergy_owned": ks != "" and prog.rank(ks) > 0, "active": str(prog.selected_class) == class_id})
+	return out

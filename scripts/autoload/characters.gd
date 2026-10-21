@@ -17,15 +17,18 @@ extends Node
 ##
 ## Binding: only the default Progress.save_path binds at boot. Tests (and anything else pointing Progress elsewhere)
 ## call bind(path) explicitly; a save to a different path never touches the bound character files.
-## Not allowed while a match scene is live (Progress.bound_inventory() != null): create / delete / select (they swap
-## the gear stash). set_class / set_ability follow the respec window instead (Progress.respec_allowed: home, round 0,
-## game over), so the game-over screen can still switch class.
+## Not allowed while a match is live (is_match_live(): begin_match() / leave_home() set it, end_match() / enter_home()
+## clear it; a bound Inventory that belongs to a Player also counts): create / delete / select (they swap the gear
+## stash). A home-screen kit Inventory bound to Progress does NOT block: before a switch it is captured into the current
+## character and unbound, and `switching` fires first so the kit can drop / reload its Inventory.
+## set_class / set_ability follow the respec window instead (Progress.respec_allowed: home, round 0, game over).
 
 signal characters_changed ## list changed (create / delete / rename / level / class)
 signal active_changed(id: int) ## a different character is now live in Progress
 signal class_changed(id: int, class_id: String)
 signal ability_changed(id: int, class_id: String, ability_id: String)
 signal delete_requested(id: int, token: String)
+signal switching(from_id: int, to_id: int) ## about to swap characters (select / create+select / delete active): home kits release their Inventory now
 
 const DEFAULT_SAVE := "user://progress.cfg"
 const INDEX_FILE := "index.cfg"
@@ -43,6 +46,7 @@ var abilities: Dictionary = {} ## active character: class_id -> ability_id
 var respecs_used: int = 0 ## active character: full respecs taken (SkillSpec)
 var _pending_delete: Dictionary = {} ## id -> {token, at}
 var spec: Node ## SkillSpec child (home-menu tree API)
+var in_match := false ## explicit match flag: begin_match() / leave_home() -> true, end_match() / enter_home() -> false
 
 
 func _ready() -> void:
@@ -140,24 +144,52 @@ func _on_progress_saved(path: String) -> void:
 		e["level"] = prog.get_level()
 		e["class"] = str(prog.selected_class)
 		e["last_played"] = _now()
+		e["best_round"] = int(prog.best_round)
+		e["games_played"] = int(prog.games_played)
+		e["abilities"] = abilities.duplicate()
 	_write_index()
 
 
 # ---------------------------------------------------------------- queries
 
-## [{id, name, class, class_name, ability, level, created, last_played, active}] in slot order.
+## [{id, name, class, class_name, ability, ability_name, level, best_round, games_played, created, last_played, active}]
+## in slot order. The active row reads live Progress; others read the index (older index entries are filled from the
+## character file once).
 func list() -> Array:
 	var out: Array = []
 	if index.is_empty():
 		return out
+	var prog := _prog()
 	for id in index.order:
 		var e: Dictionary = index.chars.get(str(id), {})
-		var cls := str(e.get("class", "soldier"))
+		var live := int(id) == active_id() and prog != null
+		if not live and not e.has("games_played"):
+			_fill_entry_from_file(int(id), e)
+		var cls := str(prog.selected_class) if live else str(e.get("class", "soldier"))
+		var ab := ability_for(cls) if live else _pick_ability(cls, e.get("abilities", {}))
+		var a := ClassRoster.find_ability(cls, ab)
 		out.append({"id": int(id), "name": str(e.get("name", "")), "class": cls,
-			"class_name": ClassRoster.template(cls).display_name, "level": int(e.get("level", 1)),
-			"created": int(e.get("created", 0)), "last_played": int(e.get("last_played", 0)),
-			"active": int(id) == active_id(), "ability": ability_for(cls) if int(id) == active_id() else str(e.get("abilities", {}).get(cls, ClassRoster.default_ability(cls)))})
+			"class_name": ClassRoster.template(cls).display_name, "ability": ab, "ability_name": a.display_name if a else ab,
+			"level": prog.get_level() if live else int(e.get("level", 1)),
+			"best_round": int(prog.best_round) if live else int(e.get("best_round", 0)),
+			"games_played": int(prog.games_played) if live else int(e.get("games_played", 0)),
+			"created": int(e.get("created", 0)), "last_played": int(e.get("last_played", 0)), "active": int(id) == active_id()})
 	return out
+
+
+static func _pick_ability(cls: String, picks) -> String:
+	var a := str(picks.get(cls, "")) if typeof(picks) == TYPE_DICTIONARY else ""
+	return a if a in ClassRoster.ability_ids(cls) else ClassRoster.default_ability(cls)
+
+
+func _fill_entry_from_file(id: int, e: Dictionary) -> void:
+	var p: Dictionary = Progress._pick_save_file(char_path(id))
+	if p.cfg == null:
+		return
+	e["best_round"] = int(p.cfg.get_value("stats", "best_round", 0))
+	e["games_played"] = int(p.cfg.get_value("stats", "games_played", 0))
+	var ab = p.cfg.get_value("character", "abilities", {})
+	e["abilities"] = ab if typeof(ab) == TYPE_DICTIONARY else {}
 
 
 func count() -> int:
@@ -179,10 +211,46 @@ func get_character(id: int) -> Dictionary:
 func blocked_reason() -> String:
 	if not is_bound():
 		return "Characters are not loaded."
-	var prog := _prog()
-	if prog and prog.bound_inventory() != null:
+	if is_match_live():
 		return "Finish or leave the match first."
 	return ""
+
+
+## A match is running: the explicit flag, or Progress has a Player's Inventory bound (a match scene that never called
+## begin_match, e.g. tests or a direct scene load). A home-screen kit Inventory (no Player owner) is not a match.
+func is_match_live() -> bool:
+	if in_match:
+		return true
+	var prog := _prog()
+	var inv: Node = prog.bound_inventory() if prog else null
+	return inv != null and _is_player_inventory(inv)
+
+
+static func _is_player_inventory(inv: Node) -> bool:
+	var p := inv.get_parent()
+	return p != null and ("skill_runner" in p or p.is_in_group("player"))
+
+
+## main.gd: match scene ready / gone (MAIN_HOOKS §23d).
+func begin_match() -> void:
+	in_match = true
+	if spec:
+		spec.end_session()
+
+
+func end_match() -> void:
+	in_match = false
+
+
+## Before a character swap: tell home kits (switching), then save a still-bound kit Inventory into the CURRENT
+## character and unbind it, so it can never write the old gear into the next character.
+func _release_home_inventory(to_id: int) -> void:
+	switching.emit(active_id(), to_id)
+	var prog := _prog()
+	var inv: Node = prog.bound_inventory() if prog else null
+	if inv != null and not _is_player_inventory(inv):
+		prog.capture_stash()
+		prog.bind_inventory(null)
 
 
 ## Why set_class / set_ability are refused right now ("" = allowed): the respec window (home, round 0, game over).
@@ -198,6 +266,7 @@ func loadout_blocked_reason() -> String:
 ## The home menu calls this when it opens: home is always inside the respec / loadout window, and picks made from
 ## here on can be undone for free (SkillSpec session).
 func enter_home() -> void:
+	in_match = false
 	var prog := _prog()
 	if prog:
 		prog.respec_allowed = true
@@ -205,8 +274,10 @@ func enter_home() -> void:
 		spec.begin_session()
 
 
-## The home menu calls this when it starts a match (or closes): picks become permanent.
+## The home menu calls this when it starts a match: picks become permanent and the match flag goes up (enter_home or
+## end_match clears it).
 func leave_home() -> void:
+	in_match = true
 	if spec:
 		spec.end_session()
 
@@ -319,6 +390,7 @@ func select(id: int) -> Dictionary:
 		return {"ok": false, "reason": why}
 	if id == active_id():
 		return {"ok": true, "reason": ""}
+	_release_home_inventory(id)
 	var prog := _prog()
 	prog.save_data() # current character -> its file (via saved)
 	var p: Dictionary = Progress._pick_save_file(char_path(id))

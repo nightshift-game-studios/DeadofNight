@@ -414,16 +414,18 @@ func _run() -> void:
 	progress.xp += 2500 # a few more points for buying through the menu
 	stm.open()
 	await wait(3)
-	check(stm._rail_tabs.size() == progress.branches().size() and progress.branches().size() == 7,
-		"skill tree rail lists all 7 branches (%d tabs)" % stm._rail_tabs.size())
-	check(stm._nodes.size() == progress.all_node_ids().size(), "skill tree: a tile per node (%d/%d)" % [stm._nodes.size(), progress.all_node_ids().size()])
+	check(stm._rail_tabs.size() == progress.branches().size() and progress.branches().size() == 9,
+		"skill tree rail lists all 9 branches (%d tabs)" % stm._rail_tabs.size())
+	# Batch C (59143a1): general nodes + one class dock (the selected class's branch)
+	var shown_ids: Array = progress.all_node_ids().filter(func(i): return str(progress.get_skill(i).get("class", "")) in ["", str(progress.selected_class)])
+	check(stm._nodes.size() == shown_ids.size(), "skill tree: a tile per general + selected-class node (%d/%d)" % [stm._nodes.size(), shown_ids.size()])
 	var clip_r: Rect2 = stm._clip.get_global_rect().grow(1.0)
 	var vp_r := Rect2(Vector2.ZERO, stm.get_viewport().get_visible_rect().size).grow(1.0)
 	var fit_ok := true
 	for id in stm._nodes:
 		var tr: Rect2 = stm._nodes[id].get_global_rect()
 		fit_ok = fit_ok and clip_r.encloses(tr) and vp_r.encloses(tr)
-	check(fit_ok, "skill tree: all 7 branches fit on screen without panning")
+	check(fit_ok, "skill tree: every branch fits on screen without panning")
 	progress.skill_ranks["mk_key"] = 1 # temporarily own a keystone to see the exclusion state
 	var states_ok: bool = stm.ui_state("sv_root") in ["owned", "maxed"] and stm.ui_state("lg_spare") in ["available", "unaffordable"] \
 		and stm.ui_state("lg_gilded") == "locked" and stm.ui_state("sp_key") == "excluded"
