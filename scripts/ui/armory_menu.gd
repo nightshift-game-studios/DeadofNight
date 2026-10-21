@@ -28,6 +28,16 @@ var _refusal: Dictionary = {} ## {id, kind, text}: last refused buy / equip, sho
 var _toast: Label ## short refusal toast in the footer, near the actions
 var _toast_t: float = 0.0
 const TOAST_SECS := 3.5
+const RIGHT_GUTTER := 14 ## px between the right-panel cards and the scrollbar
+
+
+## Wrapping body text for the right panel: shrinks with the column instead of forcing it wider (playtest #10).
+static func wrap_label(text: String, size: int, color: Color, stencil: bool = false) -> Label:
+	var l := UIStyle.label(text, size, color, stencil)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.custom_minimum_size.x = 40
+	return l
 
 
 func _init() -> void:
@@ -99,19 +109,34 @@ func _build() -> void:
 	scroll_l.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll_l.custom_minimum_size = Vector2(220, 420)
 	left_wrap.add_child(scroll_l)
+	scroll_l.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var gutter_l := MarginContainer.new()
+	gutter_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	gutter_l.add_theme_constant_override("margin_right", RIGHT_GUTTER)
+	scroll_l.add_child(gutter_l)
 	_left = VBoxContainer.new()
 	_left.add_theme_constant_override("separation", 4)
 	_left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll_l.add_child(_left)
+	gutter_l.add_child(_left)
 
+	# Playtest #10: the right panel never scrolls sideways (long summaries / drawbacks used to widen it past the
+	# viewport, so text ran under the scrollbar and over the cost / BUY column). Every text line wraps instead, and
+	# a gutter keeps the cards clear of the vertical scrollbar.
 	var right_scroll := ScrollContainer.new()
+	right_scroll.name = "RightScroll"
 	right_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	right_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	body.add_child(right_scroll)
+	var gutter := MarginContainer.new()
+	gutter.name = "RightGutter"
+	gutter.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	gutter.add_theme_constant_override("margin_right", RIGHT_GUTTER)
+	right_scroll.add_child(gutter)
 	_right = VBoxContainer.new()
 	_right.add_theme_constant_override("separation", 8)
 	_right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	right_scroll.add_child(_right)
+	gutter.add_child(_right)
 
 	# Confirm overlay on CanvasLayer root (self), NOT inside panel — PanelContainer
 	# stretches every direct child to fill, which blew the old card across the armory.
@@ -228,7 +253,7 @@ func _rebuild_weapons() -> void:
 		var id := str(w.id)
 		var b := Button.new()
 		b.focus_mode = Control.FOCUS_ALL
-		b.custom_minimum_size = Vector2(200, 48)
+		b.custom_minimum_size = Vector2(190, 48)
 		var on: bool = id == _weapon_id
 		b.add_theme_stylebox_override("normal", UIStyle.cut_box(
 			UIStyle.OLIVE_DARK if on else Color(UIStyle.INK, 0.9),
@@ -236,9 +261,17 @@ func _rebuild_weapons() -> void:
 		b.add_theme_stylebox_override("hover", UIStyle.cut_box(Color(0.16, 0.12, 0.08, 0.95), UIStyle.RUST, 2, 8))
 		b.add_theme_stylebox_override("focus", UIStyle.cut_box(Color(0.16, 0.12, 0.08, 0.95), UIStyle.RUST, 3, 8))
 		var v := VBoxContainer.new()
+		v.name = "Labels"
 		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		v.add_theme_constant_override("separation", -2)
+		v.add_theme_constant_override("separation", 0)
+		v.alignment = BoxContainer.ALIGNMENT_CENTER
 		b.add_child(v)
+		# Buttons don't lay out children: pin the labels inside the border (they sat on the top-left edge)
+		v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		v.offset_left = 10
+		v.offset_right = -8
+		v.offset_top = 3
+		v.offset_bottom = -3
 		v.add_child(UIStyle.label(str(w.get("name", id)).to_upper(), 14, UIStyle.BONE, true))
 		var tier := int(w.get("tier", 0))
 		var tier_s := "BASE" if tier <= 0 else "REWORK %s" % UIStyle.roman(tier)
@@ -284,8 +317,8 @@ func _rebuild_detail() -> void:
 	hdr.name = "WeaponHeader"
 	hdr.add_theme_constant_override("separation", 10)
 	_right.add_child(hdr)
-	var ht := UIStyle.label("%s UPGRADES — applies to all %ss" % [type_name.to_upper(), type_name], 15, UIStyle.RUST, true)
-	ht.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var ht := wrap_label("%s UPGRADES — applies to all %ss" % [type_name.to_upper(), type_name], 15, UIStyle.RUST, true)
+	ht.name = "WeaponTitle"
 	ht.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	hdr.add_child(ht)
 	hdr.add_child(_weapon_ip_plate())
@@ -318,7 +351,9 @@ func _weapon_ip_plate() -> Control:
 	var tag := UIStyle.label("BEST\nOWNED" if src == "best_owned" else ("THIS\nITEM" if src == "item" else "BASE\nLINE"), 9, UIStyle.BONE_DIM, true)
 	tag.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(tag)
-	h.add_child(UIStyle.ip_breakdown_block(bd, 22, 10, HORIZONTAL_ALIGNMENT_RIGHT))
+	var blk := UIStyle.ip_breakdown_block(bd, 22, 10, HORIZONTAL_ALIGNMENT_RIGHT)
+	blk.add_theme_constant_override("separation", 0) # playtest #10: the -4 stack let the total and breakdown lines touch
+	h.add_child(blk)
 	return p
 
 
@@ -332,12 +367,13 @@ func _upgrade_track(u: Dictionary) -> PanelContainer:
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 10)
 	v.add_child(head)
-	head.add_child(UIStyle.label(str(u.get("name", "Rework")).to_upper(), 16, UIStyle.BONE, true))
+	var un := wrap_label(str(u.get("name", "Rework")).to_upper(), 16, UIStyle.BONE, true)
+	un.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(un)
 	var lvl := int(u.get("current_level", u.get("level", 0)))
-	head.add_child(UIStyle.label("NOW  %s" % (UIStyle.roman(lvl) if lvl > 0 else "—"), 13, UIStyle.OLIVE.lightened(0.4), true))
-	var sp := Control.new()
-	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(sp)
+	var now := UIStyle.label("NOW  %s" % (UIStyle.roman(lvl) if lvl > 0 else "—"), 13, UIStyle.OLIVE.lightened(0.4), true)
+	now.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(now)
 	var maxed: bool = bool(u.get("maxed", false))
 	var buy := _btn("MAXED" if maxed else "BUY %s  %d" % [str(u.get("next_tier_name", "")), int(u.get("cost", 0))],
 		func(): _ask_buy(str(u.id), "upgrade"))
@@ -345,8 +381,9 @@ func _upgrade_track(u: Dictionary) -> PanelContainer:
 	if buy.disabled and not maxed:
 		buy.tooltip_text = _disable_reason(str(u.id), true)
 	head.add_child(buy)
-	v.add_child(UIStyle.label(str(u.get("summary", "")), 12, UIStyle.BONE_DIM))
+	v.add_child(wrap_label(str(u.get("summary", "")), 12, UIStyle.BONE_DIM))
 	var row := HBoxContainer.new()
+	row.name = "TierRow"
 	row.add_theme_constant_override("separation", 4)
 	v.add_child(row)
 	for t in u.get("tiers", []):
@@ -357,18 +394,17 @@ func _upgrade_track(u: Dictionary) -> PanelContainer:
 		var col := UIStyle.RUST if cur else (UIStyle.OLIVE if done else UIStyle.BONE_DIM)
 		cell.add_theme_stylebox_override("panel", UIStyle.cut_box(
 			Color(col, 0.35 if cur else 0.15), col, 2 if cur else 1, 6))
-		cell.custom_minimum_size = Vector2(110, 0)
+		cell.custom_minimum_size = Vector2(72, 0)
+		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL # 5 cells share the row width; their text wraps
+		cell.size_flags_stretch_ratio = 1.0
 		var cv := VBoxContainer.new()
-		cv.add_theme_constant_override("separation", -2)
+		cv.add_theme_constant_override("separation", 1)
 		cell.add_child(cv)
 		cv.add_child(UIStyle.label(str(t.get("name", UIStyle.roman(ti))), 13, UIStyle.BONE if done or cur else UIStyle.BONE_DIM, true))
-		cv.add_child(UIStyle.label("%d GM  ·  +%d IP" % [int(t.get("cost", 0)), int(t.get("item_power", 0))], 10, UIStyle.BONE_DIM))
+		cv.add_child(wrap_label("%d GM  ·  +%d IP" % [int(t.get("cost", 0)), int(t.get("item_power", 0))], 10, UIStyle.BONE_DIM))
 		var sum := str(t.get("summary", ""))
 		if sum != "":
-			var sl := UIStyle.label(sum, 10, UIStyle.BONE_DIM)
-			sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			sl.custom_minimum_size.x = 100
-			cv.add_child(sl)
+			cv.add_child(wrap_label(sum, 10, UIStyle.BONE_DIM))
 		row.add_child(cell)
 	return p
 
@@ -380,14 +416,18 @@ func _slot_section(slot_id: String, slot_name: String, equipped_id: String) -> V
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 8)
 	box.add_child(head)
-	head.add_child(UIStyle.label(slot_name.to_upper(), 13, UIStyle.OLIVE.lightened(0.3), true))
+	var sn := UIStyle.label(slot_name.to_upper(), 13, UIStyle.OLIVE.lightened(0.3), true)
+	sn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(sn)
 	if equipped_id != "":
-		head.add_child(UIStyle.label("EQUIPPED", 10, UIStyle.GOOD, true))
+		var eqd := UIStyle.label("EQUIPPED", 10, UIStyle.GOOD, true)
+		eqd.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		head.add_child(eqd)
 		var uq := _btn("UNEQUIP", func(): _do_unequip(slot_id))
 		head.add_child(uq)
 	var atts: Array = api.list_attachments(_weapon_id, slot_id)
 	if atts.is_empty():
-		box.add_child(UIStyle.label("none for this weapon", 11, UIStyle.BONE_DIM))
+		box.add_child(wrap_label("none for this weapon", 11, UIStyle.BONE_DIM))
 	for a in atts:
 		box.add_child(_att_row(a))
 	return box
@@ -405,19 +445,20 @@ func _att_row(a: Dictionary) -> PanelContainer:
 	h.add_child(UIStyle.attachment_icon(str(a.id), 40, str(a.get("slot", ""))))
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	v.add_theme_constant_override("separation", -1)
+	v.add_theme_constant_override("separation", 1)
 	h.add_child(v)
-	var nh := HBoxContainer.new()
+	var nh := HFlowContainer.new() # long names + T / UNIQUE tags wrap instead of pushing the cost column
+	nh.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nh.add_theme_constant_override("separation", 6)
 	v.add_child(nh)
 	nh.add_child(UIStyle.label(str(a.get("name", a.id)).to_upper(), 13, UIStyle.BONE, true))
 	nh.add_child(UIStyle.label("T%d" % int(a.get("tier", 1)), 10, UIStyle.RUST.lightened(0.3), true))
 	if bool(a.get("unique", false)):
 		nh.add_child(UIStyle.label("UNIQUE", 9, UIStyle.BLOOD.lightened(0.3), true))
-	v.add_child(UIStyle.label(str(a.get("summary", "")), 11, UIStyle.BONE_DIM))
+	v.add_child(wrap_label(str(a.get("summary", "")), 11, UIStyle.BONE_DIM))
 	var drawback := str(a.get("drawback", ""))
 	if drawback != "":
-		v.add_child(UIStyle.label(drawback, 11, UIStyle.BLOOD.lightened(0.25)))
+		v.add_child(wrap_label(drawback, 11, UIStyle.BLOOD.lightened(0.25)))
 	var reqs: Array = a.get("requirements", [])
 	var preqs: Array = a.get("purchase_requirements", [])
 	var conflict: Dictionary = a.get("conflict", {}) if a.get("conflict", {}) is Dictionary else {}
@@ -426,23 +467,28 @@ func _att_row(a: Dictionary) -> PanelContainer:
 		why_conf = str(api.exclusion_reason(str(a.id), _weapon_id))
 	var tier_reqs: Array = reqs.filter(func(r): return str(r) != why_conf)
 	if not tier_reqs.is_empty():
-		v.add_child(UIStyle.label("Need: " + ", ".join(tier_reqs), 10, UIStyle.RUST.lightened(0.2)))
+		v.add_child(wrap_label("Need: " + ", ".join(tier_reqs), 10, UIStyle.RUST.lightened(0.2)))
 	elif not bool(a.get("owned", false)) and not preqs.is_empty():
-		v.add_child(UIStyle.label("Buy needs: " + ", ".join(preqs), 10, UIStyle.RUST.lightened(0.2)))
+		v.add_child(wrap_label("Buy needs: " + ", ".join(preqs), 10, UIStyle.RUST.lightened(0.2)))
 	var refused_here: bool = str(_refusal.get("id", "")) == str(a.id) and why_conf in str(_refusal.get("text", ""))
 	if why_conf != "" and not refused_here: # the refusal line below repeats it
 		var cl := UIStyle.label(why_conf, 10, UIStyle.BLOOD.lightened(0.35))
 		cl.name = "ConflictReason"
 		cl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		cl.custom_minimum_size.x = 420
+		cl.custom_minimum_size.x = 40
+		cl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		v.add_child(cl)
 	if str(_refusal.get("id", "")) == str(a.id):
 		var rl := UIStyle.label("✕ " + str(_refusal.text), 11, UIStyle.BLOOD.lightened(0.35), true)
 		rl.name = "RefusalReason"
 		rl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		rl.custom_minimum_size.x = 420
+		rl.custom_minimum_size.x = 40
+		rl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		v.add_child(rl)
 	var actions := VBoxContainer.new()
+	actions.name = "Actions"
+	actions.custom_minimum_size.x = 64
+	actions.alignment = BoxContainer.ALIGNMENT_CENTER
 	actions.add_theme_constant_override("separation", 4)
 	h.add_child(actions)
 	actions.add_child(UIStyle.label("%d" % int(a.get("cost", 0)), 14, UIStyle.RUST.lightened(0.25), true))
