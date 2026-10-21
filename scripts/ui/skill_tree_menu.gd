@@ -47,6 +47,10 @@ var _respec_armed := 0.0
 var _rail: HBoxContainer
 var _rail_tabs: Dictionary = {} ## branch id -> Button
 var _last_bought := "" ## tests: id of the last node bought through the UI
+## Playtest #31: the info box shows only while a skill is hovered. Keyboard / gamepad focus counts as hover
+## (nav_input is set by key / pad input and cleared by real mouse motion), the auto-focus on open does not.
+var nav_input := false
+var _hover_id := ""
 
 
 func _ready() -> void:
@@ -58,6 +62,8 @@ func _ready() -> void:
 func refresh() -> void:
 	if not _built:
 		_build()
+	if not visible or _hover_id == "":
+		hide_tooltip()
 	_fit_panel()
 	_refresh_all()
 	_focus_first.call_deferred()
@@ -202,7 +208,9 @@ func _build_rail() -> void:
 		var t := Button.new()
 		t.focus_mode = Control.FOCUS_NONE
 		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		t.custom_minimum_size.y = 26
+		t.custom_minimum_size = Vector2(40, 26)
+		t.clip_text = true # playtest #29: many branches shrink the tabs (ellipsis) instead of overlapping
+		t.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		t.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		t.add_theme_font_override("font", UIStyle.FONT_STENCIL)
 		t.add_theme_font_size_override("font_size", 12)
@@ -306,10 +314,14 @@ func _build_canvas() -> void:
 		var xs: Array = ids.map(func(i): return float(_defs[i].x))
 		var cx: float = ORIGIN.x + (float(xs.min()) + float(xs.max())) * 0.5 * _pitch
 		var name_s := str(b.name).to_upper() + (" TRUNK" if str(b.id) == "ledger" else "")
-		var hl := UIStyle.label(name_s, 14, _accent(str(b.id)), true)
+		var span_w: float = (float(xs.max()) - float(xs.min())) * _pitch + _pitch - 10.0 # playtest #29: fit the span
+		var hfs := fit_font_size(UIStyle.FONT_STENCIL, name_s, span_w, 14, 9)
+		var hl := UIStyle.label(name_s, hfs, _accent(str(b.id)), true)
+		hl.name = "BranchHeader_" + str(b.id)
 		hl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		hl.size = Vector2(200, 18)
-		hl.position = Vector2(cx - 100, 0)
+		hl.clip_text = true
+		hl.size = Vector2(span_w, 18)
+		hl.position = Vector2(cx - span_w * 0.5, 0)
 		_canvas.add_child(hl)
 		var ul := ColorRect.new()
 		ul.color = Color(_accent(str(b.id)), 0.75)
@@ -326,6 +338,7 @@ func _build_canvas() -> void:
 		t.accent = _accent(str(_defs[id].branch))
 		var s := KEY_TILE if str(_defs[id].get("type", "")) == "keystone" else TILE
 		t.size = Vector2(s, s)
+		t.set_meta("skill_id", id)
 		t.position = _grid_pos(id) - Vector2(s, s) * 0.5
 		t.pressed.connect(_on_tile_pressed.bind(id))
 		t.focus_entered.connect(_on_tile_focus.bind(id))
@@ -354,6 +367,19 @@ func _build_footer() -> void:
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	foot.add_child(sp)
 	foot.add_child(UIStyle.label("Bonuses apply at match start  //  respec is free before round 1 and after game over", 11, UIStyle.BONE_DIM))
+
+
+## Largest font size in [lo, hi] that fits `text` in `w` px (single line).
+static func fit_font_size(f: Font, text: String, w: float, hi: int, lo: int) -> int:
+	var fs := hi
+	while fs > lo and f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > w:
+		fs -= 1
+	return fs
+
+
+## Name plate width under a tile: never wider than the column pitch, so neighbours' names can't touch.
+func name_width() -> float:
+	return minf(96.0, _pitch - 10.0)
 
 
 func _grid_pos(id: String) -> Vector2:
@@ -501,7 +527,10 @@ func _on_tile_focus(id: String) -> void:
 		_nodes[prev].queue_redraw()
 	_nodes[id].queue_redraw()
 	_ensure_visible(id)
-	_show_tooltip(id)
+	if nav_input or _hover_id == id:
+		_show_tooltip(id)
+	elif _hover_id == "":
+		hide_tooltip()
 	if prev == "" or str(_defs[prev].branch) != str(_defs[id].branch):
 		_refresh_all()
 
@@ -510,13 +539,46 @@ func _on_tile_hover(id: String, inside: bool) -> void:
 	_nodes[id].hover = inside
 	_nodes[id].queue_redraw()
 	if inside:
+		_hover_id = id
 		_ui_snd("ui_hover")
 		_show_tooltip(id)
-	elif _tip_id == id:
-		if _focus_id != "" and _nodes[_focus_id].has_focus():
-			_show_tooltip(_focus_id)
-		else:
-			_tooltip.visible = false
+	else:
+		if _hover_id == id:
+			_hover_id = ""
+		if _tip_id == id:
+			if nav_input and _focus_id != "" and _nodes[_focus_id].has_focus():
+				_show_tooltip(_focus_id)
+			else:
+				hide_tooltip()
+
+
+func hide_tooltip() -> void:
+	if _tooltip:
+		_tooltip.visible = false
+	_tip_id = ""
+
+
+func tooltip_visible() -> bool:
+	return _tooltip != null and _tooltip.visible
+
+
+## Key / pad input turns nav mode on (focus shows the info box); real mouse motion turns it off and hides the
+## box unless the pointer is over a skill. Observed in _input, never consumed.
+func _input(event: InputEvent) -> void:
+	if not visible or not _built:
+		return
+	if event is InputEventMouseMotion and (event as InputEventMouseMotion).relative.length() > 0.5:
+		if nav_input:
+			nav_input = false
+			if _hover_id == "":
+				hide_tooltip()
+	elif (event is InputEventKey and event.pressed) or (event is InputEventJoypadButton and event.pressed) \
+			or (event is InputEventJoypadMotion and absf((event as InputEventJoypadMotion).axis_value) > 0.5):
+		if not nav_input:
+			nav_input = true
+			var f := get_viewport().gui_get_focus_owner()
+			if f != null and f.has_meta("skill_id") and _nodes.has(str(f.get_meta("skill_id"))):
+				_show_tooltip(str(f.get_meta("skill_id"))) # an arrow press then moves focus -> _on_tile_focus
 
 
 func _focus_first() -> void:
@@ -929,6 +991,7 @@ class SkillTile extends Button:
 			draw_string(bf, Vector2(br.position.x + 3, br.end.y - 2.5), c, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(cc, a))
 		var y := size.y + 4
 		if typ == "keystone":
+			y = size.y + 8 # below the dashed outer frame (grow 5), not across it
 			var kt := "KEYSTONE"
 			var kw := bf.get_string_size(kt, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x + 8
 			draw_rect(Rect2((size.x - kw) * 0.5, y, kw, 10), Color(edge, 0.9 * a))
@@ -950,7 +1013,7 @@ class SkillTile extends Button:
 			draw_string(bf, Vector2((size.x - mw) * 0.5 + 3, -2), mt, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(0.05, 0.05, 0.04))
 		# name on a dark plate (connectors pass behind it)
 		var nm := str(def.name).to_upper()
-		var nw := 96.0
+		var nw: float = menu.name_width()
 		var nsz := bf.get_multiline_string_size(nm, HORIZONTAL_ALIGNMENT_CENTER, nw, 10, 2)
 		var nx := (size.x - nw) * 0.5
 		draw_rect(Rect2((size.x - nsz.x) * 0.5 - 2, y, nsz.x + 4, nsz.y + 1), Color(0.045, 0.047, 0.037, 0.95))
@@ -961,13 +1024,9 @@ class SkillTile extends Button:
 			var tk := "TAKEN: " + str(Progress.get_skill(ex).get("name", ex)).to_upper()
 			var tw := bf.get_string_size(tk, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
 			draw_string(bf, Vector2((size.x - tw) * 0.5, y + 8), tk, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(0.62, 0.35, 0.25))
-		if not active: # class tape
-			var tape := str(def.get("class", "")).to_upper() + " ONLY"
-			var tw2 := bf.get_string_size(tape, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x + 8
-			draw_set_transform(Vector2(size.x * 0.5, -6), -0.07)
-			draw_rect(Rect2(-tw2 * 0.5, -6, tw2, 11), Color(accent, 0.9))
-			draw_string(bf, Vector2(-tw2 * 0.5 + 4, 3), tape, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(0.05, 0.05, 0.04))
-			draw_set_transform(Vector2.ZERO)
+		# Playtest #29: no per-tile "<CLASS> ONLY" tape any more. Above the tile it collided with the cost badge / MAX
+		# stamp, and lower down it read as part of the row above. The CLASS LINES dock already labels each class row
+		# (YOUR CLASS / INACTIVE), inactive tiles are dimmed, and the info box says "<CLASS> ONLY".
 		# focus / hover brackets
 		if has_focus() or hover:
 			var g2 := rect.grow(7)
@@ -986,10 +1045,32 @@ class SkillTile extends Button:
 			draw_line(p0 + dir * t, p0 + dir * minf(t + on, d), c, w)
 			t += on + off
 
+	## Local y where the name plate starts (below the KEYSTONE tag and rank pips), same steps as _draw.
+	func name_top() -> float:
+		var y := size.y + 4
+		if str(def.get("type", "")) == "keystone":
+			y = size.y + 8 + 13
+		if int(def.get("ranks", 1)) > 1:
+			y += 8
+		return y
+
+	## Canvas-space rect of the name plate (playtest #29 layout checks).
+	func name_rect() -> Rect2:
+		var bf: Font = UIStyle.body_bold()
+		var nm := str(def.name).to_upper()
+		var nsz := bf.get_multiline_string_size(nm, HORIZONTAL_ALIGNMENT_CENTER, menu.name_width(), 10, 2)
+		return Rect2(position + Vector2((size.x - nsz.x) * 0.5 - 2, name_top()), Vector2(nsz.x + 4, nsz.y + 1))
+
+	## Canvas-space rect of the tile including the keystone's dashed frame and the cost badge above.
+	func body_rect() -> Rect2:
+		var r := Rect2(position, size)
+		return r.grow(5) if str(def.get("type", "")) == "keystone" else r.grow_individual(0, 7, 6, 0)
+
 
 ## Connectors, OR / ANY chips and the keystone guide line (one draw pass for the whole canvas).
 class Wires extends Control:
 	var menu
+	var keystone_label_rect := Rect2() ## canvas rect of the vertical KEYSTONE label (tests)
 
 	func _draw() -> void:
 		var defs: Dictionary = menu._defs
@@ -1004,10 +1085,15 @@ class Wires extends Control:
 			var lx: float = menu.ORIGIN.x + 3.05 * menu._pitch
 			var rx: float = menu.ORIGIN.x + 6.95 * menu._pitch
 			var kn: int = defs.keys().filter(func(i): return str(defs[i].get("type", "")) == "keystone").size()
-			var ktxt := "KEYSTONES // PICK 1 OF %d" % kn
+			# playtest #29: the label used to sit on the guide line at x 14, right under column 0's name plate.
+			# It now runs vertically in the left margin beside the keystone row, where no tile or name reaches.
+			var ktxt := "KEYSTONE · PICK 1 OF %d" % kn
 			var tw: float = bf.get_string_size(ktxt, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
-			draw_string(bf, Vector2(14, y + 3), ktxt, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(0.8, 0.35, 0.28, 0.9))
-			_dash(Vector2(20 + tw, y), Vector2(lx, y), Color(0.7, 0.25, 0.2, 0.45), 1.0, 6, 4)
+			draw_set_transform(Vector2(13, ky + tw * 0.5), -PI * 0.5)
+			draw_string(bf, Vector2.ZERO, ktxt, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(0.8, 0.35, 0.28, 0.9))
+			draw_set_transform(Vector2.ZERO)
+			keystone_label_rect = Rect2(Vector2(13 - 9, ky - tw * 0.5), Vector2(11, tw))
+			_dash(Vector2(menu.ORIGIN.x - menu.KEY_TILE * 0.5 - 10, y), Vector2(lx, y), Color(0.7, 0.25, 0.2, 0.45), 1.0, 6, 4)
 			_dash(Vector2(rx, y), Vector2(size.x - 12, y), Color(0.7, 0.25, 0.2, 0.45), 1.0, 6, 4)
 		var chips := []
 		for id in defs:
