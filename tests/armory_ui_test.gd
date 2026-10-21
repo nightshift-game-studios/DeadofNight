@@ -170,6 +170,37 @@ func _go() -> void:
 	smg_w.item_power = 290
 	prog.stash = {"version": 1, "equipped": {"primary": smg_w.to_dict()}, "backpack": {}}
 	var smg_bonus: int = int(ArmoryScr.power_bonus("smg"))
+	# optics picker (GOOEY_OPTICS §2): factory row first + zoom / ADS / sway / night / price on every optic row
+	menu._select_weapon("sniper_rifle")
+	await process_frame
+	var osl = menu.find_child("Slot_optic", true, false)
+	check(osl != null and osl.find_child("OpticFactory", true, false) != null, "optic slot: factory sights row")
+	var ost: Array = osl.find_children("OpticStats", "", true, false) if osl else []
+	check(ost.size() >= 2, "optic rows carry stat strips (%d)" % ost.size())
+	var all_stats := true
+	for fl in ost:
+		for k in ["Stat_zoom", "Stat_ads", "Stat_sway", "Stat_night"]:
+			if fl.get_node_or_null(k) == null:
+				all_stats = false
+	check(all_stats, "every optic strip: zoom, ADS speed, sway, night")
+	var fac_zoom: String = osl.find_child("OpticFactory", true, false).find_child("Stat_zoom", true, false).text if osl else ""
+	check(fac_zoom.begins_with("ZOOM ") and fac_zoom.ends_with("x"), "factory zoom chip (%s)" % fac_zoom)
+	var fovs := []
+	for l in osl.find_children("OpticFov", "", true, false):
+		fovs.append(str(l.text))
+	check(fovs.any(func(t): return t.begins_with("ADS FOV capped at")), "ADS FOV capped at… wording (%s)" % ", ".join(fovs.slice(0, 3)))
+	var lamp: Dictionary = load("res://scripts/armory/armory.gd").optic_profile("sniper_rifle", "lamplight_reflex")
+	if not lamp.is_empty() and float(lamp.get("fov_cap", 0)) > 0.0:
+		check(menu.optic_fov_line(lamp).ends_with("no zoom") == (str(lamp.fov_source) == "class"), "Lamplight on the sniper: %s" % menu.optic_fov_line(lamp))
+	check(menu.optic_fov_line({"fov_cap": 42.0, "fov_source": "optic", "ads_fov": 42.0}) == "ADS FOV capped at 42", "optic cap wins: ADS FOV capped at 42")
+	check(menu.optic_fov_line({"fov_cap": 0.0, "ads_fov": 55.0}) == "ADS FOV 55", "no cap: plain ADS FOV")
+	var priced := true
+	for row in osl.get_children():
+		if row.has_meta("att_id") and row.find_child("OpticStats", true, false) != null:
+			var acts = row.find_child("Actions", true, false)
+			if acts == null or not (acts.get_child(0) is Label) or not str(acts.get_child(0).text).is_valid_int():
+				priced = false
+	check(priced, "optic rows show the price")
 	menu._select_weapon("smg")
 	await process_frame
 	var wip = menu._right.find_child("WeaponIP", true, false)

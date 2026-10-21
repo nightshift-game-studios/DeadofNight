@@ -312,6 +312,7 @@ func _rebuild_detail() -> void:
 		return
 	for c in _right.get_children():
 		c.queue_free()
+	_optic_factory = {}
 	var type_name := _weapon_type_name()
 	var hdr := HBoxContainer.new()
 	hdr.name = "WeaponHeader"
@@ -426,6 +427,11 @@ func _slot_section(slot_id: String, slot_name: String, equipped_id: String) -> V
 		var uq := _btn("UNEQUIP", func(): _do_unequip(slot_id))
 		head.add_child(uq)
 	var atts: Array = api.list_attachments(_weapon_id, slot_id)
+	if slot_id == "optic" and api.has_method("list_optics"): # GOOEY_OPTICS §2: factory row first, stats vs factory
+		var ch: Array = api.list_optics(_weapon_id)
+		if not ch.is_empty() and str(ch[0].get("optic_id", "x")) == "":
+			_optic_factory = ch[0]
+			box.add_child(_factory_optic_row(ch[0]))
 	if atts.is_empty():
 		box.add_child(wrap_label("none for this weapon", 11, UIStyle.BONE_DIM))
 	for a in atts:
@@ -456,6 +462,9 @@ func _att_row(a: Dictionary) -> PanelContainer:
 	if bool(a.get("unique", false)):
 		nh.add_child(UIStyle.label("UNIQUE", 9, UIStyle.BLOOD.lightened(0.3), true))
 	v.add_child(wrap_label(str(a.get("summary", "")), 11, UIStyle.BONE_DIM))
+	var op = a.get("optic", {})
+	if str(a.get("slot", "")) == "optic" and op is Dictionary and not (op as Dictionary).is_empty():
+		_add_optic_stats(v, op)
 	var drawback := str(a.get("drawback", ""))
 	if drawback != "":
 		v.add_child(wrap_label(drawback, 11, UIStyle.BLOOD.lightened(0.25)))
@@ -509,6 +518,128 @@ func _att_row(a: Dictionary) -> PanelContainer:
 			eq.tooltip_text = refusal_reason(str(a.id), "equip")
 		actions.add_child(eq)
 	return p
+
+
+# ------------------------------------------------------------------ optics (GOOEY_OPTICS.md §2)
+
+var _optic_factory: Dictionary = {} ## factory row of the selected weapon: the baseline the stat deltas compare against
+
+const NIGHT_PIPS := {"poor": 1, "fair": 2, "good": 3}
+
+
+## "ADS FOV capped at…" line (art5 FOV rule: aimed FOV = min(class FOV x fov_mult, fov_cap)).
+static func optic_fov_line(p: Dictionary) -> String:
+	var cap := float(p.get("fov_cap", 0.0))
+	var fov := float(p.get("ads_fov", 0.0))
+	if cap <= 0.0:
+		return "ADS FOV %d" % roundi(fov)
+	if str(p.get("fov_source", "class")) == "optic":
+		return "ADS FOV capped at %d" % roundi(cap)
+	return "ADS FOV capped at %d  //  this gun aims at %d: no zoom" % [roundi(cap), roundi(fov)]
+
+
+static func _pct(mult: float) -> String:
+	var d := roundi((mult - 1.0) * 100.0)
+	return "±0%" if d == 0 else ("%+d%%" % d)
+
+
+## Stat chips for one optic profile: zoom, ADS speed, sway, aimed spread / move, night (+ glow swatch), badges, FOV line.
+## Deltas are against the factory row of the same weapon (lower is better for ADS time / sway / spread).
+func optic_stats(p: Dictionary) -> Array:
+	var base: Dictionary = _optic_factory if not _optic_factory.is_empty() else p
+	var out := []
+	out.append({"id": "zoom", "text": "ZOOM %.1fx" % float(p.get("true_magnification", 1.0)), "good": float(p.get("true_magnification", 1.0)) > float(base.get("true_magnification", 1.0)) + 0.05})
+	var t := float(p.get("ads_time", 0.25))
+	var bt := float(base.get("ads_time", t))
+	var tm := t / bt if bt > 0.0 else 1.0
+	out.append({"id": "ads", "text": "ADS %d ms%s" % [roundi(t * 1000.0), "" if absf(tm - 1.0) < 0.005 else "  " + _pct(tm)], "good": tm < 0.995, "bad": tm > 1.005})
+	var sw := float(p.get("sway_mult", 1.0)) / maxf(float(base.get("sway_mult", 1.0)), 0.01)
+	out.append({"id": "sway", "text": "SWAY " + _pct(sw), "good": sw < 0.995, "bad": sw > 1.005})
+	var sp := float(p.get("ads_spread_mult", 1.0)) / maxf(float(base.get("ads_spread_mult", 1.0)), 0.01)
+	if absf(sp - 1.0) >= 0.005:
+		out.append({"id": "spread", "text": "AIM SPREAD " + _pct(sp), "good": sp < 1.0, "bad": sp > 1.0})
+	var mv := float(p.get("ads_move_mult", 0.7))
+	if absf(mv - float(base.get("ads_move_mult", mv))) >= 0.005:
+		out.append({"id": "move", "text": "AIM MOVE %d%%" % roundi(mv * 100.0), "good": mv > float(base.get("ads_move_mult", mv)), "bad": mv < float(base.get("ads_move_mult", mv))})
+	var n := int(NIGHT_PIPS.get(str(p.get("night", "poor")), 1))
+	out.append({"id": "night", "text": "NIGHT " + "●".repeat(n) + "○".repeat(3 - n), "good": n >= 3})
+	return out
+
+
+func _add_optic_stats(v: VBoxContainer, p: Dictionary) -> void:
+	var fl := HFlowContainer.new()
+	fl.name = "OpticStats"
+	fl.set_meta("optic_id", str(p.get("optic_id", "")))
+	fl.add_theme_constant_override("h_separation", 6)
+	fl.add_theme_constant_override("v_separation", 3)
+	v.add_child(fl)
+	var lab := UIStyle.label(str(p.get("label", "")).to_upper(), 11, Rarity.color(Rarity.from_id(str(p.get("rarity", "common")))), true)
+	lab.name = "OpticLabel"
+	fl.add_child(lab)
+	for st in optic_stats(p):
+		var col := UIStyle.GOOD if bool(st.get("good", false)) else (UIStyle.BLOOD.lightened(0.3) if bool(st.get("bad", false)) else UIStyle.BONE_DIM)
+		var l := UIStyle.label(str(st.text), 10, col, true)
+		l.name = "Stat_" + str(st.id)
+		fl.add_child(l)
+		if st.id == "night":
+			var g = p.get("glow", {})
+			if g is Dictionary and str(g.get("mode", "none")) != "none":
+				var sw := ColorRect.new()
+				sw.name = "GlowSwatch"
+				sw.color = Color.from_string(str(g.get("color", "#FFFFFF")), Color.WHITE)
+				sw.custom_minimum_size = Vector2(9, 9)
+				sw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+				sw.tooltip_text = "%s reticle" % str(g.get("mode", "lit"))
+				fl.add_child(sw)
+	var badges := []
+	if bool(p.get("overlay", false)):
+		badges.append("SCOPE OVERLAY")
+	if not bool(p.get("replaces_irons", true)) and str(p.get("optic_id", "")) != "":
+		badges.append("KEEPS FACTORY IRONS")
+	if bool(p.get("fallback", false)):
+		badges.append("MODEL COMING")
+	for b in badges:
+		var bl := UIStyle.label(b, 9, UIStyle.RUST.lightened(0.3), true)
+		bl.name = "Badge_" + b.replace(" ", "_")
+		fl.add_child(bl)
+	var fv := UIStyle.label(optic_fov_line(p), 10, UIStyle.BONE_DIM)
+	fv.name = "OpticFov"
+	v.add_child(fv)
+	var tr := str(p.get("tradeoff", ""))
+	if tr != "":
+		v.add_child(wrap_label(tr, 10, UIStyle.BONE_DIM.darkened(0.15)))
+
+
+## Factory sights row (no part): irons or the sniper's built-in scope. USE = unequip the optic slot.
+func _factory_optic_row(p: Dictionary) -> PanelContainer:
+	var row := PanelContainer.new()
+	row.name = "OpticFactory"
+	var eq := str(p.get("state", "")) == "equipped"
+	row.add_theme_stylebox_override("panel", UIStyle.cut_box(Color(UIStyle.INK, 0.85), UIStyle.GOOD if eq else UIStyle.OLIVE, 2, 8))
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 8)
+	row.add_child(h)
+	h.add_child(UIStyle.attachment_icon("", 40, "optic"))
+	var v := VBoxContainer.new()
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.add_theme_constant_override("separation", 1)
+	h.add_child(v)
+	v.add_child(UIStyle.label(str(p.get("name", "Factory Irons")).to_upper(), 13, UIStyle.BONE, true))
+	var sm := str(p.get("summary", ""))
+	if sm != "":
+		v.add_child(wrap_label(sm, 11, UIStyle.BONE_DIM))
+	_add_optic_stats(v, p)
+	var actions := VBoxContainer.new()
+	actions.name = "Actions"
+	actions.custom_minimum_size.x = 64
+	actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	h.add_child(actions)
+	actions.add_child(UIStyle.label("FREE", 12, UIStyle.BONE_DIM, true))
+	if eq:
+		actions.add_child(UIStyle.label("ON", 12, UIStyle.GOOD, true))
+	else:
+		actions.add_child(_btn("USE", func(): _do_unequip("optic")))
+	return row
 
 
 func _disable_reason(id: String, is_upgrade: bool) -> String:
