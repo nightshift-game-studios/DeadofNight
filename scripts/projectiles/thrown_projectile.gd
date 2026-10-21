@@ -129,6 +129,7 @@ static func spawn(spec_in: Dictionary) -> ThrownProjectile:
 	p.global_position = spec_in.get("pos", Vector3.ZERO)
 	p.start_pos = p.global_position
 	spawned_total += 1
+	NetGate.projectile_spawned(spec_in, p) # NET P1: co-op host -> net id + every client spawns a visual-only copy of this spec; solo / client copy: no-op
 	if str(d.get("body", "")) == "grenade": # playtest #25: the RigidBody grenade does the flight
 		p.body = Grenade.from_projectile(p)
 	return p

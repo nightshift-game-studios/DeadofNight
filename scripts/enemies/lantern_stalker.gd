@@ -26,6 +26,8 @@ var _fx: Dictionary = {}
 var _dark: bool = false
 var _loco: Dictionary = {} ## walk/run clip names saved while DarkSneak stands in for them
 var lantern_light: OmniLight3D ## code light on the Lantern socket (glb has no lights)
+var _beam_dir: Vector3 = Vector3.FORWARD ## NET B2: last beam / spit aim, for co-op puppets
+var _spit_dir: Vector3 = Vector3.FORWARD
 
 
 func configure_boss(id: String, n: int, difficulty_id: String = "") -> void:
@@ -79,6 +81,9 @@ func _physics_process(delta: float) -> void:
 		_set_dark(false)
 		if lantern_light:
 			lantern_light.visible = false
+		super._physics_process(delta)
+		return
+	if not is_multiplayer_authority(): # NET B1: co-op client puppet -> phases come from the host (net_apply_boss_state); solo: always authority
 		super._physics_process(delta)
 		return
 	match phase:
@@ -148,16 +153,22 @@ func _begin_beam() -> void:
 	phase = Phase.BEAM
 	_attack_anim_t = maxf(_attack_anim_t, 0.1)
 	_phase_t = float(_tg.get("beam_windup", 0.8))
+	_beam_dir = Vector3.FORWARD
+	if target:
+		_beam_dir = Common.flat_dir_to(global_position, target.global_position)
+	_show_beam()
+
+
+## LanternRaise + beam telegraph along _beam_dir (host and co-op puppets, NET B3).
+func _show_beam() -> void:
+	var t := float(_tg.get("beam_windup", 0.8))
 	_set_dark(false)
 	_light("beam_energy", 3.0)
-	var clip_len := Art.clip_length(self, "raise", _phase_t)
-	Art.play(self, "raise", float(_an.get("blend", 0.15)), clip_len / maxf(_phase_t, 0.05))
-	var dir := Vector3.FORWARD
-	if target:
-		dir = Common.flat_dir_to(global_position, target.global_position)
+	var clip_len := Art.clip_length(self, "raise", t)
+	Art.play(self, "raise", float(_an.get("blend", 0.15)), clip_len / maxf(t, 0.05))
 	var from := Art.socket_pos(self, str(_fx.get("beam_socket", "BeamOrigin")), global_position + Vector3(0, 1.2, 0))
-	Telegraph.spawn_line(get_parent() if get_parent() else self, from, dir,
-		float(_tg.get("beam_length", 18.0)), _phase_t, Color(1.0, 0.85, 0.25, 0.55), 0.7)
+	Telegraph.spawn_line(get_parent() if get_parent() else self, from, _beam_dir,
+		float(_tg.get("beam_length", 18.0)), t, Color(1.0, 0.85, 0.25, 0.55), 0.7)
 
 
 func _fire_spit() -> void:
@@ -166,6 +177,7 @@ func _fire_spit() -> void:
 	var origin := Art.socket_pos(self, str(_fx.get("spit_socket", "SpitMuzzle")), global_position + Vector3(0, 1.3, 0))
 	var aim := target.global_position + Vector3(0, 1.0, 0)
 	var dir := (aim - origin).normalized()
+	_spit_dir = dir
 	var dmg := Catalog.attack_damage(boss_id, round_n, 10, 2, float(_tg.get("spit_damage_mult", 1.8)))
 	Spit.fire(self, origin, dir, dmg, float(_tg.get("spit_speed", 14.0)))
 
@@ -178,9 +190,15 @@ func _begin_sidestep() -> void:
 	_sidestep_dir = Vector3(-away.z, 0, away.x)
 	if randf() < 0.5:
 		_sidestep_dir = -_sidestep_dir
+	_show_sidestep()
+
+
+## Sidestep clip toward _sidestep_dir (host and co-op puppets, NET B3; the puppet's motion comes from snapshots).
+func _show_sidestep() -> void:
+	var t := float(_an.get("sidestep_time", 0.5))
 	# SidestepR = the character's right (+X local); faces -Z, so right = basis.x.
 	var right := _sidestep_dir.dot(global_basis.x) >= 0.0
-	Art.play(self, "sidestep_r" if right else "sidestep_l", 0.08, Art.clip_length(self, "sidestep_r", _phase_t) / maxf(_phase_t, 0.05))
+	Art.play(self, "sidestep_r" if right else "sidestep_l", 0.08, Art.clip_length(self, "sidestep_r", t) / maxf(t, 0.05))
 
 
 ## Dark phase: DarkSneak crouch replaces walk/run, the lantern dims. Meta "lantern_dark" for VFX/HUD.
@@ -206,3 +224,42 @@ func _set_dark(on: bool) -> void:
 
 func is_dark() -> bool:
 	return _dark
+
+
+# ------------------------------------------------------------------ NET B2 / B3: co-op boss state (Netz phase 3b)
+## B2 (host): [phase, beam dir, spit dir, sidestep dir]. NetWorld sends it on change.
+func net_boss_state() -> Array:
+	return [int(phase), _beam_dir, _spit_dir, _sidestep_dir]
+
+
+## B3 (client puppet): dark sneak, beam windup + telegraph, a visual-only spit (no damage; the host's spit is the
+## real one), sidestep clip, back to hunting. Never damages.
+func net_apply_boss_state(st: Array) -> void:
+	if st.size() < 4:
+		return
+	var ph := int(st[0])
+	if ph == int(phase):
+		return
+	phase = ph as Phase
+	_beam_dir = st[1] if st[1] is Vector3 else Vector3.FORWARD
+	_spit_dir = st[2] if st[2] is Vector3 else Vector3.FORWARD
+	_sidestep_dir = st[3] if st[3] is Vector3 else Vector3.RIGHT
+	match phase:
+		Phase.DARK:
+			_begin_dark()
+			_attack_anim_t = 0.0 # DarkSneak replaces walk/run: the puppet tick keeps animating locomotion
+		Phase.BEAM:
+			_show_beam()
+			_attack_anim_t = float(_tg.get("beam_windup", 0.8))
+		Phase.SPIT:
+			var origin := Art.socket_pos(self, str(_fx.get("spit_socket", "SpitMuzzle")), global_position + Vector3(0, 1.3, 0))
+			Spit.fire(self, origin, _spit_dir, 0, float(_tg.get("spit_speed", 14.0)), true)
+			Art.play(self, "spit", 0.05, 1.0)
+			_attack_anim_t = float(_an.get("spit_recover", 0.3))
+		Phase.SIDESTEP:
+			_show_sidestep()
+			_attack_anim_t = float(_an.get("sidestep_time", 0.5))
+		_:
+			_set_dark(false)
+			_light("light_energy", 1.6)
+			_attack_anim_t = 0.0

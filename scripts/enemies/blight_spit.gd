@@ -5,11 +5,13 @@ var velocity: Vector3 = Vector3.ZERO
 var damage: int = 20
 var lifetime: float = 3.5
 var _owner: Node = null
+var visual_only: bool = false ## NET B5: a co-op client's copy of the host's spit: flies and pops, never damages
 
 
-static func fire(from_node: Node3D, origin: Vector3, dir: Vector3, dmg: int, speed: float = 14.0) -> Area3D:
+static func fire(from_node: Node3D, origin: Vector3, dir: Vector3, dmg: int, speed: float = 14.0, visual: bool = false) -> Area3D:
 	var p := load("res://scripts/enemies/blight_spit.gd").new() as Area3D
 	p.damage = dmg
+	p.visual_only = visual
 	p.velocity = dir.normalized() * speed
 	p._owner = from_node
 	from_node.get_tree().current_scene.add_child(p)
@@ -52,8 +54,10 @@ func _physics_process(delta: float) -> void:
 func _on_body(body: Node) -> void:
 	if body == _owner:
 		return
-	if body.is_in_group("player") and body.has_method("take_damage"):
-		body.call("take_damage", damage, _owner)
+	# NET B5: co-op host also hits remote avatars (they forward the damage to their owner); visual copies never damage.
+	if (body.is_in_group("player") or body.is_in_group("net_avatar")) and body.has_method("take_damage"):
+		if not visual_only:
+			body.call("take_damage", damage, _owner)
 		queue_free()
 	elif body is StaticBody3D or body is CSGShape3D:
 		queue_free()

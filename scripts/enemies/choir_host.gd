@@ -54,7 +54,7 @@ func _cavity(mult: float) -> void:
 
 
 func take_damage(amount: float, hit_pos: Vector3 = Vector3.ZERO, crit: bool = false, source: Node = null) -> bool:
-	if channeling and shield_hp > 0.0:
+	if channeling and shield_hp > 0.0 and is_multiplayer_authority(): # NET B4: a co-op puppet's hit goes to the host whole (its shield absorbs there)
 		var absorbed: float = minf(shield_hp, amount)
 		shield_hp -= absorbed
 		amount -= absorbed
@@ -75,6 +75,9 @@ func _physics_process(delta: float) -> void:
 		_dim_t -= delta
 		if _dim_t <= 0.0 and not channeling:
 			_cavity(1.0)
+	if not is_multiplayer_authority(): # NET B1: co-op client puppet -> phases come from the host (net_apply_boss_state); solo: always authority
+		super._physics_process(delta)
+		return
 	match phase:
 		Phase.WALK:
 			_cd = maxf(_cd - delta, 0.0)
@@ -155,3 +158,27 @@ func _end_channel(interrupted: bool) -> void:
 ## Shield fraction remaining 0..1 (UI / tests).
 func shield_frac() -> float:
 	return 0.0 if shield_max <= 0.0 else clampf(shield_hp / shield_max, 0.0, 1.0)
+
+
+# ------------------------------------------------------------------ NET B2 / B3: co-op boss state (Netz phase 3b)
+## B2 (host): [phase, channeling, shield left in 5% steps (0..20)]. NetWorld sends it on change.
+func net_boss_state() -> Array:
+	return [int(phase), channeling, int(round(shield_frac() * 20.0))]
+
+
+## B3 (client puppet): channel start (telegraph ring, Channel loop, cavity glow), shield break (ChannelHit stagger,
+## dimmed cavity) or a normal end, plus the shield fraction for the boss bar. Never spawns echoes (main.gd only
+## wires request_echo on the host) and never damages.
+func net_apply_boss_state(st: Array) -> void:
+	if st.size() < 3:
+		return
+	var ph := int(st[0])
+	if ph == Phase.CHANNEL and phase != Phase.CHANNEL:
+		_begin_channel()
+		_attack_anim_t = float(_tg.get("channel_duration", 4.0))
+	elif phase == Phase.CHANNEL and ph != Phase.CHANNEL:
+		_end_channel(ph == Phase.STAGGER)
+		_attack_anim_t = _phase_t if ph == Phase.STAGGER else 0.0
+	phase = ph as Phase
+	if channeling:
+		shield_hp = shield_max * clampf(float(st[2]) / 20.0, 0.0, 1.0)
