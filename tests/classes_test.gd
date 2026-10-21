@@ -221,6 +221,9 @@ func _migration_checks() -> void:
 	var c1b := ConfigFile.new()
 	c1b.load(dir.path_join("char_1.cfg"))
 	check(chars.last_migration == "progress_newer" and prog.xp == 3000 and int(c1b.get_value("stats", "xp")) == 3000, "newer progress.cfg (older build) wins and is mirrored")
+	# renamed node id (Leech Habit -> Bloodtithe): old saves keep the rank
+	check(prog.migrate_ranks({"sv_leech": 1, "sv_root": 1}, []) == {"sv_bloodtithe": 1, "sv_root": 1} and prog.get_skill("sv_bloodtithe").name == "Bloodtithe",
+		"old id sv_leech loads as sv_bloodtithe (Bloodtithe)")
 	# SaveMigration knows the folder
 	var SM = load("res://scripts/autoload/save_migration.gd")
 	var base := OS.get_user_data_dir().path_join("classes_sm_test")

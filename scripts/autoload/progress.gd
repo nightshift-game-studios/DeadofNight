@@ -267,12 +267,17 @@ static func migrate_armory(v) -> Dictionary:
 
 ## v1 -> v2: a ranks dict wins; otherwise each legacy unlocked id that still exists becomes rank 1.
 ## Unknown ids are dropped and ranks are clamped to the node's max.
+## Renamed node ids: saved ranks under the old id load under the new one.
+const RANK_ID_ALIASES := {"sv_leech": "sv_bloodtithe"} ## Batch C "Leech Habit" -> "Bloodtithe" (banned-name check)
+
+
 func migrate_ranks(ranks_value, legacy_unlocked) -> Dictionary:
 	var out := {}
 	if typeof(ranks_value) == TYPE_DICTIONARY:
-		for id in ranks_value:
-			if _skill_nodes.has(str(id)) and int(ranks_value[id]) > 0:
-				out[str(id)] = mini(int(ranks_value[id]), node_max_rank(str(id)))
+		for raw in ranks_value:
+			var id := str(RANK_ID_ALIASES.get(str(raw), str(raw)))
+			if _skill_nodes.has(id) and int(ranks_value[raw]) > 0:
+				out[id] = maxi(int(out.get(id, 0)), mini(int(ranks_value[raw]), node_max_rank(id)))
 	elif typeof(legacy_unlocked) == TYPE_ARRAY:
 		for id in legacy_unlocked:
 			if _skill_nodes.has(str(id)):

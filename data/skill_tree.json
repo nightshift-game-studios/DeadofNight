@@ -2509,12 +2509,12 @@
 			]
 		},
 		{
-			"id": "sv_leech",
-			"name": "Leech Habit",
+			"id": "sv_bloodtithe",
+			"name": "Bloodtithe",
 			"branch": "survivor",
 			"type": "passive",
 			"keystone": false,
-			"icon": "sv_leech",
+			"icon": "sv_bloodtithe",
 			"x": 11,
 			"y": 5,
 			"ranks": 1,
@@ -2602,7 +2602,7 @@
 				3
 			],
 			"requires": [
-				"sv_leech"
+				"sv_bloodtithe"
 			],
 			"requires_any": [],
 			"choice_group": "",
