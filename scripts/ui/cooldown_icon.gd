@@ -4,6 +4,7 @@ extends Control
 ## recharging and lights its border when ready.
 
 var glyph: String = "G"
+var icon: Texture2D = null ## Desi icon (e.g. UIStyle.ability_icon_tex); drawn instead of the glyph when set
 var key: String = "G"
 var color: Color = UIStyle.RUST
 var fraction: float = 1.0 ## 0 = just used, 1 = ready
@@ -77,7 +78,11 @@ func _draw() -> void:
 	var fs := int(size.y * 0.42)
 	var gs := f.get_string_size(glyph, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
 	var gc := UIStyle.INK if ready else UIStyle.BONE
-	draw_string(f, Vector2((size.x - gs.x) * 0.5, size.y * 0.5 + fs * 0.36), glyph, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, gc)
+	if icon:
+		var isz := size * 0.64
+		draw_texture_rect(icon, Rect2((size - isz) * 0.5 - Vector2(0, size.y * 0.04), isz), false, Color(gc, 1.0))
+	else:
+		draw_string(f, Vector2((size.x - gs.x) * 0.5, size.y * 0.5 + fs * 0.36), glyph, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, gc)
 	var kf: Font = UIStyle.body_bold()
 	draw_string(kf, Vector2(4, size.y - 4), key, HORIZONTAL_ALIGNMENT_LEFT, -1, int(size.y * 0.24), Color(gc, 0.8))
 	if max_charges > 1: # charge pips, bottom-right

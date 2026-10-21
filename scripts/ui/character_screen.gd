@@ -1149,7 +1149,23 @@ func _class_item_block(b: VBoxContainer, item) -> void:
 	var head := UIStyle.label(("%s CLASS ITEM" % str(item.class_id).to_upper()) + ("  //  WRONG CLASS: NO EFFECT" if st == "wrong_class" else ""),
 		12, UIStyle.BAD.lightened(0.15) if st == "wrong_class" else UIStyle.TIER_LEGENDARY.lightened(0.4), true)
 	head.name = "ClassItemHead"
-	b.add_child(head)
+	var ci_tex := UIStyle.class_item_icon_tex(str(item.class_effect)) # Desi ci_<id>.png
+	if ci_tex:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		var ti := TextureRect.new()
+		ti.name = "ClassItemIcon"
+		ti.texture = ci_tex
+		ti.custom_minimum_size = Vector2(28, 28)
+		ti.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ti.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		ti.modulate = Color(1, 1, 1, 0.45) if st == "wrong_class" else Color.WHITE
+		row.add_child(ti)
+		head.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(head)
+		b.add_child(row)
+	else:
+		b.add_child(head)
 	var l := UIStyle.label(item.class_line(), 12, UIStyle.BONE if st == "active" else UIStyle.BONE_DIM)
 	l.name = "ClassItemLine"
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

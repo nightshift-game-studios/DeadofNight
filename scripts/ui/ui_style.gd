@@ -437,6 +437,32 @@ static func ip_breakdown_block(bd: Dictionary, big: int = 28, small: int = 11,
 	return v
 
 
+# ------------------------------------------------------------------ skill / ability / class-item icons
+
+## Glyph-only 256px icons (Desi): res://assets/icons/skill_<icon>.png, ability_<id>.png, <ci_id>.png. Null if missing.
+static func _icon_tex(path: String) -> Texture2D:
+	if ResourceLoader.exists(path):
+		var t = load(path)
+		if t is Texture2D:
+			return t
+	return null
+
+
+## Skill node icon by its "icon" key (skill_tree.json; falls back to the node id).
+static func skill_icon_tex(icon_key: String) -> Texture2D:
+	return null if icon_key == "" else _icon_tex("res://assets/icons/skill_%s.png" % icon_key)
+
+
+## Class Q-ability icon by ability id (dash, rally_banner, grave_bell, ...).
+static func ability_icon_tex(ability_id: String) -> Texture2D:
+	return null if ability_id == "" else _icon_tex("res://assets/icons/ability_%s.png" % ability_id)
+
+
+## Class item icon by item id (ci_*).
+static func class_item_icon_tex(item_id: String) -> Texture2D:
+	return null if item_id == "" else _icon_tex("res://assets/icons/%s.png" % item_id)
+
+
 # ------------------------------------------------------------------ attachment icons
 
 ## res://assets/icons/att_<id>.png when it exists, else null.

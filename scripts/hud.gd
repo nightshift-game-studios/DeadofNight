@@ -673,6 +673,13 @@ func set_ability(ability_name: String, left: float, total: float) -> void:
 	ic.visible = ability_name != ""
 	if ability_name != "":
 		ic.glyph = ability_name.substr(0, 2).to_upper()
+		var pl: Node = _player_ref if _player_ref != null and is_instance_valid(_player_ref) else (get_tree().get_first_node_in_group("player") if is_inside_tree() else null)
+		var ab = pl.get("ability") if pl != null else null
+		var aid := str(ab.id) if ab != null and "id" in ab else ""
+		if aid != ic.get_meta("ability_id", "~"):
+			ic.set_meta("ability_id", aid)
+			ic.icon = UIStyle.ability_icon_tex(aid) # Desi ability_<id>.png; null -> the 2-letter glyph
+			ic.queue_redraw()
 		ic.set_state(left, total)
 
 

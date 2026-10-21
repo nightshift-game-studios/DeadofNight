@@ -1192,10 +1192,21 @@ class SkillTile extends Button:
 		# glyph
 		var f: Font = UIStyle.FONT_STENCIL
 		var fs := 18 if typ == "keystone" else 15
-		var g := UIStyle.initials(str(def.name))
-		var gs := f.get_string_size(g, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
-		draw_string(f, Vector2((size.x - gs.x) * 0.5, size.y * 0.5 + fs * 0.36 - (3 if typ == "capstone" else 0)), g,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(glyph_c, a))
+		var icon_tex := UIStyle.skill_icon_tex(str(def.get("icon", id)))
+		if icon_tex != null: # icon art, tinted by state (glyph_c), initials as fallback
+			var isz := size.x * (0.86 if typ == "keystone" else 0.82)
+			var ic := Rect2((size.x - isz) * 0.5, (size.y - isz) * 0.5 - (3 if typ == "capstone" else 0), isz, isz)
+			var tint := Color(1, 1, 1, a)
+			match st:
+				"locked": tint = Color(0.42, 0.42, 0.38, 0.75 * a)
+				"unaffordable": tint = Color(0.72, 0.70, 0.64, a)
+				"excluded": tint = Color(0.45, 0.33, 0.28, 0.7 * a)
+			draw_texture_rect(icon_tex, ic, false, tint)
+		else:
+			var g := UIStyle.initials(str(def.name))
+			var gs := f.get_string_size(g, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+			draw_string(f, Vector2((size.x - gs.x) * 0.5, size.y * 0.5 + fs * 0.36 - (3 if typ == "capstone" else 0)), g,
+				HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(glyph_c, a))
 		var bf: Font = UIStyle.body_bold()
 		# type markers
 		if typ == "active":
