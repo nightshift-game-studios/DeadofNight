@@ -342,8 +342,8 @@ func _host_3b(bob: int, cara: int) -> void:
 			boss.queue_free()
 			await _sleep(0.5)
 	var PS: Script = Net.projectiles.proj_script()
-	if PS == null:
-		print("[%s] SKIP  projectiles: ThrownProjectile not in this tree" % pname)
+	if PS == null or not PS.source_code.contains("NetGate.projectile_spawned"):
+		print("[%s] SKIP  projectiles: ThrownProjectile / its P1 line (patches/P1_thrown_projectile.patch) not in this tree" % pname)
 		return
 	var tid: String = str(PS.data().get("types", {}).keys()[0])
 	var spec := {"type_id": StringName(tid), "variant": &"", "rarity": 0, "pos": main._player_spawn.origin + Vector3(6, 4, 6),
