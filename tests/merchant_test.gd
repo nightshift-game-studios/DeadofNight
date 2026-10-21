@@ -441,7 +441,7 @@ func _run() -> void:
 	check(rb.ok and rb.reason == "" and prog.gravemarks == 3 and cur_sig == [3], "buy deducts exactly the price via Progress (currency_changed %s)" % [cur_sig])
 	var in_inv: bool = inv.backpack[gun.slot].has(gun) or inv.equipped[gun.slot] == gun
 	check(in_inv and gun.item_id == str(o.item_id), "gun is in the stash Inventory with the offer's item_id")
-	check(inv.backpack[gun.slot].has(gun) and not gun.seen and inv.carried_count() == carried0 + 1, "slot occupied -> backpack, seen=false (unseen badge)")
+	check(inv.backpack[gun.slot].has(gun) and gun.seen == (not inv.badge_worthy(gun)) and inv.carried_count() == carried0 + 1, "slot occupied -> backpack, '!' only if Rare+ / an upgrade (playtest #18)")
 	check(_count("bought") == 1 and sig.filter(func(s): return s[0] == "bought")[0][3] == o.price and _count("stock", "buy") == 1, "purchased(offer_id, item, price) + stock_changed(buy)")
 	var after: Dictionary = _offer(m, func(x): return x.offer_id == o.offer_id)
 	check(after.sold and after.owned and after.reason == "Sold out" and m.buy_check(o.offer_id).reason == "Sold out" and m.buy(o.offer_id).reason == "Sold out",
