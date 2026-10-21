@@ -24,8 +24,21 @@ var _reroll_btn: Button
 var _skip_btn: Button
 var _banish_btn: Button
 var _hint: RichTextLabel
-var refusal_label: Label ## NET M13: "REROLL REFUSED (...)" after a refused co-op reroll; cleared by the next offer
 var _focus_slot: int = 0
+var toast_label: Label ## co-op reroll refusal toast (RunState.reroll_refused -> friendly last_refusal_reason)
+var refusal_label: Label ## NET M13 name for the same label (== toast_label)
+var _toast_t: float = 0.0
+var _seen_pending: bool = false ## last RunState.reroll_pending we drew (host answer pending -> reroll disabled)
+
+## RunState.last_refusal_reason -> player text. Unknown reasons fall back to a generic line.
+const REFUSAL_TEXT := {
+	"not_enough_points": "Not enough points for that reroll",
+	"points": "Not enough points for that reroll",
+	"timeout": "Host didn't answer. Reroll not charged",
+	"busy": "Host is busy. Try the reroll again",
+	"offer_closed": "Offer closed. Reroll not charged",
+}
+const TOAST_SECS := 2.8
 
 
 func _init() -> void:
@@ -45,7 +58,7 @@ func _ready() -> void:
 	RunState.rerolled.connect(func(_c, _f): _ui_snd("ui_equip"))
 	RunState.banished.connect(func(_i): _ui_snd("ui_scrap_dismantle"))
 	RunState.cards_changed.connect(_refresh_run_list)
-	if RunState.has_signal("reroll_refused"): # NET M13: a co-op paid reroll the host refused / timed out
+	if RunState.has_signal("reroll_refused"): # co-op paid reroll refused / timed out by the host (Netz M13)
 		RunState.reroll_refused.connect(_on_reroll_refused)
 
 
@@ -79,10 +92,12 @@ func _build() -> void:
 	_reroll_btn = _action_btn("R", acts, do_reroll)
 	_skip_btn = _action_btn("S", acts, do_skip)
 	_banish_btn = _action_btn("B", acts, toggle_banish)
-	refusal_label = UIStyle.label("", 12, UIStyle.BAD, true)
-	refusal_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	refusal_label.visible = false
-	content.add_child(refusal_label)
+	toast_label = UIStyle.label("", 13, UIStyle.BAD.lightened(0.2), true)
+	toast_label.name = "RerollToast"
+	toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	toast_label.modulate.a = 0.0
+	content.add_child(toast_label)
+	refusal_label = toast_label
 	_hint = _rich(11, 900)
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(_hint)
@@ -165,8 +180,7 @@ func _on_offer_ready(cards: Array, is_milestone: bool) -> void:
 	_entries = cards
 	_milestone = is_milestone
 	_banish_mode = false
-	if refusal_label:
-		refusal_label.visible = false
+	hide_toast()
 	if not was_open:
 		_focus_slot = 0
 		_ui_snd("loot_drop_legendary" if is_milestone else "menu_open")
@@ -182,17 +196,6 @@ func _on_offer_closed(result: String, _id: String) -> void:
 	_ui_snd("menu_close")
 	visible = false
 	_banish_mode = false
-
-
-## NET M13 (Skillz review): refresh the offer (button state, cost, points) and say why.
-const REFUSAL_TEXT := {"points": "not enough points", "timeout": "host didn't answer", "offer_closed": "offer closed"}
-func _on_reroll_refused(reason: String) -> void:
-	if not visible:
-		return
-	refresh()
-	var why: String = REFUSAL_TEXT.get(reason, reason)
-	refusal_label.text = ("REROLL REFUSED (%s)" % why if why != "" else "REROLL REFUSED").to_upper()
-	refusal_label.visible = true
 
 
 func refresh() -> void:
@@ -217,6 +220,9 @@ func _refresh_actions() -> void:
 		rr += "[color=#%s]FREE[/color]  [font_size=10][color=#%s]%d FREE LEFT[/color][/font_size]" % [NUM_COL, UIStyle.BONE_DIM.to_html(false), RunState.free_rerolls]
 	else:
 		rr += "[color=#%s]%s[/color]" % [UIStyle.BAD.to_html(false) if not RunState.can_reroll() else "e0a060", _thousands(cost)]
+	_seen_pending = reroll_pending()
+	if _seen_pending:
+		rr = "REROLL  [color=#%s]WAITING FOR HOST...[/color]" % UIStyle.BONE_DIM.to_html(false)
 	_reroll_btn.get_meta("text").text = rr
 	_reroll_btn.disabled = not RunState.can_reroll()
 	_skip_btn.get_meta("text").text = "SKIP  [color=#%s]+%s[/color]" % [NUM_COL, _thousands(RunState.skip_reward())]
@@ -523,7 +529,58 @@ func take(i: int) -> bool:
 
 
 func do_reroll() -> bool:
-	return RunState.reroll()
+	var ok := bool(RunState.reroll())
+	if not ok and visible:
+		_refresh_actions() # a co-op request went out (pending) or it was refused locally: redraw the button now
+	return ok
+
+
+## RunState.reroll_pending (co-op host answer outstanding); false before Netz's M13 RunState.
+static func reroll_pending() -> bool:
+	return bool(RunState.get("reroll_pending")) if "reroll_pending" in RunState else false
+
+
+static func refusal_text(reason: String) -> String:
+	if REFUSAL_TEXT.has(reason):
+		return REFUSAL_TEXT[reason]
+	return "Reroll refused. Not charged" if reason == "" else "Reroll refused (%s). Not charged" % reason.replace("_", " ")
+
+
+func _on_reroll_refused(reason: String = "") -> void:
+	var why := reason
+	if why == "" and "last_refusal_reason" in RunState:
+		why = str(RunState.last_refusal_reason)
+	if not visible:
+		return
+	_refresh_actions()
+	show_toast(refusal_text(why))
+	_ui_snd("menu_close")
+
+
+func show_toast(text: String, secs: float = TOAST_SECS) -> void:
+	toast_label.text = text.to_upper()
+	toast_label.modulate.a = 1.0
+	_toast_t = secs
+
+
+func hide_toast() -> void:
+	_toast_t = 0.0
+	if toast_label:
+		toast_label.modulate.a = 0.0
+
+
+func toast_visible() -> bool:
+	return toast_label != null and toast_label.modulate.a > 0.01
+
+
+func _process(delta: float) -> void:
+	if not visible:
+		return
+	if reroll_pending() != _seen_pending: # host request sent / answered: enable or disable the paid reroll
+		_refresh_actions()
+	if _toast_t > 0.0:
+		_toast_t -= delta
+		toast_label.modulate.a = clampf(_toast_t / 0.5, 0.0, 1.0)
 
 
 func do_skip() -> int:
