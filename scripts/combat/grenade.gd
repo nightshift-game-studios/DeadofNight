@@ -54,7 +54,7 @@ func _ready() -> void:
 	shape.shape = s
 	add_child(shape)
 	var c := _color()
-	visual = make_visual(c, variant_of(data))
+	visual = make_visual(c, model_of(data))
 	add_child(visual)
 	_trail = GrenadeFX.attach_trail(self, c)
 	band_material = visual.get_meta("band_material") if visual.has_meta("band_material") else null
@@ -110,9 +110,14 @@ static func make_visual(c: Color, variant: String = "") -> Node3D:
 	return mesh
 
 
-## Model variant id of a grenade data dict ("variant", else "model", else "").
+## Stable variant id of a grenade data dict (ThrownProjectile spec variant, SFX keys, Netz sync); "" if none.
 static func variant_of(d: Dictionary) -> String:
-	return str(d.get("variant", d.get("model", "")))
+	return str(d.get("variant", ""))
+
+
+## Model id: "model" (a mesh override, e.g. pulse -> frag), else the variant. Picks grenades/<id>.glb.
+static func model_of(d: Dictionary) -> String:
+	return str(d.get("model", d.get("variant", "")))
 
 
 func _sfx() -> Node:
@@ -130,8 +135,17 @@ func _on_bounce(_body: Node) -> void:
 
 
 func _color() -> Color:
-	var a: Array = data.get("color", [1, 0.5, 0.2])
-	return Color(a[0], a[1], a[2])
+	return color_of(data)
+
+
+## Effect tint of a grenade data dict: "#RRGGBB" (playtest #25) or the old [r, g, b] array.
+static func color_of(d: Dictionary, key: String = "color") -> Color:
+	var v = d.get(key, [1, 0.5, 0.2])
+	if v is String:
+		return Color.html(v) if Color.html_is_valid(v) else Color(1, 0.5, 0.2)
+	if v is Array and (v as Array).size() >= 3:
+		return Color(float(v[0]), float(v[1]), float(v[2]))
+	return Color(1, 0.5, 0.2)
 
 
 func _physics_process(delta: float) -> void:

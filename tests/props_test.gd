@@ -208,12 +208,12 @@ func _grenade(world: Node3D) -> void:
 	var gdb: Node = root.get_node("GearDB")
 	var thrower := Node3D.new()
 	world.add_child(thrower)
-	var want := {"frag": Color(1, 0.55, 0.2), "pulse": Color(0.35, 0.7, 1)}
+	var want := {"frag": Color.html("#FF8C33"), "pulse": Color.html("#7FB8FF")} # playtest #25: hex effect tints
 	for gid in ["frag", "pulse"]:
 		var data: Dictionary = gdb.grenade(gid)
 		var g = G.throw_from(thrower, data, Vector3(0, 50, 0), Vector3.FORWARD, Vector3.ZERO)
 		var vis: Node3D = g.visual
-		check(vis != null and vis.scene_file_path == G.MODEL_PATH, "%s: thrown grenade shows grenade.glb" % gid)
+		check(vis != null and vis.scene_file_path == G.VARIANT_DIR + "frag.glb", "%s: thrown grenade shows Desi's bone-trim grenades/frag.glb" % gid)
 		var band := vis.find_child("Band", true, false) as MeshInstance3D
 		var bm := band.material_override as StandardMaterial3D if band else null
 		check(bm != null and bm == g.band_material and bm.albedo_color.is_equal_approx(want[gid]) and bm.emission.is_equal_approx(want[gid])
