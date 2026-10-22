@@ -612,9 +612,7 @@ func _expansion(inv: Inventory, s: String, mirrored: bool) -> Control:
 		t.pressed.connect(func(): inv.equip(it); _ui_snd("ui_equip"); refresh())
 		t.gui_input.connect(func(ev):
 			if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_RIGHT:
-				inv.dismantle(it)
-				_ui_snd("ui_scrap_dismantle")
-				refresh())
+				ask_scrap(it))
 		grid.add_child(t)
 	return holder
 
@@ -1180,10 +1178,103 @@ func _grenade_block(b: VBoxContainer, item: GearItem) -> void:
 		h.add_child(t)
 
 
-## What right-click scrap pays (Progress.scrap_value, SCRAP_API.md); 0 without Progress.
+## What right-click scrap pays (Progress.salvage_preview / scrap_value, SCRAP_API.md); 0 without Progress.
 func scrap_yield(item) -> int:
+	return int(salvage_info(item).get("scrap", 0))
+
+
+## Progress.salvage_preview(item) -> {scrap, ok, reason}; falls back to scrap_value, then a refusal without Progress.
+func salvage_info(item) -> Dictionary:
 	var prog := get_node_or_null("/root/Progress")
-	return int(prog.scrap_value(item)) if prog and prog.has_method("scrap_value") and item != null else 0
+	if item == null or prog == null:
+		return {"scrap": 0, "ok": false, "reason": "Can't be scrapped"}
+	if prog.has_method("salvage_preview"):
+		return prog.salvage_preview(item, player.inventory if player else null)
+	return {"scrap": int(prog.scrap_value(item)) if prog.has_method("scrap_value") else 0, "ok": true, "reason": ""}
+
+
+var _scrap_confirm: Control = null
+var _scrap_item: GearItem = null
+
+## Right-click scrap asks first: "SCRAP <NAME>?" with the Scrap it pays (salvage_preview); refused items show the reason.
+func ask_scrap(item: GearItem) -> void:
+	_hide_tooltip()
+	if _scrap_confirm:
+		_scrap_confirm.queue_free()
+	_scrap_item = item
+	var info := salvage_info(item)
+	var ov := ColorRect.new()
+	ov.name = "ScrapConfirm"
+	ov.color = Color(0, 0, 0, 0.55)
+	ov.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ov.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(ov)
+	_scrap_confirm = ov
+	var cc := CenterContainer.new()
+	cc.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ov.add_child(cc)
+	var pnl := PanelContainer.new()
+	pnl.custom_minimum_size = Vector2(420, 0)
+	pnl.add_theme_stylebox_override("panel", UIStyle.cut_box(Color(0.06, 0.05, 0.04, 0.98), UIStyle.RUST, 2, 12))
+	cc.add_child(pnl)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 10)
+	pnl.add_child(v)
+	var t := UIStyle.label("SCRAP %s?" % item.display_name.to_upper(), 20, item.rarity_color().lightened(0.15), true)
+	t.name = "ScrapConfirmText"
+	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(t)
+	var ok := bool(info.get("ok", false))
+	if ok:
+		var yr := HBoxContainer.new()
+		yr.alignment = BoxContainer.ALIGNMENT_CENTER
+		yr.add_theme_constant_override("separation", 8)
+		yr.add_child(UIStyle.label("YOU GET", 14, UIStyle.BONE_DIM, true))
+		var chip := UIStyle.scrap_chip(int(info.get("scrap", 0)), 18)
+		chip.name = "ScrapYield"
+		yr.add_child(chip)
+		v.add_child(yr)
+		v.add_child(UIStyle.label("Gone for good.", 12, UIStyle.BONE_DIM))
+	else:
+		var r := UIStyle.label(str(info.get("reason", "Can't be scrapped")), 14, UIStyle.BLOOD.lightened(0.3))
+		r.name = "ScrapReason"
+		r.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(r)
+	var br := HBoxContainer.new()
+	br.alignment = BoxContainer.ALIGNMENT_CENTER
+	br.add_theme_constant_override("separation", 16)
+	v.add_child(br)
+	var yes := Button.new()
+	yes.text = "SCRAP +%d" % int(info.get("scrap", 0)) if ok else "SCRAP"
+	yes.custom_minimum_size = Vector2(150, 40)
+	UIStyle.style_primary_button(yes)
+	yes.name = "ScrapYes"
+	yes.disabled = not ok
+	yes.pressed.connect(confirm_scrap)
+	br.add_child(yes)
+	var no := Button.new()
+	no.text = "CANCEL"
+	no.custom_minimum_size = Vector2(150, 40)
+	no.name = "ScrapNo"
+	no.pressed.connect(cancel_scrap)
+	br.add_child(no)
+
+
+func confirm_scrap() -> void:
+	var inv: Inventory = player.inventory if player else null
+	if inv and _scrap_item and bool(salvage_info(_scrap_item).get("ok", false)):
+		inv.dismantle(_scrap_item)
+		_ui_snd("ui_scrap_dismantle")
+	cancel_scrap()
+	refresh()
+
+
+func cancel_scrap() -> void:
+	_scrap_item = null
+	if _scrap_confirm:
+		_scrap_confirm.queue_free()
+		_scrap_confirm = null
 
 
 func _refresh_gravemark() -> void:
@@ -1478,7 +1569,8 @@ func _show_tooltip(item: GearItem, equipped: bool) -> void:
 		fl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		fl.custom_minimum_size.x = CARD_W - 28
 		b.add_child(fl)
-	var foot := UIStyle.label("EQUIPPED" if equipped else "[LMB] EQUIP    [RMB] SCRAP +%d" % scrap_yield(item), 12,
+	var sv := salvage_info(item)
+	var foot := UIStyle.label("EQUIPPED" if equipped else ("[LMB] EQUIP    [RMB] SCRAP +%d" % int(sv.get("scrap", 0)) if bool(sv.get("ok", false)) else "[LMB] EQUIP    " + str(sv.get("reason", "")).to_upper()), 12,
 		UIStyle.OLIVE.lightened(0.4) if equipped else UIStyle.BONE_DIM, true)
 	foot.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	b.add_child(foot)

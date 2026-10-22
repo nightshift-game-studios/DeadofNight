@@ -459,7 +459,34 @@ func _in_match() -> void:
 	var schip = cs.find_child("ScrapChip", true, false)
 	check(schip != null and schip.find_child("ScrapAmount", true, false).text == str(root.get_node("Progress").scrap_balance()), "v070 Scrap chip on the loadout header shows the balance")
 	var any_eq = inv.equipped.values().filter(func(x): return x != null)
-	check(any_eq.is_empty() or cs.scrap_yield(any_eq[0]) == int(root.get_node("Progress").scrap_value(any_eq[0])), "v070 [RMB] SCRAP shows what scrapping pays")
+	check(any_eq.is_empty() or cs.scrap_yield(any_eq[0]) == int(root.get_node("Progress").salvage_preview(any_eq[0]).scrap), "v070 [RMB] SCRAP shows what scrapping pays (salvage_preview)")
+	# Skillz 41bd224 salvage: right-click asks first, showing salvage_preview's Scrap; cancel keeps, confirm pays
+	var sprog = root.get_node("Progress")
+	var spare = root.get_node("GearDB").roll_grenade("", 3)
+	inv.add_item(spare)
+	if inv.equipped_grenade() == spare:
+		inv.unequip_grenade()
+	var sp: Dictionary = sprog.salvage_preview(spare, inv)
+	cs.ask_scrap(spare)
+	await frames(2)
+	var sconf = cs.find_child("ScrapConfirm", true, false)
+	var syield = sconf.find_child("ScrapAmount", true, false) if sconf else null
+	check(sconf != null and syield != null and syield.text == str(int(sp.scrap)) and bool(sp.ok), "salvage confirm shows the Scrap it pays (%s)" % (syield.text if syield else "none"))
+	cs.cancel_scrap()
+	await frames(1)
+	check(spare in inv.backpack.get("grenade", []), "salvage cancel keeps the item")
+	var s_before: int = sprog.scrap_balance()
+	cs.ask_scrap(spare)
+	cs.confirm_scrap()
+	await frames(2)
+	check(not (spare in inv.backpack.get("grenade", [])) and sprog.scrap_balance() == s_before + int(sp.scrap) and cs.find_child("ScrapConfirm", true, false) == null,
+		"salvage confirm scraps it and pays +%d Scrap" % int(sp.scrap))
+	if not any_eq.is_empty():
+		cs.ask_scrap(any_eq[0])
+		await frames(1)
+		var sy = cs.find_child("ScrapYes", true, false)
+		check(sy != null and sy.disabled and cs.find_child("ScrapReason", true, false) != null, "salvage confirm refuses equipped gear with its reason")
+		cs.cancel_scrap()
 	for rn in renamed:
 		rn[0].display_name = rn[1]
 		rn[0].manufacturer = rn[2]
