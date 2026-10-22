@@ -1231,10 +1231,14 @@ func reset_cooldown(what: String) -> void:
 			_emit_ability()
 
 
-## Sound for the class ability: dash_ability.gd -> "dash", anything else (Adrenaline) -> "adrenaline_boost".
+## Sound for the class ability (§24): its own `sfx` key ("q_<ability id>") once Audi-0's file is in, else the old
+## movement sounds: dash-type -> "dash", anything else -> "adrenaline_boost".
 func ability_sfx() -> String:
-	var path: String = ability.get_script().resource_path if ability and ability.get_script() else ""
-	return "dash" if "dash" in path.get_file() else "adrenaline_boost"
+	var key: String = str(ability.get("sfx")) if ability and ability.get("sfx") != null else ""
+	var sx := _sfx()
+	if key != "" and sx and sx.has(key):
+		return key
+	return "dash" if ability is DashAbility else "adrenaline_boost"
 
 
 func _tick_ability(delta: float) -> void:
