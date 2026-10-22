@@ -1361,23 +1361,16 @@ func _show_tooltip(item: GearItem, equipped: bool) -> void:
 		b.add_child(UIStyle.roll_bar(item.roll_quality, item.item_power, 120))
 	if cmp.size() > 0:
 		b.add_child(UIStyle.label("VS EQUIPPED: %s  //  IP %d" % [cur.display_name.to_upper(), display_ip(cur)], 11, UIStyle.BONE_DIM))
-	# Perks
-	if item.perks.size() > 0:
+	# Named attributes (WEAPON_ATTRS.md): up to 3 rolled + a Mythic's signature, from the item's attribute rows
+	var attrs := UIStyle.attribute_rows_of(item)
+	if attrs.size() > 0:
 		b.add_child(_divider())
-		for pid in item.perks:
-			var p: Dictionary = GearDB.perk(pid)
-			var pr := HBoxContainer.new()
-			pr.add_theme_constant_override("separation", 10)
-			pr.add_child(PerkBadge.make(p, 34))
-			var pt := VBoxContainer.new()
-			pt.add_theme_constant_override("separation", -3)
-			pt.add_child(UIStyle.label(str(p.get("name", pid)).to_upper(), 16, UIStyle.BONE))
-			var d := UIStyle.label(p.get("description", ""), 12, UIStyle.BONE_DIM)
-			d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			d.custom_minimum_size.x = CARD_W - 80
-			pt.add_child(d)
-			pr.add_child(pt)
-			b.add_child(pr)
+		var ab := VBoxContainer.new()
+		ab.name = "Attributes"
+		ab.add_theme_constant_override("separation", 4)
+		b.add_child(ab)
+		for a in attrs:
+			ab.add_child(UIStyle.attribute_row(a, CARD_W - 28))
 	_class_item_block(b, item)
 	# Armory: Rework tier + equipped attachments (per weapon TYPE)
 	if w:

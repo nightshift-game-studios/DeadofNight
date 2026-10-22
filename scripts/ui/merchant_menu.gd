@@ -735,19 +735,16 @@ func _offer_card(o: Dictionary) -> PanelContainer:
 			dw.name = "Delta_%s" % str(rows[i][0]).replace(" ", "")
 			grid.add_child(dw)
 			shown += 1
-	# Perks
-	var perks: Array = o.get(MAPI.K_PERKS, Array(w.perks) if w else [])
-	if perks.size() > 0:
-		var names: PackedStringArray = []
-		var gdb := get_node_or_null("/root/GearDB")
-		for pid in perks:
-			var p: Dictionary = gdb.perk(pid) if gdb and gdb.has_method("perk") else {}
-			names.append(str(p.get("name", pid)).to_upper())
-		var pl := UIStyle.label("◆ " + "   ◆ ".join(names), 11, UIStyle.OLIVE.lightened(0.45), true)
-		pl.name = "OfferPerks"
-		pl.clip_text = true
-		pl.custom_minimum_size.x = CARD_W - 24
-		v.add_child(pl)
+	# Named attributes (WEAPON_ATTRS.md): compact rows (hex + name + SIGNATURE / playstyle marker), description on hover
+	var attrs := UIStyle.attribute_rows_of(o if o.has("attributes") else w)
+	if attrs.size() > 0:
+		var ab := VBoxContainer.new()
+		ab.name = "OfferPerks"
+		ab.add_theme_constant_override("separation", 1)
+		ab.custom_minimum_size.x = CARD_W - 24
+		v.add_child(ab)
+		for a in attrs:
+			ab.add_child(UIStyle.attribute_row(a, CARD_W - 24, true))
 	var flv := str(w.flavor) if w else str(o.get("flavor", ""))
 	if flv != "":
 		var fl := UIStyle.label('"%s"' % flv, 11, UIStyle.RUST.lightened(0.25))

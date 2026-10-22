@@ -530,6 +530,90 @@ static func attr_badge_tex(kind: String) -> Texture2D:
 	return null if kind == "" else _icon_tex("res://assets/icons/badge_%s.png" % kind)
 
 
+# ------------------------------------------------------------------ weapon attributes (WEAPON_ATTRS.md)
+
+const ATTR_MAX_ROLLED := 3 ## rolled attributes shown; a Mythic's signature comes on top
+
+## Attribute rows to show for a GearItem or an item dict ("attributes", else GearItem.attributes()): signature
+## rows first, then up to ATTR_MAX_ROLLED rolled ones, in roll order.
+static func attribute_rows_of(src) -> Array:
+	var rows: Array = []
+	if src is Dictionary:
+		rows = src.get("attributes", [])
+	elif src != null and src is Object and src.has_method("attributes"):
+		rows = src.attributes()
+	var sig: Array = []
+	var rolled: Array = []
+	for r in rows:
+		if not (r is Dictionary):
+			continue
+		if bool(r.get("signature", false)):
+			sig.append(r)
+		elif rolled.size() < ATTR_MAX_ROLLED:
+			rolled.append(r)
+	return sig + rolled
+
+
+## One attribute row: perk hex icon, NAME, SIGNATURE tag / playstyle marker and (unless compact) a one-line
+## description that wraps inside `width`. compact = name only, the description goes to the tooltip.
+static func attribute_row(a: Dictionary, width: float, compact: bool = false) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.name = "Attr_" + str(a.get("id", ""))
+	row.add_theme_constant_override("separation", 6 if compact else 10)
+	row.tooltip_text = "%s\n%s" % [str(a.get("name", "")), str(a.get("description", ""))]
+	var sig := bool(a.get("signature", false))
+	var badge := PerkBadge.make(a, 20.0 if compact else 34.0)
+	row.add_child(badge)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", -3)
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(col)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 6)
+	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(head)
+	var nm := label(str(a.get("name", a.get("id", ""))).to_upper(), 12 if compact else 16,
+		Color("#d9a441") if sig else BONE, compact)
+	nm.name = "AttrName"
+	nm.clip_text = true
+	nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	nm.custom_minimum_size.x = 1
+	head.add_child(nm)
+	for kind in (["signature"] if sig else []) + (["playstyle"] if bool(a.get("playstyle", false)) else []):
+		head.add_child(_attr_marker(kind, compact))
+	if not compact:
+		var d := label(str(a.get("description", "")), 12, BONE_DIM)
+		d.name = "AttrDesc"
+		d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		d.custom_minimum_size.x = maxf(width - 44.0, 40.0)
+		col.add_child(d)
+	return row
+
+
+## SIGNATURE tag (gold) or PLAYSTYLE marker: Desi's badge_<kind>.png + word, or the word alone.
+static func _attr_marker(kind: String, compact: bool) -> Control:
+	var h := HBoxContainer.new()
+	h.name = "Marker_" + kind
+	h.add_theme_constant_override("separation", 2)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var tex := attr_badge_tex(kind)
+	var sz := 14 if compact else 16
+	if tex:
+		var tr := TextureRect.new()
+		tr.texture = tex
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.custom_minimum_size = Vector2(sz, sz)
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		h.add_child(tr)
+	if kind == "signature" or not compact:
+		var col := Color("#d9a441") if kind == "signature" else OLIVE.lightened(0.45)
+		h.add_child(label("SIGNATURE" if kind == "signature" else "PLAYSTYLE", 9 if compact else 10, col, true))
+	return h
+
+
 # ------------------------------------------------------------------ attachment icons
 
 ## res://assets/icons/att_<id>.png when it exists, else null.

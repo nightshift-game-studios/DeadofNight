@@ -10,8 +10,9 @@ var icon: Texture2D = null ## Desi perk_<id>.png; drawn inside the hex instead o
 static func make(perk: Dictionary, size: float = 30.0) -> PerkBadge:
 	var b := PerkBadge.new()
 	var c = perk.get("icon_color", [0.8, 0.6, 0.2])
-	b.color = Color(c[0], c[1], c[2])
-	b.glyph = perk.get("glyph", str(perk.get("name", "?")).substr(0, 2).to_upper())
+	b.color = Color.html(c) if c is String and Color.html_is_valid(c) else (Color(c[0], c[1], c[2]) if c is Array and c.size() >= 3 else Color(0.8, 0.6, 0.2))
+	var gl := str(perk.get("glyph", ""))
+	b.glyph = gl if gl != "" else str(perk.get("name", "?")).substr(0, 2).to_upper()
 	b.icon = UIStyle.perk_icon_tex(str(perk.get("id", "")))
 	b.custom_minimum_size = Vector2(size, size)
 	b.mouse_filter = Control.MOUSE_FILTER_IGNORE

@@ -409,6 +409,22 @@ func _in_match() -> void:
 	var nm_l: Label = cs._left.find_child("SlotName", true, false)
 	check(nm_l != null and nm_l.clip_text and nm_l.text_overrun_behavior == TextServer.OVERRUN_TRIM_ELLIPSIS and nm_l.get_global_rect().end.x <= l1.end.x + 0.5, "v070 #6: item name ellipsised inside the weapons column")
 	check(cs.find_child("SuppliesScroll", true, false) is ScrollContainer, "v070 #6: supplies strip is a fixed scroll area")
+	# v070 named attributes (WEAPON_ATTRS.md): up to 3 rolled + the Mythic signature, signature first
+	var fake := {"attributes": [{"id": "a1", "name": "A1"}, {"id": "a2", "name": "A2", "playstyle": true}, {"id": "a3", "name": "A3"},
+		{"id": "a4", "name": "A4"}, {"id": "sig", "name": "SIG", "signature": true}]}
+	var ar: Array = UIStyle.attribute_rows_of(fake)
+	check(ar.size() == 4 and ar[0].id == "sig" and ar[3].id == "a3", "v070 attributes: signature first + 3 rolled (%s)" % str(ar.map(func(x): return x.id)))
+	var myth = root.get_node("GearDB").roll_weapon("", Rarity.MYTHIC)
+	cs._show_tooltip(myth, false)
+	await frames(2)
+	var ab = cs._tooltip.find_child("Attributes", true, false)
+	var mrows: Array = myth.attributes()
+	check(ab != null and ab.get_child_count() == UIStyle.attribute_rows_of(myth).size() and ab.get_child_count() >= 1,
+		"v070 Mythic tooltip renders its attribute rows (%d of %d)" % [ab.get_child_count() if ab else -1, mrows.size()])
+	var has_sig: bool = mrows.any(func(x): return bool(x.signature))
+	check(not has_sig or (ab.get_child(0).find_child("Marker_signature", true, false) != null and ab.get_child(0).find_child("AttrDesc", true, false).text != ""),
+		"v070 Mythic signature row first, tagged SIGNATURE, with its description")
+	cs._hide_tooltip()
 	var stn: Label = cs._stats_grid.get_node("Stat_toughness").find_children("*", "Label", true, false)[0]
 	check(stn != null and stn.text == "TOUGHNESS" and not stn.clip_text, "v070 #6: stat names are never clipped (%s)" % (stn.text if stn else "none"))
 	var schip = cs.find_child("ScrapChip", true, false)

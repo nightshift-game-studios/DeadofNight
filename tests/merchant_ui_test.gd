@@ -130,7 +130,8 @@ func _run() -> void:
 		if str(o.item.flavor) != "":
 			content_ok = content_ok and c.find_child("OfferFlavor", true, false) != null
 		if o.perks.size() > 0:
-			content_ok = content_ok and c.find_child("OfferPerks", true, false) != null
+			var op = c.find_child("OfferPerks", true, false)
+			content_ok = content_ok and op != null and op.get_child_count() == UIStyle.attribute_rows_of(o.item).size() and op.find_child("AttrName", true, false) != null
 	check(border_ok, "every card border = its rarity colour (Rarity via UIStyle.rarity_color)")
 	check(content_ok, "cards show name, maker, archetype, IP, key stats, perks, flavor, Gravemark price, BUY")
 	# deltas vs equipped (same slot)
