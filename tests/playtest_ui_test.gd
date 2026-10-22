@@ -328,6 +328,7 @@ func _game_over_screen_unit() -> void:
 		"#8 tiles: kills / damage / rounds")
 	check(g.tiles.points_earned.text == "3,690" and g.tiles.gravemarks.text == "+2" and g.tiles.xp_earned.text == "+1,320",
 		"#8 tiles: points / Gravemarks / XP")
+	check(not str(g._foot.text).contains("Class for next game") and not str(g._foot.text).contains("1 = Soldier"), "v070 #7: no class-for-next-game line on the death screen (%s)" % g._foot.text)
 	check(g.rows.accuracy.text.begins_with("71%") and g.rows.time_s.text == "12:34" and g.rows.headshots.text.begins_with("33"),
 		"#8 detail rows: accuracy / time / headshots (%s)" % g.rows.accuracy.text)
 	check(g.back_button.text == "BACK TO MENU" and g.again_button.text.begins_with("PLAY AGAIN"), "#8 Back to Menu + Play Again buttons")

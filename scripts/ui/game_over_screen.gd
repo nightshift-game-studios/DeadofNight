@@ -222,17 +222,13 @@ func show_stats(st: Dictionary) -> void:
 		again_button.grab_focus.call_deferred()
 
 
-## Class-for-next-game line + skill points (main's 1 / 2 keys and the skill tree change these).
+## Skill points line (playtest 2026-10-22 #7: no class-for-next-game line; class is chosen in Skills > Specialization).
 func refresh_footer() -> void:
 	if _foot == null:
 		return
 	var prog := get_node_or_null("/root/Progress") if is_inside_tree() else null
 	var parts: Array = []
 	if prog:
-		if prog.has_method("load_selected_class"):
-			var c = prog.load_selected_class()
-			if c:
-				parts.append("Class for next game: %s  (1 = Soldier, 2 = Scout)" % str(c.get("display_name")))
 		if prog.has_method("skill_points_available"):
 			parts.append("%d skill point%s to spend" % [prog.skill_points_available(),
 				"" if prog.skill_points_available() == 1 else "s"])
