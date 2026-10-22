@@ -76,6 +76,8 @@ const MIX := {
 	"grenade_leechbell_heal": [-10.0, 0.06, "SFX"],
 	"grenade_requiem_bell_bounce": [-6.0, 0.05, "SFX"], "grenade_requiem_bell_detonate": [-6.0, 0.06, "SFX"],
 	"grenade_requiem_bell_toll": [-2.0, 0.0, "SFX"], "grenade_requiem_bell_mark": [-14.0, 0.08, "SFX"],
+	## Audi-0 Q ability sounds (optional MIX entries; specific keys before the "q_" prefix catch-all)
+	"q_grave_bell": [-6.0, 0.04, "SFX"], "q_chalk_mark": [-6.0, 0.04, "SFX"], "q_": [-4.0, 0.04, "SFX"],
 	"hitmarker": [-4.0, 0.04, "UI"],
 	"round_start_stinger": [-2.0, 0.0, "UI"], "round_end_stinger": [-2.0, 0.0, "UI"], "game_over_sting": [-1.0, 0.0, "UI"],
 	"menu_open": [-7.0, 0.02, "UI"], "menu_close": [-7.0, 0.02, "UI"], "ui_hover": [-15.0, 0.04, "UI"],
