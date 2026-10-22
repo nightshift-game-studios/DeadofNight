@@ -27,7 +27,7 @@ const MAP_AMBIENCE := {
 	"arena": "ambience_map_arena_loop",
 	"rustwell_foundry": "ambience_map_rustwell_loop",
 	"lockout_substation": "ambience_map_lockout_loop",
-	"ironside_depot": "ambience_map_rustwell_loop", # placeholder until Audi-0 ships an Ironside loop
+	"ironside_depot": "ambience_map_ironside_loop",
 }
 ## 3D ambience emitters placed in maps (node meta ambience_key): [unit_size, max_distance].
 const EMITTER_RANGE := {
@@ -85,6 +85,7 @@ const MIX := {
 	"ambience_map_arena_loop": [-4.0, 0.0, "Ambience"],
 	"ambience_map_rustwell_loop": [-3.0, 0.0, "Ambience"],
 	"ambience_map_lockout_loop": [-3.0, 0.0, "Ambience"],
+	"ambience_map_ironside_loop": [-3.0, 0.0, "Ambience"],
 	"ambience_emitter_sodium_buzz_loop": [-6.0, 0.02, "Ambience"],
 	"ambience_emitter_sparking_box_loop": [-6.0, 0.02, "Ambience"],
 	"ambience_emitter_drip_pipe_loop": [-6.0, 0.02, "Ambience"],

@@ -7,7 +7,7 @@ var _fails := 0
 var _passes := 0
 
 const DIR := "res://assets/audio/ambience/"
-const OGGS := ["ambience_night_bed_loop", "ambience_map_arena_loop", "ambience_map_rustwell_loop", "ambience_map_lockout_loop"]
+const OGGS := ["ambience_night_bed_loop", "ambience_map_arena_loop", "ambience_map_rustwell_loop", "ambience_map_lockout_loop", "ambience_map_ironside_loop"]
 const WAVS := ["ambience_emitter_sodium_buzz_loop", "ambience_emitter_sparking_box_loop", "ambience_emitter_drip_pipe_loop"]
 
 
@@ -47,7 +47,7 @@ func _run() -> void:
 
 	# ---------------------------------------------------------------- bank + mix
 	var expect := {"ambience_night_bed_loop": -2.0, "ambience_map_arena_loop": -4.0, "ambience_map_rustwell_loop": -3.0,
-		"ambience_map_lockout_loop": -3.0, "ambience_emitter_sodium_buzz_loop": -6.0,
+		"ambience_map_lockout_loop": -3.0, "ambience_map_ironside_loop": -3.0, "ambience_emitter_sodium_buzz_loop": -6.0,
 		"ambience_emitter_sparking_box_loop": -6.0, "ambience_emitter_drip_pipe_loop": -6.0}
 	for k in expect:
 		var m: Array = sfx.mix(k)
@@ -77,7 +77,7 @@ func _run() -> void:
 	# ---------------------------------------------------------------- per-map layer
 	var layer: AudioStreamPlayer = sfx._ambience_map
 	var files := {"arena": "ambience_map_arena_loop.ogg", "rustwell_foundry": "ambience_map_rustwell_loop.ogg",
-		"lockout_substation": "ambience_map_lockout_loop.ogg"}
+		"lockout_substation": "ambience_map_lockout_loop.ogg", "ironside_depot": "ambience_map_ironside_loop.ogg"}
 	var maps_ok := true
 	for m in MapRegistry.list():
 		maps_ok = maps_ok and sfx.MAP_AMBIENCE.has(str(m.get("id", "")))

@@ -21,6 +21,7 @@ Treyarch/Call of Duty audio or music.
 | sfx/world/* | tools/gen_player.py | tier 4: frag bounce/explode, Tremor Charge loop |
 | sfx/ui/* (other) | tools/gen_ui.py | tier 5: stingers, menu/UI, loot chimes, chest |
 | music/*, ambience/* | tools/gen_music.py | tier 6: seamless OGG loops |
+| ambience/ambience_map_ironside_loop.ogg | tools/gen_ambience_night.py (map_ironside) | Ironside Freight Depot night layer (84 s seamless): yard wind + container-gap whistles, container groans, railcar squeals, far coupler clanks, sparse far synthetic train horns (invented chord, low-passed long tails), drips. Self-synthesized, CC0 |
 | sfx/zombies/gallspitter_windup_01..02.wav | tools/gen_gallspitter.py | Gallspitter wind-up (0.70 s telegraph): wet throat gurgle, throat-sac blub, rattly inhale |
 | sfx/zombies/gallspitter_spit_01..03.wav | tools/gen_gallspitter.py | Gallspitter spit/launch (0.45 s): hock, wet burst, ejected liquid, push thump |
 | sfx/world/bile_glob_travel_loop.wav | tools/gen_gallspitter.py | bile_glob projectile: seamless 1.4 s mono fizz/bubble hiss loop (3D) |
