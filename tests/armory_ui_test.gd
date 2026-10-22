@@ -164,7 +164,7 @@ func _go() -> void:
 		"upgrade confirm says Scrap with the Scrap balance ('%s' / '%s')" % [menu._confirm_label.text, up_cost.text if up_cost else ""])
 	menu._confirm_no()
 	await process_frame
-	menu._ask_buy(buy_id, "attachment")
+	menu._ask_buy(buy_id, "attachment", "gravemark")
 	await process_frame
 	check(menu._confirm_overlay != null and menu._confirm_overlay.visible, "confirm overlay visible")
 	check(menu._confirm.visible and "Gravemark" in menu._confirm_label.text, "buy confirm panel shows")
@@ -178,6 +178,48 @@ func _go() -> void:
 	check(menu._bal_chip.find_child("GravemarkIcon", true, false) != null, "header chip uses GravemarkIcon texture")
 	menu._confirm_no()
 	check(not menu._confirm.visible and not menu._confirm_overlay.visible, "confirm cancel hides overlay")
+
+	# ---- playtest 2026-10-22 #2: attachments buyable with Scrap OR Gravemarks (one BUY per currency)
+	prog.scrap = 5000
+	prog.gravemarks = 0
+	menu._select_weapon("smg")
+	menu.refresh()
+	await process_frame
+	var sbuy: Button = null
+	var sid := ""
+	for a in menu.api.list_attachments("smg"):
+		if not bool(a.get("owned", false)) and (a.get("prices", {}) as Dictionary).has("scrap"):
+			var row = menu.find_child("Att_" + str(a.id), true, false)
+			if row == null:
+				for n in menu.find_children("*", "", true, false):
+					if n.find_child("Buy_scrap", true, false) and str(a.id) in str(n.name):
+						row = n
+						break
+			if row:
+				sbuy = row.find_child("Buy_scrap", true, false)
+				sid = str(a.id)
+				break
+	var any_s: Array = menu.find_children("Buy_scrap", "Button", true, false)
+	var any_g: Array = menu.find_children("Buy_gravemark", "Button", true, false)
+	check(any_s.size() > 0 and any_s.size() == any_g.size(), "#2 every unowned attachment row has BUY Scrap + BUY Gravemark (%d/%d)" % [any_s.size(), any_g.size()])
+	check(any_g.size() > 0 and (any_g[0] as Button).disabled and (any_g[0] as Button).tooltip_text != "", "#2 Gravemark BUY disabled at 0 Gravemarks, with a reason")
+	if sbuy == null and any_s.size() > 0:
+		sbuy = any_s[0]
+		for a in menu.api.list_attachments("smg"):
+			if not bool(a.get("owned", false)) and int(a.get("scrap_cost", -1)) > 0 and bool(a.get("can_afford_scrap", false)):
+				sid = str(a.id)
+				break
+	check(sbuy != null and not sbuy.disabled and "Scrap" in sbuy.text or "SCRAP" in sbuy.text.to_upper(), "#2 Scrap BUY enabled + labelled with its Scrap price ('%s')" % (sbuy.text if sbuy else ""))
+	if sid != "":
+		var sc: int = int(menu.api.cost_in(sid, "scrap"))
+		menu._ask_buy(sid, "attachment", "scrap")
+		await process_frame
+		check("Scrap" in menu._confirm_label.text, "#2 Scrap buy confirm says Scrap ('%s')" % menu._confirm_label.text)
+		menu._confirm_yes()
+		await process_frame
+		check(ArmoryScr.owned(sid) and prog.scrap == 5000 - sc and prog.gravemarks == 0, "#2 Scrap buy deducts Scrap only (%d scrap)" % prog.scrap)
+		prog.armory.owned.erase(sid)
+	prog.gravemarks = 200
 
 	# ---- Item Power breakdown helpers (Armory §1a)
 	check(UIStyle.ip_breakdown_text({"base_rolled": 290, "rework_bonus": 22, "total": 312}) == "290 rolled + 22 Rework",
@@ -223,9 +265,13 @@ func _go() -> void:
 	for row in osl.get_children():
 		if row.has_meta("att_id") and row.find_child("OpticStats", true, false) != null:
 			var acts = row.find_child("Actions", true, false)
-			if acts == null or not (acts.get_child(0) is Label) or not str(acts.get_child(0).text).is_valid_int():
+			var owned_row: bool = ArmoryScr.owned(str(row.get_meta("att_id")))
+			# #2: the price sits on the per-currency BUY buttons ("BUY  120 Scrap" / "BUY  40 Gravemarks")
+			var bs = acts.find_child("Buy_scrap", true, false) if acts else null
+			var bg = acts.find_child("Buy_gravemark", true, false) if acts else null
+			if acts == null or (not owned_row and (bs == null or bg == null or not (str(bs.text).to_lower().contains("scrap") and str(bg.text).to_lower().contains("gm")))):
 				priced = false
-	check(priced, "optic rows show the price")
+	check(priced, "optic rows show the price (Scrap + Gravemark BUY)")
 	menu._select_weapon("smg")
 	await process_frame
 	var wip = menu._right.find_child("WeaponIP", true, false)

@@ -21,6 +21,7 @@ var _confirm_cost_row: HBoxContainer
 var _confirm_cost: Label
 var _pending_id: String = ""
 var _pending_kind: String = "" ## "buy" | "equip" | "unequip"
+var _pending_currency: String = "" ## attachments: "scrap" / "gravemark" (playtest 2026-10-22 #2); "" = upgrade / default
 var _hold_t: float = 0.0
 var _holding: bool = false
 var _weapon_btns: Dictionary = {} ## id -> Button
@@ -510,15 +511,23 @@ func _att_row(a: Dictionary) -> PanelContainer:
 	actions.alignment = BoxContainer.ALIGNMENT_CENTER
 	actions.add_theme_constant_override("separation", 4)
 	h.add_child(actions)
-	actions.add_child(UIStyle.label("%d" % int(a.get("cost", 0)), 14, UIStyle.RUST.lightened(0.25), true))
 	var owned: bool = bool(a.get("owned", false))
 	var equipped: bool = bool(a.get("equipped", false))
 	if not owned:
-		var buy := _btn("BUY", func(): _ask_buy(str(a.id), "attachment"))
-		buy.disabled = not bool(a.get("can_afford", false))
-		if buy.disabled:
-			buy.tooltip_text = _disable_reason(str(a.id), false)
-		actions.add_child(buy)
+		# playtest 2026-10-22 #2: pay with Scrap or Gravemarks (entry.prices); one BUY per currency, Scrap first
+		var prices: Dictionary = a.get("prices", {}) if a.get("prices") is Dictionary else {}
+		if prices.is_empty():
+			prices = {str(a.get("currency", "gravemark")): int(a.get("cost", 0))}
+		actions.custom_minimum_size.x = 104
+		for cur in ["scrap", "gravemark"]:
+			if not prices.has(cur):
+				continue
+			var buy := _btn("BUY  " + UIStyle.cost_text(int(prices[cur]), cur), _ask_buy.bind(str(a.id), "attachment", cur))
+			buy.name = "Buy_" + cur
+			buy.disabled = not bool(a.get("can_afford_" + cur, a.get("can_afford", false)))
+			if buy.disabled:
+				buy.tooltip_text = refusal_reason(str(a.id), "buy", cur)
+			actions.add_child(buy)
 	elif equipped:
 		actions.add_child(UIStyle.label("ON", 12, UIStyle.GOOD, true))
 	else:
@@ -658,10 +667,10 @@ func _disable_reason(id: String, is_upgrade: bool) -> String:
 
 ## Why a buy ("buy") or equip ("equip") would be refused, from Armory's own rule set (art pass 3):
 ## Armory.purchase_check(id) / equip_check(weapon_id, slot, id) -> {ok, reason}. "" when it would go through.
-func refusal_reason(id: String, kind: String) -> String:
+func refusal_reason(id: String, kind: String, currency: String = "") -> String:
 	if api == null:
 		return "Armory unavailable"
-	var chk: Dictionary = ArmoryScr.equip_check(_weapon_id, "", id) if kind == "equip" else ArmoryScr.purchase_check(id)
+	var chk: Dictionary = ArmoryScr.equip_check(_weapon_id, "", id) if kind == "equip" else ArmoryScr.purchase_check(id, currency)
 	if bool(chk.get("ok", false)):
 		return ""
 	var r := str(chk.get("reason", ""))
@@ -700,12 +709,13 @@ func _ui_error() -> void:
 	a.play("ui_error" if a.has_method("has") and a.has("ui_error") else "ui_hover")
 
 
-func _ask_buy(id: String, kind: String) -> void:
+func _ask_buy(id: String, kind: String, currency: String = "") -> void:
 	_pending_id = id
 	_pending_kind = "buy"
-	var cost := int(api.cost(id)) if api else 0
-	# Economy v2: upgrade tiers are paid in Scrap, attachments / optics in Gravemarks
-	var cur := ArmoryScr.upgrade_currency() if kind == "upgrade" else "gravemark"
+	# Economy v2: upgrade tiers are paid in Scrap; attachments / optics in the currency picked on the row (#2)
+	var cur := ArmoryScr.upgrade_currency() if kind == "upgrade" else (currency if currency != "" else ArmoryScr.attachment_currency())
+	_pending_currency = "" if kind == "upgrade" else cur
+	var cost := int(api.cost_in(id, cur)) if api and kind != "upgrade" and api.has_method("cost_in") else (int(api.cost(id)) if api else 0)
 	var bal := ArmoryScr.balance(cur)
 	var label := id
 	if kind == "upgrade":
@@ -764,9 +774,10 @@ func _execute_pending() -> void:
 	var pid := _pending_id
 	var why := ""
 	if _pending_kind == "buy":
-		ok = bool(api.purchase(pid))
+		ok = bool(api.purchase_with(pid, _pending_currency)) if _pending_currency != "" and api.has_method("purchase_with") else bool(api.purchase(pid))
 		if not ok:
 			why = _last_refusal(pid, "buy")
+	_pending_currency = ""
 	_show_confirm(false)
 	_pending_id = ""
 	if ok:
