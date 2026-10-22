@@ -392,6 +392,9 @@ func refresh() -> void:
 	_left.add_child(UIStyle.label("WEAPONS", 18, UIStyle.RUST, true))
 	for s in Inventory.WEAPON_SLOTS:
 		_left.add_child(_slot_row(inv, s, false))
+	if inv.equipped.has("grenade"): # playtest 2026-10-22 #5: equip slot for GrenadeItems
+		_left.add_child(UIStyle.label("GRENADE", 18, UIStyle.RUST, true))
+		_left.add_child(_slot_row(inv, "grenade", false))
 	var armor_title := UIStyle.label("ARMOR", 18, UIStyle.RUST, true)
 	armor_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_right.add_child(armor_title)
@@ -510,6 +513,20 @@ func _slot_row(inv: Inventory, s: String, mirrored: bool) -> Control:
 	var is_weapon := s in Inventory.WEAPON_SLOTS
 	var tile := _tile(g, Vector2(116, 76) if is_weapon else Vector2(62, 62), true)
 	tile.set_meta("slot", s)
+	var ghost: Texture2D = UIStyle.slot_ghost_tex(s) if g == null else null
+	if ghost: # Desi slot_<slot>.png empty-slot ghost (grenade) instead of "+"
+		for ch in tile.get_children():
+			ch.queue_free()
+		var gr := TextureRect.new()
+		gr.name = "SlotGhost"
+		gr.texture = ghost
+		gr.set_anchors_preset(Control.PRESET_FULL_RECT)
+		gr.offset_left = 8; gr.offset_top = 8; gr.offset_right = -8; gr.offset_bottom = -8
+		gr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		gr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		gr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		gr.modulate = Color(1, 1, 1, 0.35)
+		tile.add_child(gr)
 	tile.pressed.connect(func():
 		_expanded = "" if _expanded == s else s
 		refresh())
@@ -549,6 +566,11 @@ func _slot_row(inv: Inventory, s: String, mirrored: bool) -> Control:
 			meta.add_child(plate)
 			meta.add_child(maker_l)
 		info.add_child(meta)
+	elif s == "grenade":
+		# empty grenade slot = the class grenade (Inventory.equipped_grenade() null -> GrenadeItem.class_grenade)
+		var cg := UIStyle.label("CLASS GRENADE: %s" % class_grenade_name(), 13, UIStyle.BONE_DIM)
+		cg.name = "ClassGrenade"
+		info.add_child(fit_label(cg))
 	else:
 		info.add_child(UIStyle.label("EMPTY", 15, UIStyle.BONE_DIM))
 	if mirrored:
@@ -699,16 +721,26 @@ func _tile(item: GearItem, sz: Vector2, equipped: bool) -> Button:
 	return b
 
 
+## What an empty grenade slot throws: the player's class grenade name (grenades.json), e.g. "FRAG".
+func class_grenade_name() -> String:
+	var d: Dictionary = GrenadeItem.class_grenade(player) if player else {}
+	return str(d.get("name", d.get("grenade_id", "frag"))).replace("_", " ").to_upper()
+
+
 ## Pre-rendered armor icon (tests/render_armor_icons.gd) for the item's slot look ("" if none).
+## GrenadeItems use Desi's grenade_<id>.png (or grenade_<variant>.png).
 func armor_icon_path(item: GearItem) -> String:
-	if item is GrenadeItem: # Desi grenade_<grenade_id>.png (playtest 2026-10-22 #5)
-		return ICON_DIR + "grenade_" + str(item.grenade_id) + ".png"
+	if item is GrenadeItem:
+		for k in [str(item.grenade_id), str(item.variant())]:
+			if ResourceLoader.exists(ICON_DIR + "grenade_" + k + ".png"):
+				return ICON_DIR + "grenade_" + k + ".png"
+		return ""
 	var piece := ArmorModels.piece_for_slot(str(item.get("slot")), _class_id())
 	return ICON_DIR + "armor_" + piece + ".png" if piece != "" else ""
 
 
 func _initials(item: GearItem) -> String:
-	var map := {"helmet": "HELM", "gauntlets": "ARMS", "chest": "CHEST", "legs": "LEGS", "class_item": "MARK"}
+	var map := {"helmet": "HELM", "gauntlets": "ARMS", "chest": "CHEST", "legs": "LEGS", "class_item": "MARK", "grenade": "GREN"}
 	return map.get(item.slot, item.type_name().substr(0, 4).to_upper())
 
 
@@ -1105,6 +1137,49 @@ func _on_seen_changed(_item = null) -> void:
 	_refresh_stash_count(player.inventory)
 
 
+## GrenadeItem card: what the type does (effect_line) + its rolled Fittings (fitting_rows), playtest 2026-10-22 #5.
+func _grenade_block(b: VBoxContainer, item: GearItem) -> void:
+	if not (item is GrenadeItem):
+		return
+	var g := item as GrenadeItem
+	b.add_child(_divider())
+	var el := UIStyle.label(g.effect_line(), 13, g.effect_color().lightened(0.25))
+	el.name = "GrenadeEffect"
+	el.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	el.custom_minimum_size.x = CARD_W - 28
+	b.add_child(el)
+	var rows: Array = g.fitting_rows()
+	if rows.is_empty():
+		return
+	var fb := VBoxContainer.new()
+	fb.name = "Fittings"
+	fb.add_theme_constant_override("separation", 1)
+	b.add_child(fb)
+	fb.add_child(UIStyle.label("FITTINGS", 11, UIStyle.RUST.lightened(0.25), true))
+	for r in rows:
+		var h := HBoxContainer.new()
+		h.name = "Fitting_" + str(r.id)
+		h.add_theme_constant_override("separation", 8)
+		fb.add_child(h)
+		var gt: Texture2D = UIStyle.fitting_glyph_tex(str(r.id))
+		var gl := TextureRect.new()
+		gl.name = "FitGlyph"
+		gl.custom_minimum_size = Vector2(24, 24)
+		gl.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		gl.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		gl.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		gl.texture = gt
+		gl.modulate = g.effect_color().lightened(0.3)
+		h.add_child(gl)
+		var n := UIStyle.label(str(r.name).to_upper(), 13, UIStyle.BONE, true)
+		n.custom_minimum_size.x = 110
+		h.add_child(n)
+		var t := UIStyle.label(str(r.text), 12, UIStyle.BONE_DIM)
+		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		t.custom_minimum_size.x = CARD_W - 28 - 150
+		h.add_child(t)
+
+
 ## What right-click scrap pays (Progress.scrap_value, SCRAP_API.md); 0 without Progress.
 func scrap_yield(item) -> int:
 	var prog := get_node_or_null("/root/Progress")
@@ -1373,6 +1448,7 @@ func _show_tooltip(item: GearItem, equipped: bool) -> void:
 		b.add_child(ab)
 		for a in attrs:
 			ab.add_child(UIStyle.attribute_row(a, CARD_W - 28))
+	_grenade_block(b, item)
 	_class_item_block(b, item)
 	# Armory: Rework tier + equipped attachments (per weapon TYPE)
 	if w:

@@ -427,6 +427,33 @@ func _in_match() -> void:
 	check(not has_sig or (ab.get_child(0).find_child("Marker_signature", true, false) != null and ab.get_child(0).find_child("AttrDesc", true, false).text != ""),
 		"v070 Mythic signature row first, tagged SIGNATURE, with its description")
 	cs._hide_tooltip()
+	# playtest 2026-10-22 #5: grenade equip slot (Inventory "grenade", GrenadeItem) on the loadout screen
+	var gslot = cs._left.find_child("Slot_grenade", true, false)
+	check(gslot != null, "#5 loadout has a GRENADE slot")
+	var gdb2 = root.get_node("GearDB")
+	if gdb2.has_method("roll_grenade") or gdb2.has_method("starter_grenade"):
+		var gi = gdb2.roll_grenade("", 3) if gdb2.has_method("roll_grenade") else gdb2.starter_grenade("frag")
+		inv.add_item(gi)
+		if inv.equipped_grenade() != gi:
+			inv.equip_grenade(gi)
+		cs.refresh()
+		await frames(2)
+		gslot = cs._left.find_child("Slot_grenade", true, false)
+		var gname: Label = gslot.find_child("SlotName", true, false) if gslot else null
+		check(gname != null and gname.text == gi.display_name.to_upper(), "#5 equipped grenade item shows in the slot (%s)" % (gname.text if gname else "none"))
+		cs._show_tooltip(gi, true)
+		await frames(2)
+		check(cs._tooltip.find_child("GrenadeEffect", true, false) != null and (gi.fittings.is_empty() or cs._tooltip.find_child("Fittings", true, false) != null),
+			"#5 grenade card shows its effect line + Fittings")
+		cs._hide_tooltip()
+		check(inv.unequip_grenade(), "#5 unequip grenade (test setup)")
+		cs.refresh()
+		await frames(2)
+		var cgl: Label = cs._left.find_child("ClassGrenade", true, false)
+		check(cgl != null and cgl.text.begins_with("CLASS GRENADE"), "#5 empty slot names the class grenade it falls back to (%s)" % (cgl.text if cgl else "none"))
+		check(cs._left.get_global_rect().end.y <= 720.5, "#5 grenade slot fits the left column")
+	else:
+		print("SKIP  #5 grenade item roll API not on main")
 	var stn: Label = cs._stats_grid.get_node("Stat_toughness").find_children("*", "Label", true, false)[0]
 	check(stn != null and stn.text == "TOUGHNESS" and not stn.clip_text, "v070 #6: stat names are never clipped (%s)" % (stn.text if stn else "none"))
 	var schip = cs.find_child("ScrapChip", true, false)
