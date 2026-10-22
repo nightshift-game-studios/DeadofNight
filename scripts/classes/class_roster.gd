@@ -62,6 +62,14 @@ static func find_ability(class_id: String, ability_id: String) -> Ability:
 	return null
 
 
+## The pre-§24 id of an ability (its icon is the stand-in until the new one lands), else the id itself.
+static func _old_id(ability_id: String) -> String:
+	for k in ABILITY_ALIASES:
+		if ABILITY_ALIASES[k] == ability_id:
+			return k
+	return ability_id
+
+
 ## Current id for a (possibly pre-§24) ability id.
 static func canonical_ability(ability_id: String) -> String:
 	return str(ABILITY_ALIASES.get(ability_id, ability_id))
@@ -74,7 +82,8 @@ static func ability_info(class_id: String) -> Array:
 	for a in abilities(class_id):
 		out.append({"id": str(a.id), "name": a.display_name, "kind": str(a.kind), "summary": str(a.summary),
 			"cooldown": a.cooldown, "duration": a.duration, "default": str(a.id) == d, "movement": str(a.kind) == MOVEMENT,
-			"icon": "q_" + str(a.id), "sfx": str(a.get("sfx")) if a.get("sfx") != null else ""})
+			"icon": "ability_" + str(a.id), "icon_fallback": "ability_" + str(_old_id(str(a.id))),
+			"sfx": str(a.get("sfx")) if a.get("sfx") != null else ""})
 	return out
 
 
