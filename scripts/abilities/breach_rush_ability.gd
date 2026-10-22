@@ -10,6 +10,7 @@ extends DashAbility
 @export var knockback: float = 7.0
 var _hit: Dictionary = {}
 var hits: int = 0 ## zombies hit this rush (tests)
+var _vfx: Node3D = null ## Desi's dust / streak (AbilityVFX)
 
 
 func activate(player: Node) -> bool:
@@ -19,6 +20,7 @@ func activate(player: Node) -> bool:
 		return false
 	if player.has_method("grant_overshield"):
 		player.grant_overshield(tuned(player, "rush_os", overshield))
+	_vfx = AbilityVFX.rush_start(player, duration)
 	_plough(player)
 	return true
 
@@ -47,3 +49,5 @@ func _plough(player: Node) -> void:
 		if e.has_method("apply_knockback"):
 			e.apply_knockback(dir.normalized() * tuned(player, "rush_knock", knockback) + Vector3.UP * 2.0)
 		AbilityField.hurt(player, e, tuned(player, "rush_damage", damage), id)
+		if e is Node3D:
+			AbilityVFX.rush_hit(_vfx, (e as Node3D).global_position)

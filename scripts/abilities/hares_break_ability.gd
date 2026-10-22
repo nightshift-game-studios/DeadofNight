@@ -30,4 +30,5 @@ func activate(player: Node) -> bool:
 			w.reserve -= take
 			reloaded = take
 	PlayerStatus.clear_slows(player)
+	AbilityVFX.hare_start(player, duration)
 	return true
