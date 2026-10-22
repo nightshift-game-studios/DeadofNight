@@ -8,6 +8,9 @@ extends Node
 ##   * zombie hits on avatars (host) -> the owner's own Player.take_damage; owner damage -> host callout driver
 ##   * downed / revive / bleed-out / game over (host-authoritative, data/net.json downed.*)
 ##   * late join (phase 3a): the joiner spectates (life "dead", party state "spectating") until the next round break
+##   * the local player's equipped grenade item (playtest #5): NetProjectiles.send_grenade_item at match start / late
+##     join and on every Inventory.grenade_equipped change (polled each state tick too), at most one per
+##     projectiles.grenade_item_min_interval_s (the newest wins)
 ##   * spectate camera (NetSpectate) while the local player is downed / dead; game_event ids for Gooey's HUD:
 ##     player_downed, player_revived, revive_progress, player_bled_out, player_respawned, player_joined_late
 
@@ -45,6 +48,10 @@ var _hold_target := 0 ## local: the downed peer we're holding interact on
 var late_spectators: Dictionary = {} ## host: late joiners spectating until the next round break (peer -> true)
 var spectate: Node ## NetSpectate under the match (local camera while downed / dead)
 var _progress_t := 0.0
+var _gitem_key := "?" ## local: the equipped grenade last sent to the host ("?" = nothing sent this match)
+var _gitem_dirty := true
+var _gitem_sent_ms := -1000000
+var _gitem_inv: Object = null ## the Inventory whose grenade_equipped signal we listen to
 
 
 func _ready() -> void:
@@ -118,6 +125,9 @@ func clear() -> void:
 	spectate = null
 	_seq = 0
 	_last_weapon = "?"
+	_gitem_key = "?"
+	_gitem_dirty = true
+	_gitem_sent_ms = -1000000
 	if _root and is_instance_valid(_root):
 		_root.queue_free()
 	_root = null
@@ -188,6 +198,41 @@ func send_state() -> void:
 	if wid + "|" + slot != _last_weapon:
 		_last_weapon = wid + "|" + slot
 		_rpc_weapon_slot.rpc(wid, slot)
+	sync_grenade_item()
+
+
+## Local player's equipped grenade -> the host (NetProjectiles.send_grenade_item): the first state tick of a match
+## (late join too), then whenever the grenade slot changes. Rate-limited; a change inside the interval goes out at
+## the first tick after it (only the newest). Returns true if it sent now.
+func sync_grenade_item() -> bool:
+	if not net.is_networked() or _player == null or not is_instance_valid(_player) or net.projectiles == null:
+		return false
+	var inv = _player.get("inventory") if "inventory" in _player else null
+	_watch_inventory(inv)
+	var gi = inv.call("equipped_grenade") if inv is Object and is_instance_valid(inv) and inv.has_method("equipped_grenade") else null
+	var key := str(gi.get_instance_id()) if gi is Object else "0"
+	if key == _gitem_key and not _gitem_dirty:
+		return false
+	var now := Time.get_ticks_msec()
+	if now - _gitem_sent_ms < int(float(NetConfig.get_value("projectiles.grenade_item_min_interval_s", 0.25)) * 1000.0):
+		_gitem_dirty = true
+		return false
+	_gitem_key = key
+	_gitem_dirty = false
+	_gitem_sent_ms = now
+	net.projectiles.send_grenade_item(NetProjectiles.item_dict_of(gi))
+	return true
+
+
+func _watch_inventory(inv: Variant) -> void:
+	if not (inv is Object) or not is_instance_valid(inv) or inv == _gitem_inv or not (inv as Object).has_signal("grenade_equipped"):
+		return
+	_gitem_inv = inv
+	_gitem_dirty = true
+	(inv as Object).connect("grenade_equipped", func(_item):
+		if inv == _gitem_inv:
+			_gitem_dirty = true
+			sync_grenade_item())
 
 
 @rpc("any_peer", "call_remote", "unreliable_ordered")

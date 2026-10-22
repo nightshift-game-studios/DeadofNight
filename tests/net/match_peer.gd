@@ -392,16 +392,32 @@ func _host_grenades(bob: int, cara: int, z_hint) -> void:
 		print("[%s] SKIP  grenades: no P1 / grenade net lines in this tree" % pname)
 		return
 	check(Net.status_allowed("frost") and Net.status_allowed("burn") and not Net.status_allowed("bogus"), "host: frost is an allowed status (statuses.forwarded)")
+	var items: bool = NP.has_method("grenade_item") and load("res://scripts/items/grenade_item.gd") != null
+	if items: # grenade items (playtest #5): each peer's equipped grenade synced at match start, then on every change
+		for id in [1, bob, cara]:
+			check(await _wait(func(): return NP.grenade_item(id) != null, 5.0), "host: peer %d's equipped grenade synced at match start (%s)" % [id, NP.grenade_item(id)])
+		Net.broadcast_event(&"t_cmd", bob, {"op": "gequip"})
+		check(await _wait(func(): var it = NP.grenade_item(bob); return it is Dictionary and it.get("grenade_id") == "rookery", 4.0), "host: Bob's equip change (Rookery item) synced (%s)" % [NP.grenade_item(bob)])
+		Net.broadcast_event(&"t_cmd", cara, {"op": "gunequip"})
+		check(await _wait(func(): return NP.grenade_item(cara) is Dictionary and (NP.grenade_item(cara) as Dictionary).is_empty(), 4.0), "host: Cara's emptied grenade slot synced as {} (class grenade)")
+	var reasons: Array = []
+	NP.throw_refused.connect(func(pid, why): if pid == bob: reasons.append(why))
 	var ok0: int = NP.stats.throw_ok
 	var ref0: int = NP.stats.throw_refused
-	Net.broadcast_event(&"t_cmd", bob, {"op": "gthrow"})
+	Net.broadcast_event(&"t_cmd", bob, {"op": "gthrow", "items": items})
 	check(await _wait(func(): return NP.stats.throw_ok == ok0 + 1, 3.0), "host: Bob's Rookery (Grenade.throw_from -> request_throw) accepted")
-	check(await _wait(func(): return NP.stats.throw_refused == ref0 + 2, 3.0), "host: bad rarity + a second grenade inside grenade_min_interval_s refused (%s)" % [NP.stats])
+	var nref := 3 if items else 2
+	check(await _wait(func(): return NP.stats.throw_refused == ref0 + nref, 3.0), "host: bad rarity + %sa second grenade inside grenade_min_interval_s refused (%s)" % ["a frag while the Rookery is equipped + " if items else "", reasons])
+	if items:
+		check(reasons.has("wrong_rarity") and reasons.has("wrong_grenade") and reasons.has("grenade_interval"), "host: refusal reasons wrong_rarity / wrong_grenade / grenade_interval (%s)" % [reasons])
 	var g: Node = NP.projectile(NP._next_id)
 	if not check(g != null and not g.is_visual_only and str(g.type_id) == "grenade" and str(g.variant) == "rookery" and g.owner_id == P.avatar(bob).get_instance_id(), "host: the real Rookery, owned by Bob's avatar"):
 		return
 	var body = g.body
 	check(body != null and body.authoritative and body.data.get("variant") == "rookery", "host: its Grenade body is authoritative, data from the variant id (GearDB)")
+	if items:
+		var want: Dictionary = load("res://scripts/items/grenade_item.gd").throw_data_from_dict(NP.grenade_item(bob))
+		check(is_equal_approx(float(body.data.damage), float(want.damage)) and float(body.data.damage) < 99999.0 and int(body.data.get("item_power", 0)) == 140 and body.data.get("fittings") == NP.grenade_item(bob).fittings, "host: the Rookery's numbers come from Bob's stored item (dmg %s, IP %s), not his tampered 99999" % [body.data.get("damage"), body.data.get("item_power")])
 	var fx0: int = NP.stats.fx_fwd
 	var k0: int = NP._next_id
 	body.detonate() # the real Rookery: blast, then bomblets_n grenade_bomblet spawns (P1 replicates each)
@@ -429,7 +445,7 @@ func _host_grenades(bob: int, cara: int, z_hint) -> void:
 		Net.broadcast_event(&"t_cmd", cara, {"op": "frost", "z": str(z.name)})
 		check(await _wait(func(): return z.has_status("frost"), 3.0), "host: Cara's frost claim applied to %s" % z.name)
 	for id in [bob, cara]:
-		Net.broadcast_event(&"t_cmd", id, {"op": "gcheck", "bob": bob, "cara": cara, "nb": nb})
+		Net.broadcast_event(&"t_cmd", id, {"op": "gcheck", "bob": bob, "cara": cara, "nb": nb, "items": items})
 	await _sleep(1.5)
 	# E7: host-side damage from Bob's grenade credits Bob (needs the enemy.gd E7 line)
 	if not load("res://scripts/enemy.gd").source_code.contains("note_damage_source"):
@@ -572,16 +588,29 @@ func _do(c: Dictionary) -> void:
 			health_before_dmg = int(main.player.health)
 		"hp_check":
 			check(int(main.player.health) - health_before_dmg >= int(c.min_gain) and Net.match_players.stats.heal_rx >= 2, "client: host heals applied to my own player (%d -> %d)" % [health_before_dmg, int(main.player.health)])
+		"gequip": # a rolled Rookery item (IP 140, 2 Fittings) into the grenade slot -> grenade_equipped -> the host
+			var inv = main.player.inventory
+			var gi = get_root().get_node("GearDB").roll_grenade("rookery", 3, 140, null, 2)
+			inv.backpack["grenade"].append(gi)
+			check(inv.equip_grenade(gi) and str(main.player.grenade_data.get("variant")) == "rookery", "client: Rookery item equipped, my player throws it")
+		"gunequip":
+			check(main.player.inventory.unequip_grenade(), "client: grenade slot emptied (class grenade)")
 		"gthrow":
 			drop0 = Net.projectiles.stats.dropped
 			var Gr: Script = load("res://scripts/combat/grenade.gd") # loaded at run time: autoloads (GearDB) exist by now
 			var gd: Dictionary = Gr.data_for_variant("rookery")
 			var me: Node3D = main.player
+			if bool(c.get("items", false)): # the equipped item's data, with numbers a cheater might send
+				gd = (me.grenade_data as Dictionary).duplicate(true)
+				gd.damage = 99999.0
 			my_grenade = Gr.throw_from(me, gd, me.global_position + Vector3(0, 1.5, 0), Vector3(0, 0, -1), Vector3.ZERO)
 			my_grenade = my_grenade.proj if my_grenade else null
 			var bad: Dictionary = Gr.make_spec(me, gd, me.global_position + Vector3(0, 1.5, 0), Vector3(0, 3, 0), 5)
 			bad.rarity = 9
 			Net.projectiles.request_throw(bad) # no such rarity
+			if bool(c.get("items", false)):
+				await _sleep(0.1)
+				Net.projectiles.request_throw(Gr.make_spec(me, Gr.data_for_variant("frag"), me.global_position + Vector3(0, 1.5, 0), Vector3(0, 3, 0), 6)) # not the equipped type
 			await _sleep(0.2)
 			Gr.throw_from(me, gd, me.global_position + Vector3(0, 1.5, 0), Vector3(0, 0, -1), Vector3.ZERO) # inside the interval
 		"hp_low":
@@ -597,7 +626,12 @@ func _do(c: Dictionary) -> void:
 			var am_cara: bool = Net.local_peer_id() == int(c.cara)
 			var blasts: Array = grenade_ev.filter(func(e): return e[1] == "blast")
 			check(not mine or (my_grenade == null or not is_instance_valid(my_grenade)) and blasts.size() >= 1, "client: my own Rookery copy was bound to the host's net id (its blast arrived, copy detonated)")
-			check(Net.projectiles.stats.dropped - drop0 == (2 if mine else 0), "client: refused throws dropped their local copy (%d)" % (Net.projectiles.stats.dropped - drop0))
+			var nd := (3 if bool(c.get("items", false)) else 2) if mine else 0
+			check(Net.projectiles.stats.dropped - drop0 == nd, "client: refused throws dropped their local copy (%d)" % (Net.projectiles.stats.dropped - drop0))
+			if am_cara and bool(c.get("items", false)): # someone else's grenade: the copy shows the host's item data (variant + color)
+				var rk: Array = grenade_rx.filter(func(sp): return str(sp.get("variant")) == "rookery" and sp.get("type_id") == &"grenade")
+				var gdat: Dictionary = rk.back().get("data", {}) if not rk.is_empty() else {}
+				check(not gdat.is_empty() and gdat.get("color") == load("res://scripts/combat/grenade.gd").data_for_variant("rookery").get("color") and int(gdat.get("item_power", 0)) == 140, "client: Bob's Rookery copy got variant + color + the host's item data (%s)" % [gdat.get("color")])
 			var kids: Array = grenade_rx.filter(func(sp): return str(sp.type_id) == "grenade_bomblet")
 			check(kids.size() == int(c.nb), "client: %d Rookery bomblets (grenade_bomblet) replicated as visual-only children (%d)" % [int(c.nb), kids.size()])
 			var want_owner: int = main.player.get_instance_id() if mine else Net.match_players.avatar(int(c.bob)).get_instance_id()

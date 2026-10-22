@@ -160,9 +160,14 @@ func _run() -> void:
 	check(Net.last_hitter(z) == 1 and not Net._last_hit_crit(), "last_hitter solo: peer 1")
 
 	# ------------------------------------------------------------ hosting: targeting + hit claims + points
+	var NP = Net.projectiles
+	var gtx0: int = NP.stats.gitem_tx
+	NP.send_grenade_item({})
+	check(NP.stats.gitem_tx == gtx0 and NP.grenade_item(1) == null, "grenade item: solo send is a no-op (nothing stored)")
 	var port := 30000 + randi() % 20000
 	check(Net.host_party(port, false) == OK and Net.is_networked() and Net.is_host(), "host_party on %d" % port)
 	Net._party[5] = {"peer_id": 5, "name": "Bob", "class_id": "soldier", "ready": true, "is_leader": false, "ping_ms": 0, "slot": 1, "state": "in_match"} # test-only fake client entry
+	_grenade_items(Net, NP)
 	var av2 := _body("net_avatar", Vector3(30, 0, 0), 6)
 	check(Net.pick_target(z) == av, "pick_target host: nearest player body (avatar at 1 m beats local at 10 m)")
 	av.downed = true
@@ -299,6 +304,88 @@ func _run() -> void:
 	await process_frame
 	print("NET SEAM TEST: %s (%d passed, %d failed)" % ["OK" if _fails == 0 else "FAILED", _passes, _fails])
 	quit(_fails)
+
+
+## Grenade items (playtest #5, Skillz 41bd224): host store + checks, throw check against the stored item, host-built
+## data, {} = class grenade, P1 copies carry the host data, peer leave clears. Runs on a real GearDB.
+func _grenade_items(Net: Node, NP: Node) -> void:
+	var GDB: Node = root.get_node_or_null("GearDB")
+	if GDB == null or not GDB.has_method("roll_grenade"):
+		print("SKIP  grenade items: no GearDB.roll_grenade in this tree")
+		return
+	var S = NP
+	var it = GDB.roll_grenade("rookery", 3, 140, null, 2)
+	var d: Dictionary = S.item_dict_of(it)
+	check(d.get("class") == "grenade" and d.get("grenade_id") == "rookery" and d.has("fittings") and not d.has("stats"), "item_dict_of: the to_dict keys the host uses (%s)" % [d.keys()])
+	check(S.item_dict_of(null) == {}, "item_dict_of(null) = {} (class grenade)")
+	var r: Dictionary = S.sanitize_grenade_item(d)
+	check(r.why == "" and r.item.grenade_id == "rookery" and int(r.item.item_power) == 140 and r.item.fittings.size() == d.fittings.size(), "sanitize: a rolled Rookery passes as is")
+	check(S.sanitize_grenade_item({}).why == "" and S.sanitize_grenade_item({}).item == {}, "sanitize: {} = class grenade")
+	var bad := d.duplicate(true)
+	bad.rarity = int(d.rarity) + 1
+	check(S.sanitize_grenade_item(bad).why == "item_rarity", "sanitize: rarity not the type's -> item_rarity")
+	bad = d.duplicate(true)
+	bad.variant = "frag"
+	check(S.sanitize_grenade_item(bad).why == "wrong_variant", "sanitize: variant not the type's -> wrong_variant")
+	bad = d.duplicate(true)
+	bad.grenade_id = "nuke"
+	check(S.sanitize_grenade_item(bad).why == "unknown_grenade", "sanitize: unknown grenade_id")
+	bad = d.duplicate(true)
+	bad.item_power = 99999
+	check(S.sanitize_grenade_item(bad).why == "item_power", "sanitize: Item Power past item_power.max")
+	bad = d.duplicate(true)
+	bad.fittings = {"heavy_packing": 9.0}
+	check(S.sanitize_grenade_item(bad).why == "bad_fitting", "sanitize: a Fitting outside its range")
+	bad.fittings = {"short_wick": 0.8, "heavy_packing": 1.1, "wide_casing": 1.1}
+	check(S.sanitize_grenade_item(bad).why == "too_many_fittings", "sanitize: more Fittings than the rarity rolls")
+	bad = d.duplicate(true)
+	bad.class = "weapon"
+	check(S.sanitize_grenade_item(bad).why == "not_grenade", "sanitize: not a grenade item")
+	# host store (peer 5 = the fake Bob, class soldier)
+	NP._gitem_t.clear()
+	check(NP.host_grenade_item(5, d) == "" and NP.grenade_item(5).grenade_id == "rookery", "host: Bob's equipped Rookery stored")
+	var huge := d.duplicate(true)
+	huge["flavor"] = "x".repeat(5000)
+	check(NP.host_grenade_item(5, huge) == "item_too_big" and NP.grenade_item(5).grenade_id == "rookery", "host: an oversized item dict refused, the old one kept")
+	NP._gitem_t.clear()
+	var rates := []
+	for i in 10:
+		rates.append(NP.host_grenade_item(7, {}))
+	check(rates.count("") == 8 and rates.back() == "item_rate", "host: grenade item updates past grenade_item_max_per_s refused (%s)" % [rates])
+	NP._gitem_t.clear()
+	NP.send_grenade_item(S.item_dict_of(GDB.roll_grenade("frag", 1, 100, null, 0)))
+	check(NP.grenade_item(1) != null and NP.grenade_item(1).grenade_id == "frag", "host: its own equipped grenade is tracked too (peer 1)")
+	# throw checks against the stored item
+	var GS: Script = load("res://scripts/combat/grenade.gd")
+	var tampered: Dictionary = it.throw_data().duplicate(true)
+	tampered.damage = 99999.0
+	tampered.radius = 50.0
+	var spec: Dictionary = GS.make_spec(null, tampered, Vector3.ZERO, Vector3(0, 3, -10), 9)
+	var ck: Dictionary = NP.grenade_throw_check(5, spec)
+	var want: Dictionary = load("res://scripts/items/grenade_item.gd").throw_data_from_dict(NP.grenade_item(5))
+	check(ck.why == "" and is_equal_approx(float(ck.data.damage), float(want.damage)) and float(ck.data.damage) < 99999.0 and is_equal_approx(float(ck.data.radius), float(want.radius)), "throw check: host data = throw_data_from_dict(stored item), not the client's numbers (dmg %s)" % [ck.get("data", {}).get("damage")])
+	check(ck.data.fittings == NP.grenade_item(5).fittings and int(ck.data.item_power) == 140, "throw check: the item's Fittings + Item Power are in the host data")
+	var fs: Dictionary = GS.make_spec(null, GS.data_for_variant("frag"), Vector3.ZERO, Vector3(0, 3, -10), 9)
+	check(NP.grenade_throw_check(5, fs).why == "wrong_grenade", "throw check: a frag while a Rookery is equipped -> wrong_grenade")
+	var rs := spec.duplicate()
+	rs.rarity = 0
+	check(NP.grenade_throw_check(5, rs).why == "item_rarity", "throw check: rarity not the item's -> item_rarity")
+	check(NP.grenade_throw_check(6, spec).why == "no_grenade_item", "throw check: no item synced -> no_grenade_item")
+	# {} = class grenade (soldier)
+	NP.host_grenade_item(5, {})
+	var cid: String = load("res://scripts/classes/class_roster.gd").template("soldier").grenade_id
+	var cs: Dictionary = GS.make_spec(null, GS.data_for_variant(cid), Vector3.ZERO, Vector3(0, 3, -10), 9)
+	var cc: Dictionary = NP.grenade_throw_check(5, cs)
+	check(NP.grenade_item(5) == {} and cc.why == "" and str(cc.data.get("variant", cid)) == str(GS.data_for_variant(cid).get("variant", cid)), "throw check: {} -> the class grenade (%s) at its base numbers" % cid)
+	var other := "rookery" if cid != "rookery" else "frag"
+	check(NP.grenade_throw_check(5, GS.make_spec(null, GS.data_for_variant(other), Vector3.ZERO, Vector3(0, 3, -10), 9)).why == "wrong_grenade", "throw check: {} + another type -> wrong_grenade")
+	# P1 broadcast form: data only with_data (host -> copies), never in a client's request
+	var sp: Dictionary = spec.duplicate()
+	sp.data = ck.data
+	check(not NP.spec_tx(sp).has("data") and NP.spec_tx(sp, true).get("data", {}).get("color") == ck.data.get("color"), "spec_tx: a throw request carries no data; the host broadcast carries the host data (+ color)")
+	NP.drop_peer(5)
+	check(NP.grenade_item(5) == null, "peer left: its grenade item cleared")
+	NP._gitem_t.clear()
 
 
 func _main_stub_script() -> GDScript:

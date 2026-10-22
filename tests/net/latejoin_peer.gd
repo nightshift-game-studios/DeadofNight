@@ -225,6 +225,11 @@ func _host() -> void:
 	check(P.avatar(dan) != null, "host: an avatar for Dan")
 	check(_evs("player_joined_late", dan).size() == 1 and bool(_evs("player_joined_late", dan)[0][2].get("spectating")), "host: game_event player_joined_late (spectating)")
 	check(Net.get_points(dan) == int(NetConfig.get_value("points.late_join_start")), "host: Dan's ledger = points.late_join_start (%d)" % Net.get_points(dan))
+	if Net.projectiles.has_method("grenade_item"): # grenade items (playtest #5): the late joiner's equipped grenade reached the host
+		var GDB: Node = get_root().get_node("GearDB")
+		check(await _wait(func(): return Net.projectiles.grenade_item(dan) != null, 5.0), "host: Dan's equipped grenade synced on late join (%s)" % [Net.projectiles.grenade_item(dan)])
+		var gi = Net.projectiles.grenade_item(dan)
+		check(gi is Dictionary and ((gi as Dictionary).is_empty() or (GDB.grenades as Dictionary).has(str(gi.get("grenade_id")))), "host: Dan's grenade item is a known type or {} (class grenade)")
 	var znames: Array = []
 	var zhp: Dictionary = {}
 	for z in main.zombies_root.get_children():
@@ -268,6 +273,8 @@ func _host() -> void:
 	check(P.life_of(eve) == "alive" and not P.late_spectators.has(eve) and str(_entry("Eve").get("state")) == "in_match", "host: Eve alive straight away (break join)")
 	check(_evs("player_joined_late", eve).size() == 1 and not bool(_evs("player_joined_late", eve)[0][2].get("spectating")), "host: player_joined_late (not spectating)")
 	check(Net.match_players.avatars.size() == 3, "host: avatars for Bob, Dan, Eve (%d)" % Net.match_players.avatars.size())
+	if Net.projectiles.has_method("grenade_item"):
+		check(await _wait(func(): return Net.projectiles.grenade_item(eve) != null, 5.0), "host: Eve's equipped grenade synced on her break join")
 	check(not Net._offers_closed.is_empty() and Net._offers_closed.has(dan) and Net._offers_closed.has(eve), "host: late joiners never block Field Card rounds")
 	await _sleep(1.0)
 	Net.broadcast_event(&"t_finish", 0, {})

@@ -65,7 +65,13 @@
 		"_help_grenades": "cooldown_types: player-thrown type_ids on a cooldown; a second throw within grenade_min_interval_s is refused (Ordnance etc. shorten the real cooldown, so this is a loose floor). heal_max_per_s: most HP the host relays to one player per second (Leechbell orbs etc.); more is clipped and logged. A bug guard, not a balance number: well above one Leechbell (its heal comes from grenades.json).",
 		"cooldown_types": ["grenade"],
 		"grenade_min_interval_s": 2.0,
-		"heal_max_per_s": 500
+		"heal_max_per_s": 500,
+		"_help_items": "Grenade items (playtest #5): item_types = thrown type_ids whose data is built by the host from the thrower's equipped item (GrenadeItem.throw_data_from_dict). A peer's item update is refused past grenade_item_max_per_s or grenade_item_max_bytes; peers send at most one per grenade_item_min_interval_s. grenade_data_max_bytes caps the grenade data the host sends with each copy.",
+		"item_types": ["grenade"],
+		"grenade_item_min_interval_s": 0.25,
+		"grenade_item_max_per_s": 8,
+		"grenade_item_max_bytes": 4096,
+		"grenade_data_max_bytes": 8192
 	},
 	"drops": {
 		"shared_world_drops": true,

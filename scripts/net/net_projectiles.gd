@@ -24,15 +24,26 @@ extends Node
 ## Nothing here knows a type id or variant: anything registered in data/projectiles.json syncs.
 ## owner_id is an instance id, so it never goes over the wire as is: it becomes owner_z (zombie name) or owner_peer
 ## (net peer) and is mapped back to the local puppet / player / avatar on arrival.
+##   * grenade items (Skillz 41bd224, playtest #5, GRENADE_ITEMS_API.md): every peer sends its equipped GrenadeItem
+##     (send_grenade_item: the to_dict() keys the host uses, {} = the class grenade) at match start / late join and
+##     on every grenade_equipped change (NetPlayers drives it, rate-limited). The host checks + stores one per peer
+##     (its own too), drops it when the peer leaves, and checks every client grenade throw against it: variant ==
+##     grenade_id, rarity == the item's rarity, else refused (wrong_grenade / item_rarity / no_grenade_item). The
+##     real grenade's data is GrenadeItem.throw_data_from_dict(stored), never the client's numbers; the copies get
+##     that data in the P1 broadcast (variant + data.color + the host's fuse / radius for the visuals).
 
 signal projectile_rx(spec: Dictionary) ## client: a host projectile's visual copy was spawned here
 signal event_rx(net_id: int, kind: String, data: Dictionary) ## client: a host projectile event reached its copy
 signal throw_refused(peer_id: int, reason: String) ## host: a client throw was rejected (logged, never a kick)
 signal throw_dropped(req: int, reason: String) ## client: the host refused our throw; its local copy was removed
+signal grenade_item_rx(peer_id: int, item: Dictionary) ## host: a peer's equipped grenade was stored ({} = class grenade)
+signal grenade_item_refused(peer_id: int, reason: String) ## host: a grenade item update was rejected (kept the old one)
+
+const GITEM_KEYS := ["class", "grenade_id", "variant", "rarity", "item_power", "fittings", "item_id"] ## what the host uses
 
 var script_path := "res://scripts/projectiles/thrown_projectile.gd" ## tests swap in a fake
 var net: Node
-var stats := {"tx": 0, "rx": 0, "throw_req": 0, "throw_ok": 0, "throw_refused": 0, "ev_tx": 0, "ev_rx": 0, "ev_lost": 0, "fx_fwd": 0, "dropped": 0}
+var stats := {"tx": 0, "rx": 0, "throw_req": 0, "throw_ok": 0, "throw_refused": 0, "ev_tx": 0, "ev_rx": 0, "ev_lost": 0, "fx_fwd": 0, "dropped": 0, "gitem_tx": 0, "gitem_rx": 0, "gitem_refused": 0}
 var _thrower := 0 ## host: the peer whose request is being spawned right now (its P1 broadcast skips it)
 var _thrower_req := 0 ## host: that request's token (bound to the new net id on the thrower)
 var _throw_t: Dictionary = {} ## host: peer -> [msec of recent throws]
@@ -42,6 +53,8 @@ var _by_id: Dictionary = {} ## every peer: net id -> projectile (weak: freed one
 var _req_seq := 0 ## client: throw request tokens
 var _pending_req: Dictionary = {} ## client: token -> its local visual copy, until the host binds a net id
 var _script: Script = null
+var _gitems: Dictionary = {} ## host: peer -> its checked equipped grenade dict ({} = class grenade)
+var _gitem_t: Dictionary = {} ## host: peer -> [msec of recent grenade item updates]
 
 
 func _ready() -> void:
@@ -49,6 +62,10 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	if net.has_signal("returned_to_lobby"):
 		net.returned_to_lobby.connect(clear)
+	if net.has_signal("disconnected"):
+		net.disconnected.connect(func(_r): clear())
+	if net.has_signal("peer_left"):
+		net.peer_left.connect(func(id, _n, _r): drop_peer(id))
 
 
 func clear() -> void:
@@ -56,7 +73,17 @@ func clear() -> void:
 	_pending_req.clear()
 	_throw_t.clear()
 	_grenade_t.clear()
+	_gitems.clear()
+	_gitem_t.clear()
 	_next_id = 0
+
+
+## Host: a peer left -> its grenade item and throw history go.
+func drop_peer(id: int) -> void:
+	_gitems.erase(id)
+	_gitem_t.erase(id)
+	_throw_t.erase(id)
+	_grenade_t.erase(id)
 
 
 func proj_script() -> Script:
@@ -157,13 +184,19 @@ func data_rx(v: Variant) -> Variant:
 
 
 ## Spec -> wire form: plain Variants, owner as a zombie name or a peer id.
-func spec_tx(spec: Dictionary) -> Dictionary:
+## with_data (host P1 broadcast only): the grenade's "data" goes along so copies show the host's numbers + colour.
+## A client's own throw request never sends data: the host builds it from the stored item.
+func spec_tx(spec: Dictionary, with_data: bool = false) -> Dictionary:
 	var tx := {}
 	for k in ["type_id", "variant", "rarity", "pos", "vel", "seed"]:
 		if spec.has(k):
 			tx[k] = spec[k]
 	if spec.get("fuse") is float or spec.get("fuse") is int: # a per-spawn fuse (Rookery bomblet_delay from the grenade data)
 		tx["fuse"] = float(spec.fuse)
+	if with_data and spec.get("data") is Dictionary and not (spec.data as Dictionary).is_empty():
+		var d: Variant = data_tx(spec.data)
+		if var_to_bytes(d).size() <= int(_cfg("grenade_data_max_bytes", 8192)):
+			tx["data"] = d
 	var oid := int(spec.get("owner_id", 0))
 	var ref := node_tx(instance_from_id(oid) if oid != 0 else null)
 	if ref.begins_with("z:"):
@@ -208,7 +241,7 @@ func host_spawned(spec: Dictionary, p: Node = null) -> int:
 	_watch_body(p)
 	if p and p.get("body") == null:
 		_watch_body.call_deferred(p) # P1 ahead of the Grenade body (the first P1 line): hook it once spawn() returned
-	var tx := spec_tx(spec)
+	var tx := spec_tx(spec, true)
 	tx["net_id"] = nid
 	stats.tx += 1
 	if _thrower == 0:
@@ -233,6 +266,8 @@ func receive_projectile(tx: Dictionary) -> Node:
 		return null
 	var spec := spec_rx(tx)
 	spec["visual_only"] = true
+	if tx.get("data") is Dictionary: # from the host (authority): its grenade numbers + colour for this copy
+		spec["data"] = data_rx(tx.data)
 	var p: Node = S.spawn(spec)
 	if p:
 		_register(int(tx.get("net_id", 0)), p)
@@ -347,6 +382,7 @@ func host_throw(peer_id: int, tx: Dictionary) -> String:
 	var spec := spec_rx(tx) if tx is Dictionary else {}
 	var av: Node3D = net.match_players.avatar(peer_id)
 	var def: Dictionary = S.type_def(spec.type_id, spec.variant) if S and not spec.is_empty() else {}
+	var gchk: Dictionary = grenade_throw_check(peer_id, spec) if not spec.is_empty() and _item_type(spec.type_id) else {}
 	var now := Time.get_ticks_msec()
 	if S == null:
 		why = "no_projectiles"
@@ -358,6 +394,8 @@ func host_throw(peer_id: int, tx: Dictionary) -> String:
 		why = "wrong_rarity"
 	elif int(spec.rarity) < 0 or int(spec.rarity) >= Rarity.IDS.size():
 		why = "wrong_rarity"
+	elif str(gchk.get("why", "")) != "":
+		why = str(gchk.why)
 	elif av == null:
 		why = "no_avatar"
 	elif (spec.pos as Vector3).distance_to(av.global_position) > _cfg("max_throw_dist", 4.0):
@@ -383,6 +421,9 @@ func host_throw(peer_id: int, tx: Dictionary) -> String:
 	if _cooldown_type(spec.type_id):
 		_grenade_t[peer_id] = now
 	spec.owner_id = av.get_instance_id()
+	spec.erase("data")
+	if gchk.get("data") is Dictionary: # the stored item's numbers (GrenadeItem.throw_data_from_dict), never the client's
+		spec["data"] = gchk.data
 	stats.throw_ok += 1
 	_thrower = peer_id
 	_thrower_req = int(tx.get("req", 0))
@@ -405,3 +446,177 @@ func drop_request(req: int, why: String) -> void:
 		p.queue_free()
 	stats.dropped += 1
 	throw_dropped.emit(req, why)
+
+
+# ------------------------------------------------------------------ grenade items (playtest #5, Skillz 41bd224)
+## data/net.json projectiles.item_types: thrown types whose data comes from the thrower's equipped item (grenades).
+func _item_type(type_id: StringName) -> bool:
+	var lst = NetConfig.get_value("projectiles.item_types", ["grenade"])
+	return lst is Array and (lst as Array).has(str(type_id))
+
+
+static func _gdb() -> Node:
+	var ml := Engine.get_main_loop()
+	return (ml as SceneTree).root.get_node_or_null("GearDB") if ml is SceneTree else null
+
+
+## The wire form of an equipped grenade: the GrenadeItem.to_dict() keys the host uses; null (empty slot) = {}.
+static func item_dict_of(item: Variant) -> Dictionary:
+	if item == null or not (item is Object) or not is_instance_valid(item) or not (item as Object).has_method("to_dict"):
+		return {}
+	var d: Dictionary = item.to_dict()
+	if str(d.get("class", "")) != "grenade":
+		return {}
+	var out := {}
+	for k in GITEM_KEYS:
+		if d.has(k):
+			out[k] = d[k]
+	return out
+
+
+## Any peer: tell the host what grenade this machine's player has equipped ({} = the class grenade). Solo: nothing.
+## The host stores its own straight away. NetPlayers calls this (rate-limited) on match start and every change.
+func send_grenade_item(d: Dictionary) -> void:
+	if not net.is_networked():
+		return
+	stats.gitem_tx += 1
+	if net.is_host():
+		host_grenade_item(net.local_peer_id(), d)
+	else:
+		_rpc_grenade_item.rpc_id(1, d)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _rpc_grenade_item(d: Dictionary) -> void:
+	if net.is_host():
+		host_grenade_item(multiplayer.get_remote_sender_id(), d)
+
+
+## Host: store `peer_id`'s equipped grenade after the checks (rate, size, sanitize_grenade_item). Returns "" or the
+## reason it was refused (the old one stays; logged, never a kick).
+func host_grenade_item(peer_id: int, d: Variant) -> String:
+	var why := ""
+	var now := Time.get_ticks_msec()
+	var recent: Array = (_gitem_t.get(peer_id, []) as Array).filter(func(t): return now - int(t) < 1000)
+	var clean: Dictionary = {}
+	if not (d is Dictionary):
+		why = "bad_item"
+	elif recent.size() >= int(_cfg("grenade_item_max_per_s", 8.0)):
+		why = "item_rate"
+	elif var_to_bytes(d).size() > int(_cfg("grenade_item_max_bytes", 4096.0)):
+		why = "item_too_big"
+	else:
+		recent.append(now)
+		var r := sanitize_grenade_item(d)
+		why = str(r.why)
+		clean = r.item
+	_gitem_t[peer_id] = recent
+	if why != "":
+		stats.gitem_refused += 1
+		push_warning("NetProjectiles: refused a grenade item from peer %d (%s)" % [peer_id, why])
+		grenade_item_refused.emit(peer_id, why)
+		return why
+	_gitems[peer_id] = clean
+	stats.gitem_rx += 1
+	grenade_item_rx.emit(peer_id, clean)
+	return ""
+
+
+## Checks a peer's grenade item dict against GearDB: known type, variant + rarity are the type's, Item Power in
+## 1..item_power.max, Fittings that can roll on the type, inside their ranges, no more than the rarity allows.
+## {why: "" | reason, item: the clean dict (GITEM_KEYS only) or {} (class grenade / refused)}.
+static func sanitize_grenade_item(d: Dictionary) -> Dictionary:
+	if d.is_empty():
+		return {"why": "", "item": {}}
+	var g := _gdb()
+	if g == null:
+		return {"why": "no_geardb", "item": {}}
+	if str(d.get("class", "")) != "grenade":
+		return {"why": "not_grenade", "item": {}}
+	var id := str(d.get("grenade_id", ""))
+	var all: Dictionary = g.get("grenades")
+	if not all.has(id):
+		return {"why": "unknown_grenade", "item": {}}
+	var base: Dictionary = all[id]
+	var var_id := str(base.get("variant", id))
+	if d.has("variant") and str(d.variant) != var_id:
+		return {"why": "wrong_variant", "item": {}}
+	var r = d.get("rarity")
+	var rar := Rarity.from_id(str(base.get("rarity", "common")))
+	if not (r is int or r is float) or int(r) != rar:
+		return {"why": "item_rarity", "item": {}}
+	var ip = d.get("item_power", 100)
+	var ip_max := int((g.get("loot") as Dictionary).get("item_power", {}).get("max", 400)) if g.get("loot") is Dictionary else 400
+	if not (ip is int or ip is float) or int(ip) < 1 or int(ip) > ip_max:
+		return {"why": "item_power", "item": {}}
+	var fit = d.get("fittings", {})
+	if not (fit is Dictionary):
+		return {"why": "bad_fitting", "item": {}}
+	var cfg: Dictionary = g.get("grenade_items") if g.get("grenade_items") is Dictionary else {}
+	var per: Dictionary = cfg.get("fittings_per_rarity", {})
+	if (fit as Dictionary).size() > int(per.get(Rarity.IDS[rar], 3)):
+		return {"why": "too_many_fittings", "item": {}}
+	var pool: Array = g.grenade_fitting_pool(id) if g.has_method("grenade_fitting_pool") else []
+	var defs: Dictionary = cfg.get("fittings", {})
+	var clean_fit := {}
+	for fid in fit:
+		var v = fit[fid]
+		if not pool.has(str(fid)) or not (v is int or v is float):
+			return {"why": "bad_fitting", "item": {}}
+		var rg: Array = (defs.get(str(fid), {}) as Dictionary).get("range", [1.0, 1.0])
+		if float(v) < float(rg[0]) - 0.006 or float(v) > float(rg[-1]) + 0.006:
+			return {"why": "bad_fitting", "item": {}}
+		clean_fit[str(fid)] = float(v)
+	return {"why": "", "item": {"class": "grenade", "grenade_id": id, "variant": var_id, "rarity": rar, "item_power": int(ip),
+		"fittings": clean_fit, "item_id": str(d.get("item_id", "")).left(64)}}
+
+
+## Host: the stored equipped grenade of `peer_id` (a copy; {} = class grenade), or null if none arrived yet.
+func grenade_item(peer_id: int) -> Variant:
+	return (_gitems[peer_id] as Dictionary).duplicate(true) if _gitems.has(peer_id) else null
+
+
+## The class grenade id of `peer_id` (party class_id -> PlayerClass.grenade_id); "" if the class is unknown here.
+func class_grenade_id(peer_id: int) -> String:
+	for e in net.get_party():
+		if int(e.peer_id) == peer_id:
+			var cls := str(e.get("class_id", ""))
+			if cls != "" and ClassRoster.has(cls):
+				var t = ClassRoster.template(cls)
+				return str(t.grenade_id) if t else ""
+	return ""
+
+
+## Host: a client's grenade throw against its stored item. {why: "" | reason, data: the host-built grenade data}.
+## {} stored (class grenade): the class's grenade at its grenades.json numbers (any known type if the class is unknown).
+func grenade_throw_check(peer_id: int, spec: Dictionary) -> Dictionary:
+	if not _gitems.has(peer_id):
+		return {"why": "no_grenade_item"}
+	var g := _gdb()
+	if g == null:
+		return {"why": "no_geardb"}
+	var all: Dictionary = g.get("grenades")
+	var d: Dictionary = _gitems[peer_id]
+	var id := ""
+	var data: Dictionary = {}
+	var rar := -1
+	if d.is_empty():
+		id = class_grenade_id(peer_id)
+		if id == "": # class unknown here: whichever known type the spec names, at its base numbers
+			for k in all:
+				if k == str(spec.variant) or str((all[k] as Dictionary).get("variant", k)) == str(spec.variant):
+					id = str(k)
+		if not all.has(id):
+			return {"why": "wrong_grenade"}
+		data = (all[id] as Dictionary).duplicate(true)
+		rar = Rarity.from_id(str(data.get("rarity", "common")))
+	else:
+		id = str(d.grenade_id)
+		data = GrenadeItem.throw_data_from_dict(d)
+		rar = int(d.rarity)
+	var var_id := str(data.get("variant", id))
+	if str(spec.variant) != id and str(spec.variant) != var_id:
+		return {"why": "wrong_grenade"}
+	if int(spec.rarity) != rar:
+		return {"why": "item_rarity"}
+	return {"why": "", "data": data}
