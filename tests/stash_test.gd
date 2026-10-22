@@ -137,7 +137,7 @@ func _run() -> void:
 	inv.add_item(gear.roll_armor("gauntlets", COMMON, 1))
 	inv.add_item(unseen_bp)
 	var sd: Dictionary = JSON.parse_string(JSON.stringify(inv.to_save_dict()))
-	check(int(sd.version) == 1 and sd.backpack.gauntlets.any(func(d): return d.seen == false), "to_save_dict carries version + per-item seen")
+	check(int(sd.version) == load("res://scripts/items/inventory.gd").SAVE_VERSION and sd.backpack.gauntlets.any(func(d): return d.seen == false), "to_save_dict carries version + per-item seen")
 	var inv_rt = _new_inv()
 	inv_rt.load_save_dict(sd)
 	check(inv_rt.unseen_count("gauntlets") == 1 and inv_rt.unseen_count() == 1 and inv_rt.carried_count() == inv.carried_count(),
@@ -173,7 +173,7 @@ func _run() -> void:
 	check(prog.save_stash(), "save_stash() captures the bound inventory")
 	var c2 := ConfigFile.new()
 	c2.load(prog.save_path)
-	check(int(c2.get_value("meta", "save_version", 0)) == prog.SAVE_VERSION and prog.SAVE_VERSION >= 3 and c2.has_section_key("stash", "data") and int(c2.get_value("stash", "version", 0)) == 1,
+	check(int(c2.get_value("meta", "save_version", 0)) == prog.SAVE_VERSION and prog.SAVE_VERSION >= 3 and c2.has_section_key("stash", "data") and int(c2.get_value("stash", "version", 0)) == load("res://scripts/items/inventory.gd").SAVE_VERSION,
 		"save written as current version (>= v3): [meta] save_version, [stash] version + data")
 	check(c2.get_value("skills", "ranks", {}) == {"mk_root": 1}, "skills survive the v3 rewrite")
 	prog.stash = {}

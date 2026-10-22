@@ -186,7 +186,7 @@ func _run() -> void:
 	gdb.loot.tables.zombie.drop_chance = 1.0
 	for i in 400:
 		for it in gdb.roll_table("zombie", 5):
-			has_g = has_g or ("grenade_id" in it and it.effect == CI.Effect.GRENADE)
+			has_g = has_g or ("grenade_id" in it and "fittings" in it) # §25: GrenadeItem (equippable), not the old consumable
 	gdb.loot.tables.zombie.drop_chance = saved_dc
 	check(has_g and gdb.loot.tables.chest.entries.any(func(e): return e.get("kind") == "grenade"), "zombie + chest tables can drop grenades")
 	var lt: Dictionary = gdb.loot.tables.zombie
@@ -210,7 +210,7 @@ func _run() -> void:
 	var rare_w = gdb.roll_weapon("smg", 2, 3, "", 200)
 	inv.backpack[rare_w.slot].append(rare_w)
 	var val: int = prog.scrap_value(rare_w)
-	check(val == 4 + 2 and A.scrap_yield(0) == 1 and A.scrap_yield(4) == 15, "scrap yield: Rare 4 + 1 per 50 IP over 100 (IP 200 -> %d); Common 1, Mythic 15" % val)
+	check(val == 6 + 2 and A.scrap_yield(0) == 1 and A.scrap_yield(4) == 25, "scrap yield: Rare 6 + 1 per 50 IP over 100 (IP 200 -> %d); Common 1, Mythic 25 (salvage pass 2026-10-22)" % val)
 	check(prog.scrap_item(rare_w, inv, "stash") == val and prog.scrap == val and not inv.backpack[rare_w.slot].has(rare_w)
 		and sig == [[val, "stash"]], "scrap_item: removes the item, pays Scrap, scrap_gained(n, source)")
 	check(not prog.spend_scrap(val + 1) and prog.spend_scrap(1) and prog.scrap == val - 1 and prog.scrap_lifetime == val, "spend_scrap")
@@ -378,7 +378,7 @@ func _grenade_pickup_checks(main, pl) -> void:
 	if pk == null:
 		check(false, "scenes/pickup.tscn exists")
 		return
-	pk.item = gdb.grenade_pickup("gravewell")
+	pk.item = gdb.grenade_pickup("gravewell") # legacy consumable: §25 turns it into an equipped GrenadeItem
 	main.add_child(pk)
 	pk.global_position = pl.global_position + Vector3(3, 0, 0)
 	await physics_frame
@@ -386,8 +386,9 @@ func _grenade_pickup_checks(main, pl) -> void:
 	var k0: float = pl.grenade_cooldown / maxf(float(before.get("cooldown", 20.0)), 0.001)
 	pk.interact(pl)
 	await physics_frame
-	check(str(pl.grenade_data.get("name", "")) == "Gravewell" and pl.get_meta("grenade_override", "") == "gravewell" and (not is_instance_valid(pk) or pk.is_queued_for_deletion()),
-		"E on a grenade pickup: player.grenade_data = GearDB.grenade(gravewell), meta grenade_override, pickup gone (was %s)" % before.get("name", "?"))
+	var eg = pl.inventory.equipped.get("grenade") if pl.inventory.equipped.has("grenade") else null
+	check(str(pl.grenade_data.get("name", "")) == "Gravewell" and (eg == null or str(eg.grenade_id) == "gravewell") and (not is_instance_valid(pk) or pk.is_queued_for_deletion()),
+		"E on a grenade pickup: player throws Gravewell (equipped as a GrenadeItem), pickup gone (was %s)" % before.get("name", "?"))
 	check(absf(pl.grenade_cooldown - float(pl.grenade_data.get("cooldown", 20.0)) * k0) < 0.01, "grenade cooldown follows the new grenade (%.1f s)" % pl.grenade_cooldown)
 	pl.recalc_stats()
 	check(str(pl.grenade_data.get("name", "")) == "Gravewell", "picked-up grenade survives recalc_stats")
@@ -396,7 +397,8 @@ func _grenade_pickup_checks(main, pl) -> void:
 	if pl.has_method("apply_stats") and FileAccess.get_file_as_string("res://scripts/player.gd").contains("grenade_override"):
 		pl.apply_stats()
 		check(str(pl.grenade_data.get("name", "")) == "Gravewell", "player.gd §24c: picked-up grenade survives apply_stats")
-	pl.remove_meta("grenade_override")
+	if pl.has_meta("grenade_override"):
+		pl.remove_meta("grenade_override")
 	pl.grenade_data = before
 	pl.recalc_stats()
 

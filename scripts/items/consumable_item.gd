@@ -65,6 +65,22 @@ func give_grenade(player: Node) -> bool:
 	var gdb: Node = root.get_node_or_null("GearDB") if root else null
 	if gdb == null or not (gdb.get("grenades") as Dictionary).has(grenade_id) or not "grenade_data" in player:
 		return false
+	var inv = player.get("inventory") if "inventory" in player else null
+	if inv and "equipped" in inv and (inv.equipped as Dictionary).has("grenade") and inv.has_method("take_and_equip"):
+		# §25: grenades are items now. A legacy pickup (old co-op grant / test) becomes a GrenadeItem of that type and is
+		# equipped at once (the old one goes to the backpack, or is dropped on the floor when there is no room).
+		var cur = inv.equipped.get("grenade")
+		if cur is GrenadeItem and str(cur.grenade_id) == grenade_id:
+			return false
+		var cs: Node = (ml as SceneTree).current_scene
+		var item: GearItem = gdb.roll_grenade(grenade_id, maxi(int(cs.get("current_round")), 1) if cs and "current_round" in cs else 1)
+		var r: Dictionary = inv.take_and_equip(item)
+		if not r.ok:
+			return false
+		if r.displaced and cs and cs.has_method("spawn_pickup") and player is Node3D:
+			cs.spawn_pickup(r.displaced, (player as Node3D).global_position, false)
+		_grenade_sfx(root, str(gdb.grenade(grenade_id).get("rarity", "common")))
+		return true
 	var d: Dictionary = gdb.grenade(grenade_id)
 	if str((player.get("grenade_data") as Dictionary).get("variant", "")) == str(d.get("variant", grenade_id)) \
 			and str((player.get("grenade_data") as Dictionary).get("name", "")) == str(d.get("name", "")):
@@ -76,8 +92,12 @@ func give_grenade(player: Node) -> bool:
 	if player.has_signal("grenade_changed"):
 		player.emit_signal("grenade_changed", str(d.get("name", "Grenade")), float(player.get("_grenade_cd")) if "_grenade_cd" in player else 0.0,
 			float(player.get("grenade_cooldown")) if "grenade_cooldown" in player else 20.0)
-	var sfx: Node = root.get_node_or_null("Sfx")
+	_grenade_sfx(root, str(d.get("rarity", "common")))
+	return true
+
+
+static func _grenade_sfx(root: Node, rarity_id: String) -> void:
+	var sfx: Node = root.get_node_or_null("Sfx") if root else null
 	if sfx:
 		sfx.play("grenade_pickup")
-		sfx.play("grenade_rarity_" + str(d.get("rarity", "common")))
-	return true
+		sfx.play("grenade_rarity_" + rarity_id)

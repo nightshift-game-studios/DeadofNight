@@ -18,15 +18,18 @@ signal changed
 signal weapon_equipped(weapon: WeaponItem)
 signal armor_changed
 signal seen_changed(item: GearItem) ## an item's seen flag flipped, or an unseen item was added/removed (badge refresh)
+signal grenade_equipped(item: GearItem) ## §25: the "grenade" slot changed (the GrenadeItem now equipped, or null = class grenade)
 
-const SAVE_VERSION := 1 ## to_save_dict() shape version (1 = equipped + backpack, items carry "seen")
+const SAVE_VERSION := 2 ## to_save_dict() shape version (1 = equipped + backpack, items carry "seen"; 2 = + "grenade" slot, DESIGN §25)
 const DEFAULT_STASH_CAP := 40
 const GEAR_DB_PATH := "res://scripts/autoload/gear_db.gd" ## static GearDB.is_upgrade / slot_refusal (load(), not preload: avoids a compile cycle)
 
 const WEAPON_SLOTS: Array[String] = ["primary", "secondary", "heavy"]
 const ARMOR_SLOTS: Array[String] = ["helmet", "gauntlets", "chest", "legs", "class_item"]
+const GRENADE_SLOTS: Array[String] = ["grenade"] ## §25 (playtest 2026-10-22 #5): the equipped GrenadeItem is the thrown grenade
+const ALL_SLOTS: Array[String] = ["primary", "secondary", "heavy", "helmet", "gauntlets", "chest", "legs", "class_item", "grenade"]
 const SLOT_LABELS := {"primary": "Primary", "secondary": "Secondary", "heavy": "Heavy", "helmet": "Helmet",
-	"gauntlets": "Gauntlets", "chest": "Chest", "legs": "Legs", "class_item": "Class Item"}
+	"gauntlets": "Gauntlets", "chest": "Chest", "legs": "Legs", "class_item": "Class Item", "grenade": "Grenade"}
 
 @export var backpack_size: int = 9
 @export var bag_size: int = 6
@@ -39,9 +42,11 @@ var active_weapon_slot: String = "primary"
 
 
 func _ready() -> void:
-	for s in WEAPON_SLOTS + ARMOR_SLOTS:
-		equipped[s] = null
-		backpack[s] = []
+	for s in ALL_SLOTS:
+		if not equipped.has(s):
+			equipped[s] = null
+		if not backpack.has(s):
+			backpack[s] = []
 	var gdb := get_node_or_null("/root/GearDB")
 	if gdb and stash_cap == DEFAULT_STASH_CAP:
 		stash_cap = int(gdb.loot.get("stash", {}).get("cap", DEFAULT_STASH_CAP))
@@ -74,6 +79,7 @@ func give_fresh_starter_loadout() -> void:
 	add_item(GearDB.roll_weapon("sidearm", Rarity.COMMON, 1)) # secondary (handgun)
 	for s in ARMOR_SLOTS:
 		add_item(GearDB.roll_armor(s, Rarity.COMMON, 1))
+	add_item(GearDB.starter_grenade(_class_grenade_id())) # §25: the class grenade as an item
 	equip_weapon_slot("primary")
 
 
@@ -86,6 +92,10 @@ func fill_empty_slots() -> void:
 	for s in ARMOR_SLOTS:
 		if equipped.get(s) == null:
 			add_item(GearDB.roll_armor(s, Rarity.COMMON, 1))
+	if equipped.get("grenade") == null and backpack.get("grenade", []).is_empty():
+		# §25 save migration: a pre-v2 stash (no grenade slot) gets the class grenade as a starter item. An empty slot
+		# with spare grenades in the backpack stays empty on purpose (player unequipped: class grenade).
+		add_item(GearDB.starter_grenade(_class_grenade_id()))
 	if get_equipped_weapon() == null:
 		equip_weapon_slot("primary")
 
@@ -101,6 +111,8 @@ func add_item(item: Item) -> bool:
 	if gear:
 		_rehome(gear)
 		var s: String = gear.slot
+		if not backpack.has(s):
+			backpack[s] = []
 		if equipped.get(s) == null:
 			equipped[s] = gear
 			_set_seen(gear, true)
@@ -190,6 +202,8 @@ func take_and_equip(gear: GearItem) -> Dictionary:
 	if s in WEAPON_SLOTS:
 		(gear as WeaponItem).init_ammo()
 		equip_weapon_slot(s)
+	elif s in GRENADE_SLOTS:
+		_grenade_changed()
 	else:
 		armor_changed.emit()
 	changed.emit()
@@ -246,7 +260,7 @@ func stash_space() -> int:
 
 func _slot_items(slot: String) -> Array:
 	var out := []
-	for s in (WEAPON_SLOTS + ARMOR_SLOTS if slot == "" else [slot]):
+	for s in (ALL_SLOTS if slot == "" else [slot]):
 		if equipped.get(s):
 			out.append(equipped[s])
 		out.append_array(backpack.get(s, []))
@@ -290,8 +304,57 @@ func _after_equip(s: String) -> void:
 		w.init_ammo()
 		if s == active_weapon_slot or get_equipped_weapon() == null:
 			equip_weapon_slot(s)
+	elif s in GRENADE_SLOTS:
+		_grenade_changed()
 	else:
 		armor_changed.emit()
+
+
+# ------------------------------------------------------------------ grenade slot (§25, GRENADE_ITEMS_API.md)
+
+## The equipped GrenadeItem (null = empty slot: the player throws the class grenade).
+func equipped_grenade() -> GrenadeItem:
+	return equipped.get("grenade") as GrenadeItem
+
+
+## Equip a backpack GrenadeItem (same as equip(item)). False if it isn't a grenade in the backpack.
+func equip_grenade(item: GearItem) -> bool:
+	if not (item is GrenadeItem) or not backpack.get("grenade", []).has(item):
+		return false
+	equip(item)
+	return true
+
+
+## Moves the equipped grenade to the backpack (slot empty -> class grenade). False with no room or nothing equipped.
+func unequip_grenade() -> bool:
+	var g: GearItem = equipped.get("grenade")
+	if g == null or backpack.get("grenade", []).size() >= backpack_size or stash_full():
+		return false
+	backpack["grenade"].append(g)
+	equipped["grenade"] = null
+	_grenade_changed()
+	changed.emit()
+	return true
+
+
+## Every grenade slot change: grenade_equipped(item) + the owning Player throws it from now on (charges kept).
+func _grenade_changed() -> void:
+	var p := get_parent()
+	if p and "grenade_data" in p:
+		GrenadeItem.apply_to_player(p)
+		if not p.is_node_ready(): # match start: player._ready() runs apply_stats() after the stash restore -> re-apply after it
+			GrenadeItem.apply_to_player.call_deferred(p)
+	grenade_equipped.emit(equipped.get("grenade"))
+
+
+## The class grenade id for a starter grenade item: the owning Player's class, else Progress's selected class, else frag.
+func _class_grenade_id() -> String:
+	var p := get_parent()
+	var pc = p.get("player_class") if p and "player_class" in p else null
+	if pc == null:
+		var prog := get_node_or_null("/root/Progress") if is_inside_tree() else null
+		pc = prog.load_selected_class() if prog and prog.has_method("load_selected_class") else null
+	return str(pc.grenade_id) if pc and "grenade_id" in pc else "frag"
 
 
 func equip_weapon_slot(s: String) -> void:
@@ -363,12 +426,12 @@ func compare_power(item: GearItem) -> Dictionary:
 	return {"label": "Item Power", "delta": float(d), "better": d > 0, "worse": d < 0, "text": "%+d" % d if d != 0 else ""}
 
 
-## Low-key average Item Power of equipped gear (empty slots ignored).
+## Low-key average Item Power of equipped gear (empty slots ignored; the grenade doesn't count, §25).
 func average_item_power() -> int:
 	var t := 0
 	var n := 0
 	for s in equipped:
-		if equipped[s]:
+		if equipped[s] and not (s in GRENADE_SLOTS):
 			t += (equipped[s] as GearItem).item_power
 			n += 1
 	return int(round(float(t) / max(n, 1)))
@@ -414,17 +477,18 @@ func to_save_dict() -> Dictionary:
 	var d := {"version": SAVE_VERSION, "equipped": {}, "backpack": {}}
 	for s in equipped:
 		d.equipped[s] = equipped[s].to_dict() if equipped[s] else null
-		d.backpack[s] = backpack[s].map(func(i): return i.to_dict())
+		d.backpack[s] = backpack.get(s, []).map(func(i): return i.to_dict())
 	return d
 
 
 func load_save_dict(d: Dictionary) -> void:
 	slot_migrations = []
 	var moved: Array = [] # wrong-slot weapons (saves from before the slot rule): placed after the right ones
-	for s in WEAPON_SLOTS + ARMOR_SLOTS:
+	for s in ALL_SLOTS:
 		equipped[s] = null
 		backpack[s] = []
-	for s in WEAPON_SLOTS + ARMOR_SLOTS:
+	# v1 dicts have no "grenade" key: the slot loads empty and fill_empty_slots() (restore_stash) adds the starter.
+	for s in ALL_SLOTS:
 		var e = d.get("equipped", {}).get(s)
 		var eq := GearDB.item_from_dict(e) if typeof(e) == TYPE_DICTIONARY else null
 		if _loadable(eq, s):
@@ -453,6 +517,7 @@ func load_save_dict(d: Dictionary) -> void:
 	armor_changed.emit()
 	changed.emit()
 	seen_changed.emit(null) # whole inventory replaced: badge UI should recount
+	_grenade_changed()
 	if equipped.get(active_weapon_slot) == null:
 		for s in WEAPON_SLOTS:
 			if equipped.get(s):

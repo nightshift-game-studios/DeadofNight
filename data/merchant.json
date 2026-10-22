@@ -27,6 +27,7 @@
 	},
 	"featured_bonus": {"item_power": 4, "bonus_perks": 1, "price_mult": 1.15},
 	"mythic_signature_perks": ["choirfall", "lantern_tithe", "bellrope_return"],
+	"grenades": {"_help": "Grenade items (playtest 2026-10-22 #5, DESIGN §25): count extra grenade offers beside the guns (Merchant.grenade_stock / buy_grenade, same seed / refresh / reroll as the guns). weights = rarity odds (the type is then a random grenades.json id of that rarity). price = rarity price x price_mult (merchant) x price_mult here: 3 / 7 / 16 / 39 / 79 Gravemarks at the current 0.5. item_power = that rarity's gun item_power range; Fittings re-rolled (deterministic, best kept, max_roll_attempts) until roll_quality >= roll_quality_floor.", "count": 2, "price_mult": 0.5, "roll_quality_floor": 0.5, "weights": {"common": 30, "uncommon": 40, "rare": 22, "legendary": 7, "mythic": 1}},
 	"income_source": "armory",
 	"income_per_match": {"easy": 5.2, "medium": 7.0, "hard": 14.0}
 }

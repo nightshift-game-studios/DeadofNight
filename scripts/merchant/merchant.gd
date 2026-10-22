@@ -24,6 +24,7 @@ signal stock_changed(reason: String) ## "refresh" | "reroll" | "buy" | "load"
 signal purchased(offer_id: String, item: WeaponItem, price: int)
 signal refreshed ## free hourly refresh (also emits stock_changed("refresh"))
 signal reroll_cost_changed(new_cost: int)
+signal grenade_purchased(offer_id: String, item: GearItem, price: int) ## §25 grenade offers (GrenadeItem)
 
 const DATA_PATH := "res://data/merchant.json"
 const STATE_VERSION := 1
@@ -52,6 +53,7 @@ var inventory: Node = null
 var data: Dictionary = {}
 
 var _items: Dictionary = {} ## offer_id -> preview WeaponItem (rebuilt from the saved dict)
+var _gitems: Dictionary = {} ## §25 grenade offer_id -> preview GrenadeItem
 var _last_refusal: String = ""
 var _income_cache: Dictionary = {} ## diff -> Gravemarks per typical match
 var _anchor_unix: float = -1.0 ## trusted time at _anchor_ticks (this session)
@@ -326,6 +328,7 @@ func _state() -> Dictionary:
 func _on_progress_changed(kind: String, _id: String) -> void:
 	if kind == "load":
 		_items.clear()
+		_gitems.clear()
 		_anchor_unix = -1.0
 		stock_changed.emit("load")
 
@@ -508,6 +511,7 @@ func _roll_stock(only_unsold: bool) -> void:
 		_items[oid] = w
 	randomize() # don't leave the global RNG on a predictable seed
 	st["stock"] = stock
+	_roll_grenades(only_unsold)
 
 
 ## Random-perk pool: every perk except Mythic signatures (sorted, so rolls are deterministic).
@@ -548,6 +552,141 @@ func _ensure_playstyle(w: WeaponItem, need: int, rng: RandomNumberGenerator) -> 
 		else:
 			w.perks.append(pick)
 		have += 1
+
+
+# ================================================================== grenade offers (§25, playtest 2026-10-22 #5)
+
+func grenade_cfg() -> Dictionary:
+	return data.get("grenades", {})
+
+
+func grenade_price_for(r: int) -> int:
+	return maxi(int(round(float(rarity_cfg(r).get("price", 1)) * price_mult() * float(grenade_cfg().get("price_mult", 0.5)))), 1)
+
+
+## Grenade offers: [{offer_id, slot, item (GrenadeItem), item_id, grenade_id, rarity, rarity_id, rarity_name, item_power,
+## fittings (GrenadeItem.fitting_rows), price, currency "gravemark", sold, owned, can_afford, reason}]. Same refresh /
+## reroll as the guns (a reroll replaces unsold grenade offers too). Empty when merchant.json has no "grenades".
+func grenade_stock() -> Array:
+	if not _ensure_stock():
+		return []
+	var st := _state()
+	if int(st.get("grenade_gen", -1)) != int(st.gen) or typeof(st.get("grenades")) != TYPE_ARRAY:
+		_roll_grenades(false) # saves from before §25 / a stock rolled without grenades
+		_progress().save_data()
+	var out := []
+	for o in st.grenades:
+		out.append(_decorate_grenade(o))
+	return out
+
+
+func buy_grenade(offer_id: String) -> Dictionary:
+	var o := _find_grenade(offer_id)
+	if o.is_empty() or _due():
+		return _refuse(R_EXPIRED, true)
+	var c := _check(o)
+	if not c.ok:
+		return _refuse(c.reason, true)
+	var p := _progress()
+	var price := int(o.price)
+	if not p.spend_gravemark(price):
+		return _refuse(R_FUNDS % price, true)
+	var g := _grenade_preview(o)
+	g.seen = false
+	var gr := _grant(g)
+	if not gr.ok:
+		p.refund_gravemark(price)
+		_gitems.erase(offer_id)
+		return _refuse(str(gr.reason), true)
+	o["sold"] = true
+	_last_refusal = ""
+	if gr.live:
+		p.save_stash()
+	else:
+		p.save_data()
+	grenade_purchased.emit(offer_id, g, price)
+	stock_changed.emit("buy")
+	return {"ok": true, "reason": "", "item": g}
+
+
+func _roll_grenades(only_unsold: bool) -> void:
+	var st := _state()
+	var gdb := _gear_db()
+	var gc := grenade_cfg()
+	var n := maxi(int(gc.get("count", 0)), 0)
+	var old: Array = st.get("grenades", []) if typeof(st.get("grenades")) == TYPE_ARRAY else []
+	var out: Array = []
+	var ws: Array = []
+	for id in Rarity.IDS:
+		ws.append(maxf(float(gc.get("weights", {}).get(id, 0.0)), 0.0))
+	for i in n:
+		if only_unsold and i < old.size() and bool(old[i].get("sold", false)):
+			out.append(old[i])
+			continue
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash([int(st.seed), int(st.hour_index), int(st.rerolls), i, "gravecrew_merchant_grenade"])
+		var tot := 0.0
+		for v in ws:
+			tot += v
+		var r := Rarity.COMMON
+		var x := rng.randf() * tot
+		for k in ws.size():
+			x -= ws[k]
+			if x < 0.0:
+				r = k
+				break
+		var ids: Array = gdb.grenade_ids_of_rarity(r)
+		while ids.is_empty() and r > 0:
+			r -= 1
+			ids = gdb.grenade_ids_of_rarity(r)
+		if ids.is_empty():
+			continue
+		var gid: String = str(ids[rng.randi_range(0, ids.size() - 1)])
+		var ipr: Array = rarity_cfg(r).get("item_power", [100, 100])
+		var ip := rng.randi_range(int(ipr[0]), int(ipr[-1]))
+		var g: GrenadeItem = null
+		for attempt in maxi(int(data.get("max_roll_attempts", 1)), 1):
+			var cand: GrenadeItem = gdb.roll_grenade(gid, 1, ip, rng)
+			if g == null or cand.roll_quality > g.roll_quality:
+				g = cand
+			if g.roll_quality >= float(gc.get("roll_quality_floor", 0.0)):
+				break
+		g.seen = false
+		var oid := "gren%d_%d" % [int(st.gen), i]
+		out.append({"offer_id": oid, "slot": i, "rarity": g.rarity, "price": grenade_price_for(g.rarity), "sold": false, "item": g.to_dict()})
+		_gitems[oid] = g
+	st["grenades"] = out
+	st["grenade_gen"] = int(st.gen)
+
+
+func _find_grenade(offer_id: String) -> Dictionary:
+	if _progress() == null:
+		return {}
+	for o in _state().get("grenades", []):
+		if str(o.get("offer_id", "")) == offer_id:
+			return o
+	return {}
+
+
+func _grenade_preview(o: Dictionary) -> GrenadeItem:
+	var oid := str(o.offer_id)
+	var g = _gitems.get(oid)
+	if g == null or not is_instance_valid(g):
+		g = _gear_db().item_from_dict(o.item) as GrenadeItem
+		g.seen = false
+		_gitems[oid] = g
+	return g
+
+
+func _decorate_grenade(o: Dictionary) -> Dictionary:
+	var g := _grenade_preview(o)
+	o["price"] = grenade_price_for(int(o.rarity)) # price dial changes apply to saved stock
+	var c := {"ok": false, "reason": R_EXPIRED} if _due() else _check(o)
+	var r := int(o.rarity)
+	return {"offer_id": str(o.offer_id), "slot": int(o.slot), "item": g, "item_id": str(g.item_id), "grenade_id": g.grenade_id,
+		"rarity": r, "rarity_id": Rarity.IDS[r], "rarity_name": Rarity.name_of(r), "item_power": g.item_power,
+		"fittings": g.fitting_rows(), "price": int(o.price), "currency": "gravemark", "sold": bool(o.get("sold", false)),
+		"owned": _owns(str(g.item_id)), "can_afford": _balance() >= int(o.price), "reason": "" if c.ok else str(c.reason)}
 
 
 # ================================================================== offers
@@ -655,7 +794,7 @@ func _room(slot: String) -> Dictionary:
 
 ## Puts the gun in the live inventory, or (no match / home inventory bound) straight into Progress.stash.
 ## Returns {ok, reason, live}.
-func _grant(w: WeaponItem) -> Dictionary:
+func _grant(w: GearItem) -> Dictionary:
 	var inv := _live_inventory()
 	if inv:
 		if inv.add_item(w):
@@ -663,7 +802,7 @@ func _grant(w: WeaponItem) -> Dictionary:
 		return {"ok": false, "reason": _reject_reason(inv), "live": true}
 	var p := _progress()
 	var tmp := Inventory.new()
-	for s in Inventory.WEAPON_SLOTS + Inventory.ARMOR_SLOTS:
+	for s in Inventory.ALL_SLOTS:
 		tmp.equipped[s] = null
 		tmp.backpack[s] = []
 	tmp.stash_cap = _cap()

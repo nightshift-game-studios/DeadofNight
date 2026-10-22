@@ -174,5 +174,173 @@
 			"mark_damage_mult": 1.25,
 			"mark_refund": 0.2
 		}
+	},
+	"items": {
+		"_help": "Grenade items (playtest 2026-10-22 #5, Skillz, DESIGN §25, /workspace/skillz/GRENADE_ITEMS_API.md). A grenade is a GearItem (GrenadeItem, class 'grenade') in the Inventory 'grenade' equip slot; the equipped one is what you throw (player.gd §25 hunk: GrenadeItem.resolve). Empty slot = the class grenade (PlayerClass.grenade_id). Grenade COUNT (charges, cooldown refill) stays on the player; the item only picks the type + rolled Fittings. Item rarity = the type's rarity (grenades[id].rarity, so Netz's variant/rarity check holds). item_power is rolled like other gear (loot_tables item_power); every damage key x (1 + (IP-100) x ip_damage_per_point), floor ip_mult_min. fittings_per_rarity = rolled Fittings (mods) per rarity; starter items (class grenade on a fresh / migrated stash) have starter_fittings. fittings: id -> {name, stat (what it multiplies), range [lo, hi] (rolled uniformly, rounded to 0.01), text ({pct} = the rolled % change), needs (optional: only on types whose base data has this key > 0), types (optional allow list)}. Groups of keys each stat touches: damage_keys, radius_keys, effect_keys[type]. heal_frac is capped at heal_frac_cap. Names are original (no third-party terms): the rolled parts are 'Fittings', the maker is the item's manufacturer.",
+		"slot": "grenade",
+		"slot_label": "Grenade",
+		"type_name": "Grenade",
+		"ip_damage_per_point": 0.003,
+		"ip_mult_min": 0.7,
+		"fittings_per_rarity": {
+			"common": 1,
+			"uncommon": 1,
+			"rare": 2,
+			"legendary": 2,
+			"mythic": 3
+		},
+		"starter_fittings": 0,
+		"damage_keys": [
+			"damage",
+			"burn_dps",
+			"chain_damage",
+			"bomblet_damage",
+			"bounce_damage",
+			"toll_damage"
+		],
+		"radius_keys": [
+			"radius",
+			"patch_radius",
+			"bomblet_radius",
+			"pull_radius",
+			"bounce_radius",
+			"toll_radius",
+			"chain_range"
+		],
+		"effect_keys": {
+			"cinderjar": [
+				"patch_duration",
+				"burn_dps"
+			],
+			"shiverglass": [
+				"slow_time"
+			],
+			"tallyhook": [
+				"chain_damage"
+			],
+			"rookery": [
+				"bomblet_damage"
+			],
+			"gravewell": [
+				"pull_time"
+			],
+			"leechbell": [
+				"heal_frac"
+			],
+			"requiem_bell": [
+				"mark_time",
+				"toll_damage"
+			]
+		},
+		"heal_frac_cap": 0.45,
+		"fittings": {
+			"heavy_packing": {
+				"name": "Heavy Packing",
+				"stat": "damage_mult",
+				"range": [
+					1.06,
+					1.15
+				],
+				"text": "+{pct}% damage"
+			},
+			"wide_casing": {
+				"name": "Wide Casing",
+				"stat": "radius_mult",
+				"range": [
+					1.06,
+					1.15
+				],
+				"text": "+{pct}% blast radius"
+			},
+			"quick_rearm": {
+				"name": "Quick Rearm",
+				"stat": "cooldown_mult",
+				"range": [
+					0.86,
+					0.94
+				],
+				"text": "-{pct}% cooldown"
+			},
+			"short_wick": {
+				"name": "Short Wick",
+				"stat": "fuse_mult",
+				"range": [
+					0.7,
+					0.85
+				],
+				"text": "-{pct}% fuse time",
+				"needs": "fuse"
+			},
+			"long_arm": {
+				"name": "Long Arm",
+				"stat": "throw_speed_mult",
+				"range": [
+					1.12,
+					1.25
+				],
+				"text": "+{pct}% throw distance"
+			},
+			"steeped": {
+				"name": "Steeped",
+				"stat": "effect_mult",
+				"range": [
+					1.1,
+					1.25
+				],
+				"text": "+{pct}% {effect}",
+				"types": [
+					"cinderjar",
+					"shiverglass",
+					"tallyhook",
+					"rookery",
+					"gravewell",
+					"leechbell",
+					"requiem_bell"
+				]
+			}
+		},
+		"effect_labels": {
+			"cinderjar": "burn",
+			"shiverglass": "chill time",
+			"tallyhook": "chain damage",
+			"rookery": "bomblet damage",
+			"gravewell": "pull time",
+			"leechbell": "healing",
+			"requiem_bell": "toll"
+		},
+		"makers": [
+			{
+				"name": "Tallowmere Ordnance",
+				"color": "#C9A46A",
+				"flavor": [
+					"Packed by candlelight, thrown by daylight.",
+					"Mind the wick."
+				]
+			},
+			{
+				"name": "Ashpit & Daughters",
+				"color": "#B5543A",
+				"flavor": [
+					"Four generations of loud.",
+					"Family recipe. Do not open."
+				]
+			},
+			{
+				"name": "Wickcross Foundry",
+				"color": "#7F9DB0",
+				"flavor": [
+					"Cast in the same furnace as the bells.",
+					"Every casing numbered."
+				]
+			},
+			{
+				"name": "Kettlebrand",
+				"color": "#8FA35A",
+				"flavor": [
+					"If it rattles, it's working.",
+					"Shake well before use."
+				]
+			}
+		]
 	}
 }

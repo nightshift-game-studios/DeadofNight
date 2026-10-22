@@ -2,7 +2,8 @@ class_name Armory
 extends RefCounted
 ## Armory (Skillz): Gravemark currency drops, weapon attachments and weapon upgrade tiers.
 ## Economy v2 (DESIGN §21): upgrade tiers cost Scrap (armory.json upgrades.currency = "scrap"; Progress.scrap, save v6,
-## earned by scrapping gear, see /workspace/skillz/SCRAP_API.md). Attachments / optics stay Gravemark.
+## earned by scrapping gear, see /workspace/skillz/SCRAP_API.md). Attachments / optics: Gravemark OR Scrap (playtest
+## 2026-10-22 #2, armory.json attachment_shop: Scrap price by attachment rarity; default_currency picks cost()/purchase()).
 ## Data: res://data/attachments.json (slots, class compatibility, parts) + res://data/armory.json (currency, drops, tiers).
 ## State lives in the Progress autoload (save v4): Progress.gravemarks, Progress.armory {upgrades, owned, equipped}.
 ## Works outside a match (home menu) because it only needs Progress.
@@ -623,7 +624,8 @@ static func optic_profile(weapon_id: String, optic = null) -> Dictionary:
 		"aperture_mm": float(ob.get("aperture_mm", 0.0)),
 		"replaces_irons": bool(ob.get("replaces_irons", false)) if oid != "" else false,
 		"hides": _optic_hides(oid, arch) if oid != "" else [],
-		"rarity": str(ob.get("rarity", "common")), "tier": int(a.get("tier", 0)), "cost": int(a.get("cost", 0)),
+		"rarity": str(ob.get("rarity", "common")), "tier": int(a.get("tier", 0)), "cost": cost_of(oid) if oid != "" else 0,
+		"currency": attachment_currency(), "prices": attachment_prices(oid) if oid != "" else {},
 		"owned": oid == "" or owned(oid), "equipped": str(loadout(arch).get("optic", "")) == oid,
 		"compatible": oid == "" or is_compatible(oid, arch), "art_status": art,
 		"fallback": art == "pending", "tradeoff": str(ob.get("tradeoff", "")),
@@ -795,7 +797,7 @@ static func _slot_name(slot: String) -> String:
 
 ## Can `id` be bought right now? id = attachment id or "upg_<arch>". {ok, reason}; reason is UI text when !ok.
 ## Single source of truth for buy_attachment / buy_upgrade / purchase().
-static func purchase_check(id: String) -> Dictionary:
+static func purchase_check(id: String, currency: String = "") -> Dictionary:
 	var p = prog()
 	if p == null:
 		return _check(false, "Save data isn't loaded")
@@ -817,9 +819,12 @@ static func purchase_check(id: String) -> Dictionary:
 	var preq := purchase_requirements(id)
 	if not preq.is_empty():
 		return _check(false, "Needs " + str(preq[0]))
-	var cst := cost_of(id)
-	if int(p.gravemarks) < cst:
-		return _check(false, "Need %d %s (you have %d)" % [cst, _currency_word(cst), int(p.gravemarks)])
+	var cur := attachment_currency(currency)
+	if cur == "":
+		return _check(false, "%s can't buy that" % str(currency).capitalize())
+	var cst := attachment_price(id, cur)
+	if balance(cur) < cst:
+		return _check(false, "Need %d %s (you have %d)" % [cst, currency_word(cur, cst), balance(cur)])
 	return _check(true)
 
 
@@ -849,13 +854,15 @@ static func equip_check(weapon_id: String, slot: String, id: String) -> Dictiona
 	return _check(true)
 
 
-static func buy_attachment(att_id: String) -> bool:
-	var c := purchase_check(att_id) if not att_id.begins_with(UPGRADE_PREFIX) else _check(false, "Not an attachment")
+## currency "" = attachment_shop.default_currency; "scrap" / "gravemark" pay with that one (playtest 2026-10-22 #2).
+static func buy_attachment(att_id: String, currency: String = "") -> bool:
+	var c := purchase_check(att_id, currency) if not att_id.begins_with(UPGRADE_PREFIX) else _check(false, "Not an attachment")
 	_last_refusal = str(c.reason)
 	if not c.ok:
 		return false
 	var p = prog()
-	if not p.spend_gravemark(int(attachment(att_id).cost)):
+	var cur := attachment_currency(currency)
+	if not _spend(cur, attachment_price(att_id, cur)):
 		_last_refusal = "Purchase failed"
 		return false
 	p.armory.owned.append(att_id)
@@ -902,14 +909,94 @@ static func unequip_slot(arch: String, slot: String) -> bool:
 	return true
 
 
-static func cost_of(id: String) -> int:
+static func cost_of(id: String, currency: String = "") -> int:
 	if id.begins_with(UPGRADE_PREFIX):
 		return next_upgrade_cost(id.substr(UPGRADE_PREFIX.length()))
-	return int(attachment(id).get("cost", 0))
+	var cur := attachment_currency(currency)
+	return attachment_price(id, cur if cur != "" else "gravemark")
+
+
+# ================================================================== attachment shop (playtest 2026-10-22 #2, SCRAP_API.md)
+
+static func shop_cfg() -> Dictionary:
+	return cfg().get("attachment_shop", {})
+
+
+## Currencies an attachment can be paid with (armory.json attachment_shop.currencies; default ["gravemark"]).
+static func attachment_currencies() -> Array:
+	var c: Array = shop_cfg().get("currencies", ["gravemark"])
+	return c.filter(func(x): return str(x) in ["scrap", "gravemark"]).map(func(x): return str(x))
+
+
+## "" -> attachment_shop.default_currency; an allowed currency -> itself; anything else -> "" (refused).
+static func attachment_currency(currency: String = "") -> String:
+	if currency == "":
+		currency = str(shop_cfg().get("default_currency", "gravemark"))
+	return currency if currency in attachment_currencies() else ""
+
+
+## Attachment rarity id (common..mythic): explicit "rarity", else optic.rarity, else rarity_by_cost[cost] raised to
+## tier_floor[tier], then unique parts +unique_step.
+static func attachment_rarity(att_id: String) -> String:
+	var a := attachment(att_id)
+	if a.is_empty():
+		return "common"
+	if a.has("rarity"):
+		return str(a.rarity)
+	if a.get("optic") is Dictionary and (a.optic as Dictionary).has("rarity"):
+		return str(a.optic.rarity)
+	var sh := shop_cfg()
+	var ids := ["common", "uncommon", "rare", "legendary", "mythic"]
+	var r := ids.find(str(sh.get("rarity_by_cost", {}).get(str(int(a.get("cost", 0))), "common")))
+	r = maxi(r, ids.find(str(sh.get("tier_floor", {}).get(str(int(a.get("tier", 1))), "common"))))
+	if bool(a.get("unique", false)):
+		r += int(sh.get("unique_step", 0))
+	return ids[clampi(r, 0, 4)]
+
+
+## Price of an attachment in `currency` ("scrap": attachment_shop.scrap_price[rarity]; "gravemark": attachments.json cost).
+static func attachment_price(att_id: String, currency: String) -> int:
+	var a := attachment(att_id)
+	if a.is_empty():
+		return 0
+	if currency == "scrap":
+		if a.has("scrap_cost"):
+			return int(a.scrap_cost)
+		return int(shop_cfg().get("scrap_price", {}).get(attachment_rarity(att_id), 0))
+	return int(a.get("cost", 0))
+
+
+## {currency: price} for every allowed currency, e.g. {"scrap": 14, "gravemark": 3}.
+static func attachment_prices(att_id: String) -> Dictionary:
+	var out := {}
+	for c in attachment_currencies():
+		out[c] = attachment_price(att_id, c)
+	return out
+
+
+## Scrap price list by rarity (Gooey / docs): [{rarity_id, name, scrap, salvage_ip100}].
+static func attachment_price_table() -> Array:
+	var out := []
+	var names := ["Common", "Uncommon", "Rare", "Legendary", "Mythic"]
+	var ids := ["common", "uncommon", "rare", "legendary", "mythic"]
+	for i in 5:
+		out.append({"rarity": i, "rarity_id": ids[i], "name": names[i], "scrap": int(shop_cfg().get("scrap_price", {}).get(ids[i], 0)),
+			"salvage_ip100": scrap_yield(i, 100)})
+	return out
+
+
+## Salvage (scrap) payout per rarity at Item Power ip: [{rarity, rarity_id, name, scrap}] (Progress.salvage_table).
+static func salvage_table(ip: int = 100) -> Array:
+	var out := []
+	var names := ["Common", "Uncommon", "Rare", "Legendary", "Mythic"]
+	var ids := ["common", "uncommon", "rare", "legendary", "mythic"]
+	for i in 5:
+		out.append({"rarity": i, "rarity_id": ids[i], "name": names[i], "scrap": scrap_yield(i, ip)})
+	return out
 
 
 ## Balance covers the cost and the item is buyable (not owned / not maxed, requirements met).
-static func can_afford_id(id: String) -> bool:
+static func can_afford_id(id: String, currency: String = "") -> bool:
 	var p = prog()
 	if p == null:
 		return false
@@ -918,7 +1005,8 @@ static func can_afford_id(id: String) -> bool:
 		return is_archetype(arch) and upgrade_tier(arch) < max_tier() and balance(upgrade_currency()) >= next_upgrade_cost(arch)
 	if not is_attachment(id) or owned(id) or not purchase_requirements(id).is_empty():
 		return false
-	return p.gravemarks >= cost_of(id)
+	var cur := attachment_currency(currency)
+	return cur != "" and balance(cur) >= attachment_price(id, cur)
 
 
 # ================================================================== Gravemark drops
@@ -1187,15 +1275,18 @@ static func matches_to_max(diff: String, rounds: int = -1, arch: String = "auto_
 	for w in weapons():
 		ups += upgrade_total_cost(w.id)
 	var atts := 0
+	var atts_scrap := 0
 	for a in data().get("attachments", []):
 		atts += int(a.get("cost", 0))
+		atts_scrap += attachment_price(str(a.id), "scrap")
 	var gm_all := atts + (ups if up_cur == "gravemark" else 0)
 	return {"rounds": rounds, "per_match": inc, "scrap_per_match": up_inc if up_cur == "scrap" else 0.0,
 		"upgrade_currency": up_cur, "tiers_to_iv": ceilf(to_iv / maxf(up_inc, 0.01)),
 		"one_weapon_max": ceilf(upgrade_total_cost(arch) / maxf(up_inc, 0.01)),
 		"all_upgrades": ceilf(ups / maxf(up_inc, 0.01)), "upgrades_cost": ups,
 		"everything": maxf(ceilf(gm_all / maxf(inc, 0.01)), ceilf(ups / maxf(up_inc, 0.01))),
-		"everything_cost": gm_all, "attachments_cost": atts, "attachments": ceilf(atts / maxf(inc, 0.01))}
+		"everything_cost": gm_all, "attachments_cost": atts, "attachments": ceilf(atts / maxf(inc, 0.01)),
+		"attachments_scrap_cost": atts_scrap, "attachments_in_scrap": ceilf(atts_scrap / maxf(float(expected_match_scrap(diff, rounds).total), 0.01))}
 
 
 # ================================================================== instance API (Gooey's Armory tab)
@@ -1274,7 +1365,11 @@ func list_attachments(weapon_id: String, slot: String = "") -> Array:
 		var own := owned(id)
 		var eq := equipped_on(id, arch)
 		out.append({"id": id, "name": str(a.name), "summary": str(a.summary), "description": str(a.description),
-			"drawback": str(a.get("drawback", "")), "cost": int(a.cost), "owned": own, "equipped": eq,
+			"drawback": str(a.get("drawback", "")), "cost": cost_of(id), "owned": own, "equipped": eq,
+			# playtest 2026-10-22 #2: Scrap or Gravemark. currency = what cost / purchase(id) use; prices = every option.
+			"currency": attachment_currency(), "rarity": attachment_rarity(id), "prices": attachment_prices(id),
+			"scrap_cost": attachment_price(id, "scrap"), "gravemark_cost": int(a.cost),
+			"can_afford_scrap": can_afford_id(id, "scrap"), "can_afford_gravemark": can_afford_id(id, "gravemark"),
 			"slot": str(a.slot), "tier": int(a.get("tier", 1)), "unique": bool(a.get("unique", false)),
 			"icon": str(a.get("icon", id)), "model": str(a.get("model", "")), "weapon_id": arch,
 			"requirements": req, "purchase_requirements": preq, "can_afford": can_afford_id(id),
@@ -1307,6 +1402,21 @@ func purchase(id: String) -> bool:
 	if id.begins_with(UPGRADE_PREFIX):
 		return buy_upgrade(id.substr(UPGRADE_PREFIX.length()))
 	return buy_attachment(id)
+
+
+## Buys attachment `id` paying in `currency` ("scrap" / "gravemark"); upgrades ignore it (they use upgrade_currency()).
+func purchase_with(id: String, currency: String) -> bool:
+	if id.begins_with(UPGRADE_PREFIX):
+		return purchase(id)
+	var c := purchase_check(id, currency)
+	_last_refusal = str(c.reason)
+	if not c.ok:
+		return false
+	return buy_attachment(id, currency)
+
+
+func cost_in(id: String, currency: String) -> int:
+	return attachment_price(id, currency) if not id.begins_with(UPGRADE_PREFIX) else cost_of(id)
 
 
 ## Gooey's placeholder signature. `slot` must match the part's slot ("" = take it from the part).

@@ -20,6 +20,7 @@ var perks: Dictionary = {} ## perk id -> dict
 var attribute_cfg: Dictionary = {} ## perks.json attribute_counts (playtest #33)
 var loot: Dictionary = {}
 var grenades: Dictionary = {}
+var grenade_items: Dictionary = {} ## grenades.json "items": grenade items (DESIGN §25, GrenadeItem)
 var stat_variance: int = 12 ## +/- random roll applied to each weapon stat
 var headshot_default: float = 2.0 ## weapons.json -> headshot_multiplier_default
 
@@ -44,7 +45,9 @@ func reload_data() -> void:
 		perks[p.id] = p
 	attribute_cfg = pj.get("attribute_counts", {})
 	loot = _load_json(LOOT_PATH)
-	grenades = _load_json(GRENADES_PATH).get("grenades", {})
+	var gj := _load_json(GRENADES_PATH)
+	grenades = gj.get("grenades", {})
+	grenade_items = gj.get("items", {})
 
 
 func _load_json(path: String) -> Dictionary:
@@ -60,7 +63,18 @@ func perk(id: String) -> Dictionary:
 
 
 func grenade(id: String) -> Dictionary:
+	if id.begins_with("@") and item_grenades.has(id): # §25: an equipped GrenadeItem's throw_data (GrenadeItem.apply_to_player)
+		return item_grenades[id]
 	return grenades.get(id, grenades.get("frag", {}))
+
+
+## §25 bridge: "@<item_id>" -> that GrenadeItem's throw_data(), so player.gd's §24c meta path (apply_stats ->
+## GearDB.grenade(meta grenade_override)) keeps the equipped item with its Fittings. Set by GrenadeItem.apply_to_player.
+var item_grenades: Dictionary = {}
+
+
+func set_item_grenade(key: String, d: Dictionary) -> void:
+	item_grenades[key] = d
 
 
 ## MAIN_HOOKS §24c: drop odds per grenades.json id = drop_weight x loot_tables grenade_drops.rarity_mult[its rarity]
@@ -111,6 +125,94 @@ func grenade_pickup(id: String) -> ConsumableItem:
 		c.model_path = model
 		c.model_scale = 1.6
 	return c
+
+
+# ------------------------------------------------------------------ grenade items (playtest 2026-10-22 #5, DESIGN §25)
+
+## grenades.json ids of one rarity (sorted, so seeded picks are stable).
+func grenade_ids_of_rarity(r: int) -> Array:
+	var out: Array = grenades.keys().filter(func(k): return Rarity.from_id(str(grenades[k].get("rarity", "common"))) == r)
+	out.sort()
+	return out
+
+
+## Fitting ids that can roll on grenade `id` (needs / types rules; sorted).
+func grenade_fitting_pool(id: String) -> Array:
+	var b: Dictionary = grenades.get(id, {})
+	var out := []
+	var defs: Dictionary = grenade_items.get("fittings", {})
+	for fid in defs:
+		var f: Dictionary = defs[fid]
+		if f.has("needs") and float(b.get(str(f.needs), 0.0)) <= 0.0:
+			continue
+		if f.has("types") and not (id in (f.types as Array)):
+			continue
+		out.append(str(fid))
+	out.sort()
+	return out
+
+
+## Rolls a GrenadeItem. id "" = a drop pick (roll_grenade_id: drop_weight x rarity_mult). Rarity = the type's.
+## item_power -1 = roll_item_power(rarity, round). fittings_n -1 = items.fittings_per_rarity. rng null = global RNG.
+func roll_grenade(id: String = "", round_number: int = 1, item_power: int = -1, rng: RandomNumberGenerator = null, fittings_n: int = -1) -> GrenadeItem:
+	if id == "" or not grenades.has(id):
+		id = roll_grenade_id(rng) if id == "" else "frag"
+	var b: Dictionary = grenades.get(id, {})
+	var g := GrenadeItem.new()
+	g.grenade_id = id
+	g.archetype = id
+	g.rarity = Rarity.from_id(str(b.get("rarity", "common")))
+	g.color = Rarity.color(g.rarity)
+	g.item_power = item_power if item_power > 0 else roll_item_power(g.rarity, round_number)
+	g.display_name = str(b.get("name", id.capitalize()))
+	g.id = "gi_%s_%d" % [id, g.uid]
+	var makers: Array = grenade_items.get("makers", [])
+	var mk: Dictionary = makers[(rng.randi() if rng else randi()) % makers.size()] if makers.size() else {}
+	g.manufacturer = str(mk.get("name", "Scavenged"))
+	g.manufacturer_color = Color.from_string(str(mk.get("color", "#CCCCCC")), Color(0.8, 0.8, 0.8))
+	var fl: Array = mk.get("flavor", [""])
+	g.flavor = str(fl[(rng.randi() if rng else randi()) % fl.size()]) if fl.size() else ""
+	var n := fittings_n if fittings_n >= 0 else int(grenade_items.get("fittings_per_rarity", {}).get(Rarity.IDS[g.rarity], 1))
+	var pool := grenade_fitting_pool(id)
+	var defs: Dictionary = grenade_items.get("fittings", {})
+	var q := 0.0
+	var picked := 0
+	while picked < n and not pool.is_empty():
+		var fid: String = pool.pop_at((rng.randi() if rng else randi()) % pool.size())
+		var rg: Array = defs[fid].get("range", [1.0, 1.0])
+		var lo := float(rg[0])
+		var hi := float(rg[-1])
+		var t := rng.randf() if rng else randf()
+		var v := snappedf(lerpf(lo, hi, t), 0.01)
+		g.fittings[fid] = v
+		var better_low := str(defs[fid].get("stat", "")) in ["cooldown_mult", "fuse_mult"]
+		q += _range_pos(v, lo, hi) if not better_low else 1.0 - _range_pos(v, lo, hi)
+		picked += 1
+	g.roll_quality = q / picked if picked > 0 else 0.5
+	g.description = g.effect_line()
+	g.seen = false
+	return g
+
+
+## How good a GrenadeItem's Fittings rolled (0 worst .. 1 best; 0.5 with none). Lower is better for cooldown / fuse.
+func grenade_roll_quality(g: GrenadeItem) -> float:
+	var defs: Dictionary = grenade_items.get("fittings", {})
+	var q := 0.0
+	var n := 0
+	for fid in g.fittings:
+		if not defs.has(fid):
+			continue
+		var rg: Array = defs[fid].get("range", [1.0, 1.0])
+		var p := _range_pos(float(g.fittings[fid]), float(rg[0]), float(rg[-1]))
+		q += 1.0 - p if str(defs[fid].get("stat", "")) in ["cooldown_mult", "fuse_mult"] else p
+		n += 1
+	return q / n if n > 0 else 0.5
+
+
+## The class grenade as a starter item (fresh / migrated stash): Common-type grenade, IP 100, starter_fittings.
+func starter_grenade(class_grenade_id: String = "frag") -> GrenadeItem:
+	var id := class_grenade_id if grenades.has(class_grenade_id) else "frag"
+	return roll_grenade(id, 1, 100, null, int(grenade_items.get("starter_fittings", 0)))
 
 
 func element_color(e: String) -> Color:
@@ -499,10 +601,8 @@ func roll_table(table_id: String, round_number: int = 1, drop_bonus: float = 0.0
 				var c := consumable(e.get("id", ""))
 				if c:
 					out.append(c)
-			"grenade": # MAIN_HOOKS §24c: id by grenades.json drop_weight x rarity_mult (not the table's rarity roll)
-				var gp := grenade_pickup(roll_grenade_id())
-				if gp:
-					out.append(gp)
+			"grenade": # §25: a GrenadeItem (equippable gear); id by grenades.json drop_weight x rarity_mult (not the table's rarity roll)
+				out.append(roll_grenade("", round_number))
 	return out
 
 
@@ -542,6 +642,15 @@ func item_from_dict(d: Dictionary) -> Item:
 			if a.roll_quality < 0.0:
 				a.roll_quality = derive_roll_quality(a)
 			return a
+		"grenade": # §25 GrenadeItem
+			var g := GrenadeItem.new()
+			g.apply_dict(d)
+			if not grenades.has(g.grenade_id):
+				return null # removed grenade type
+			g.description = g.effect_line()
+			if g.roll_quality < 0.0:
+				g.roll_quality = grenade_roll_quality(g)
+			return g
 		"consumable":
 			return consumable(d.get("id", ""))
 	return null

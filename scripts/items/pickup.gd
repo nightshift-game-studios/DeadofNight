@@ -26,12 +26,13 @@ func _ready() -> void:
 	var c: Color = gear.rarity_color() if gear else item.color
 	label.text = item.display_name
 	label.modulate = c.lightened(0.35)
-	var wm: Array = cons.world_model() if cons else ["", 1.0]
+	# §25: a GrenadeItem shows its grenade model (Desi's grenades/<variant>.glb) instead of the loot shard
+	var wm: Array = cons.world_model() if cons else (item.world_model() if item is GrenadeItem else ["", 1.0])
 	if wm[0] != "":
 		_visual = (load(wm[0]) as PackedScene).instantiate()
 		_visual.scale = Vector3.ONE * float(wm[1])
 		add_child(_visual)
-		if cons.effect == ConsumableItem.Effect.HEAVY_AMMO:
+		if cons and cons.effect == ConsumableItem.Effect.HEAVY_AMMO:
 			# Desi's heavy_ammo.glb: tint only its TintBand stripe; the old fallback mesh has none, so tint it all.
 			var tb := _visual.find_child("TintBand", true, false)
 			_tint(tb if tb else _visual, c)

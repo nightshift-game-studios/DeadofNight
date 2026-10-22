@@ -249,6 +249,13 @@ func migrate_stash(v) -> Dictionary:
 	var out: Dictionary = v.duplicate(true)
 	if typeof(out.get("backpack")) != TYPE_DICTIONARY:
 		out["backpack"] = {}
+	# stash v1 -> v2 (§25 grenade items): add the empty "grenade" slot. The next match / Kit restore fills it with the
+	# class grenade as a starter GrenadeItem (Inventory.fill_empty_slots); the old match-only grenade pickup is not saved.
+	if not out.equipped.has("grenade"):
+		out.equipped["grenade"] = null
+	if typeof(out.backpack.get("grenade")) != TYPE_ARRAY:
+		out.backpack["grenade"] = []
+	out["version"] = maxi(int(out.get("version", 1)), 2)
 	# v3 -> v4: every stored item gets a stable item_id (Armory identity), kept from here on.
 	for s in out.equipped:
 		if typeof(out.equipped[s]) == TYPE_DICTIONARY:
@@ -493,6 +500,30 @@ func spend_scrap(n: int) -> bool:
 func scrap_value(item) -> int:
 	var g := item as GearItem
 	return load(ARMORY_SCRIPT).scrap_yield(g.rarity, g.item_power) if g else 0
+
+
+## Salvage preview for the item card / scrap button (playtest 2026-10-22 #2, SCRAP_API.md "Salvage"):
+## {scrap, rarity, rarity_id, item_power, ok, reason}. ok false (scrap still shown) when `inv` (default: the bound
+## Inventory) holds it equipped or doesn't hold it: reason "Equipped" / "Not in your stash"; non-gear -> scrap 0.
+func salvage_preview(item, inv: Node = null) -> Dictionary:
+	var g := item as GearItem
+	if g == null:
+		return {"scrap": 0, "rarity": -1, "rarity_id": "", "item_power": 0, "ok": false, "reason": "Can't be scrapped"}
+	if inv == null:
+		inv = bound_inventory()
+	var out := {"scrap": scrap_value(g), "rarity": g.rarity, "rarity_id": Rarity.IDS[clampi(g.rarity, 0, 4)], "item_power": g.item_power, "ok": true, "reason": ""}
+	if inv and "equipped" in inv and inv.equipped.get(g.slot) == g:
+		out.ok = false
+		out.reason = "Equipped"
+	elif inv and "backpack" in inv and not inv.backpack.get(g.slot, []).has(g):
+		out.ok = false
+		out.reason = "Not in your stash"
+	return out
+
+
+## Scrap per rarity at Item Power `ip` (Armory.salvage_table): [{rarity, rarity_id, name, scrap}] common..mythic.
+func salvage_table(ip: int = 100) -> Array:
+	return load(ARMORY_SCRIPT).salvage_table(ip)
 
 
 ## Scraps a spare piece of gear for good and pays its Scrap: removes it from `inv` (default: the bound Inventory, i.e.
