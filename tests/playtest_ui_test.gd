@@ -64,6 +64,9 @@ func _go() -> void:
 	await _armory()
 	await _maps()
 	await _skill_tree()
+	# playtest 2026-10-22 #1: skill tiles draw the icon inside _draw(); UIStyle must keep a strong ref or it renders white
+	var it1 = UIStyle.skill_icon_tex("mk_root")
+	check(it1 != null and it1 == UIStyle.skill_icon_tex("mk_root") and UIStyle._icon_cache.has("res://assets/icons/skill_mk_root.png"), "skill icon texture cached (strong ref, no white box)")
 	_stat_formulas_static()
 	_run_stats_unit()
 	await _game_over_screen_unit()

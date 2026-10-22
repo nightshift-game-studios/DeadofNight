@@ -440,12 +440,21 @@ static func ip_breakdown_block(bd: Dictionary, big: int = 28, small: int = 11,
 # ------------------------------------------------------------------ skill / ability / class-item icons
 
 ## Glyph-only 256px icons (Desi): res://assets/icons/skill_<icon>.png, ability_<id>.png, <ci_id>.png. Null if missing.
+## Cache holds a strong ref: canvas draw_texture_rect() only stores the RID, so a texture loaded inside _draw()
+## and dropped at scope end is freed and renders as a solid white box (skill tiles, playtest 2026-10-22 #1).
+static var _icon_cache: Dictionary = {}
+
+
 static func _icon_tex(path: String) -> Texture2D:
+	if _icon_cache.has(path):
+		return _icon_cache[path]
+	var tex: Texture2D = null
 	if ResourceLoader.exists(path):
 		var t = load(path)
 		if t is Texture2D:
-			return t
-	return null
+			tex = t
+	_icon_cache[path] = tex
+	return tex
 
 
 ## Skill node icon by its "icon" key (skill_tree.json; falls back to the node id).
