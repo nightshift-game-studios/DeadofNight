@@ -43,6 +43,14 @@ Treyarch/Call of Duty audio or music.
 | sfx/player/grenade_leechbell_heal_01..02.wav | tools/gen_grenades_rare.py | Leechbell heal-orb pickup chime |
 | sfx/world/grenade_requiem_bell_bounce/detonate_01..03.wav | tools/gen_grenades_rare.py | Requiem Bell: bell-metal bounce clank; small per-bounce blast |
 | sfx/world/grenade_requiem_bell_toll_01..02.wav, grenade_requiem_bell_mark_01..02.wav | tools/gen_grenades_rare.py | Requiem Bell: deep final toll (~5 s); mark-applied ping |
+| sfx/player/q_breach_rush_01..02.wav | tools/gen_q_abilities.py | Q Breach Rush: heavy boot thud, lunge whoosh, shoulder-into-body impact |
+| sfx/player/q_hares_break_01..02.wav | tools/gen_q_abilities.py | Q Hare's Break: quick inhale, cloth whip, snap-reload click-clack |
+| sfx/player/q_rally_banner_01..02.wav | tools/gen_q_abilities.py | Q Rally Banner: pole stab (wood thunk + dirt) and cloth flap |
+| sfx/player/q_chalk_mark_01..02.wav | tools/gen_q_abilities.py | Q Chalk Mark: two dry chalk scrapes with stick-slip chatter |
+| sfx/player/q_grave_bell_01..02.wav | tools/gen_q_abilities.py | Q Grave Bell: deep low bronze toll (~3 s ring) |
+| sfx/player/q_headstone_01..02.wav | tools/gen_q_abilities.py | Q Headstone: stone slab drop, heavy crunch, settling grit |
+| sfx/player/q_vigil_candle_01..02.wav | tools/gen_q_abilities.py | Q Vigil Candle: match strike, phosphor flare, soft flame |
+| sfx/player/q_ember_brand_01..02.wav | tools/gen_q_abilities.py | Q Ember Brand: hot-iron clink, violent sizzle, steam hiss |
 
 Shared code: `tools/dsp.py`, `tools/synth.py`. Regenerate everything with `tools/build_all.sh`.
 The seeds are fixed, so the decoded audio is bit-identical on every run (OGG container serial
