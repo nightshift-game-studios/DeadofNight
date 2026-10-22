@@ -337,6 +337,12 @@ func _make_card(i: int, e: Dictionary) -> Button:
 	var cls := str(e.get("class", ""))
 	chip.add_child(UIStyle.label((cls if cls != "" else br).to_upper() + (" ONLY" if cls != "" else ""), 9, UIStyle.INK, true))
 	top.add_child(chip)
+	# playtest #13 card type chip (Instant / Echo / Growing / Fleeting / Hoard / Wager / Counter / Reactive / Active)
+	var ctype := UIStyle.card_type_of(e)
+	if ctype.label != "" and not bool(e.get("is_cache", false)):
+		top.add_child(Control.new())
+		top.get_child(top.get_child_count() - 1).custom_minimum_size.x = 4
+		top.add_child(UIStyle.card_type_chip(e, 9))
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(sp)
@@ -399,6 +405,14 @@ func _make_card(i: int, e: Dictionary) -> Button:
 	else:
 		rl.text = "[center][color=#%s]OWNED  //  RANK %s → [color=#%s]%s[/color][/color][/center]" % [dim, UIStyle.roman(rn), NUM_COL, UIStyle.roman(int(e.get("rank_next", rn)))]
 	root.add_child(rl)
+	# the type's one-line rule ("Strong, but expires after a few rounds.")
+	if ctype.hint != "" and not bool(e.get("is_cache", false)):
+		var th0 := UIStyle.label(str(ctype.hint), 11, UIStyle.card_type_color(ctype.type).lightened(0.25))
+		th0.name = "TypeHint"
+		th0.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		th0.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		th0.custom_minimum_size.x = CARD_W - 28
+		root.add_child(th0)
 	# description + drawback
 	var dm := MarginContainer.new()
 	dm.add_theme_constant_override("margin_left", 14)

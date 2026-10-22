@@ -496,6 +496,31 @@ func _run_pick_refusal(m, p) -> void:
 	rs.open_offer(3)
 	await frames(2)
 	check(rp.visible, "run-pick: offer open")
+	# playtest #13: the 8 new Field Card types show their label chip + one-line hint (RunState.offer_entry type_label / type_hint)
+	var by_type := {}
+	for cd in rs.data.get("cards", []):
+		var cid := str(cd.get("id", ""))
+		var ty := str(cd.get("type", "passive"))
+		if ty in ["instant", "echo", "growing", "fleeting", "hoard", "wager", "counter", "reactive"] and not by_type.has(ty):
+			by_type[ty] = cid
+	var saved_entries: Array = rp._entries
+	var tents: Array = by_type.values().map(func(cid): return rs.offer_entry(cid))
+	rp._on_offer_ready(tents, false)
+	await frames(2)
+	var types_ok: bool = by_type.size() == 8 and rp.card_buttons.size() == 8
+	for i in rp.card_buttons.size():
+		var e: Dictionary = tents[i]
+		var chip = rp.card_buttons[i].find_child("TypeChip", true, false)
+		var hint = rp.card_buttons[i].find_child("TypeHint", true, false)
+		types_ok = types_ok and chip != null and chip.find_child("TypeLabel", true, false).text == str(e.type_label).to_upper() \
+			and str(e.type_hint) != "" and hint != null and hint.text == str(e.type_hint)
+	check(types_ok, "#13 offer cards show type chip + hint for all 8 new types (%s)" % str(by_type.keys()))
+	var frow = UIStyle.field_card_row({"name": "Borrowed Hour", "type": "fleeting", "rounds_left": 2, "rank": 1, "ranks": 1}, 150)
+	check(frow.find_child("RoundsLeft", true, false).text == "2R" and frow.find_child("TypeTag", true, false) != null and "expires" in frow.tooltip_text,
+		"#13 owned Fleeting card row: type tag + rounds left + rule tooltip")
+	frow.free()
+	rp._on_offer_ready(saved_entries, false)
+	await frames(2)
 	if rs.has_signal("reroll_refused"):
 		rs.last_refusal_reason = "timeout"
 		rs.reroll_refused.emit("timeout")

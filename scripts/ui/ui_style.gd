@@ -271,6 +271,52 @@ static func card_rank_text(c: Dictionary) -> String:
 
 ## One owned Field Card as a compact row: branch tick, name, rank (and the description when `desc_w` > 0).
 ## Used by the run pick menu's THIS RUN list, the HUD strip tooltip and the character screen.
+## Field Card types (playtest #13, run_picks.json card_types): chip colour per type id. Passive has no chip.
+const CARD_TYPE_COLORS := {"active": Color("#c46a2b"), "instant": Color("#d9b44a"), "echo": Color("#8f7fc9"),
+	"growing": Color("#6f9a45"), "fleeting": Color("#5fa7b8"), "hoard": Color("#b8913a"), "wager": Color("#b8433a"),
+	"counter": Color("#9a9a8a"), "reactive": Color("#4f8fd0")}
+
+
+static func card_type_color(t: String) -> Color:
+	return CARD_TYPE_COLORS.get(t, BONE_DIM)
+
+
+## Type label + hint for a card row / offer: the entry's own type_label / type_hint (RunState.offer_entry), else
+## RunState.type_info(type). {type, label, hint}; label "" for passive cards.
+static func card_type_of(c: Dictionary) -> Dictionary:
+	var t := str(c.get("type", "passive"))
+	var lab := str(c.get("type_label", ""))
+	var hint := str(c.get("type_hint", ""))
+	if lab == "":
+		var ml := Engine.get_main_loop()
+		var rs: Node = (ml as SceneTree).root.get_node_or_null("RunState") if ml is SceneTree else null
+		if rs and rs.has_method("type_info"):
+			var ti: Dictionary = rs.type_info(t)
+			lab = str(ti.get("label", ""))
+			hint = str(ti.get("hint", ""))
+		else:
+			lab = t.capitalize()
+	return {"type": t, "label": "" if t == "passive" else lab, "hint": hint}
+
+
+## Small type chip ("FLEETING"); tooltip = the type's one-line rule.
+static func card_type_chip(c: Dictionary, font: int = 9) -> PanelContainer:
+	var ti := card_type_of(c)
+	var chip := PanelContainer.new()
+	chip.name = "TypeChip"
+	var cs := StyleBoxFlat.new()
+	cs.bg_color = card_type_color(ti.type)
+	cs.content_margin_left = 5
+	cs.content_margin_right = 5
+	chip.add_theme_stylebox_override("panel", cs)
+	chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	chip.tooltip_text = "%s: %s" % [ti.label, ti.hint] if ti.hint != "" else ti.label
+	var l := label(str(ti.label).to_upper(), font, INK, true)
+	l.name = "TypeLabel"
+	chip.add_child(l)
+	return chip
+
+
 static func field_card_row(c: Dictionary, w: float = 150.0, desc_w: float = 0.0, inline_desc: bool = false) -> PanelContainer:
 	var p := PanelContainer.new()
 	var st := StyleBoxFlat.new()
@@ -304,6 +350,20 @@ static func field_card_row(c: Dictionary, w: float = 150.0, desc_w: float = 0.0,
 	else:
 		n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var leg := str(c.get("tier", "")) == "legendary"
+	# playtest #13 card types: coloured type tag (not for passive) + Fleeting rounds left; the rule is the tooltip
+	var ti := card_type_of(c)
+	if ti.label != "":
+		var tt := label(str(ti.label).to_upper().substr(0, 4) if w < 200.0 and not inline_desc and desc_w <= 0.0 else str(ti.label).to_upper(), 9, card_type_color(ti.type), true)
+		tt.name = "TypeTag"
+		h.add_child(tt)
+		p.tooltip_text = "%s: %s" % [ti.label, ti.hint] if ti.hint != "" else str(ti.label)
+		p.mouse_filter = Control.MOUSE_FILTER_PASS
+	var rl := int(c.get("rounds_left", -1))
+	if rl >= 0:
+		var rt := label("%dR" % rl, 11, card_type_color("fleeting"), true)
+		rt.name = "RoundsLeft"
+		rt.tooltip_text = "Expires in %d round%s" % [rl, "" if rl == 1 else "s"]
+		h.add_child(rt)
 	h.add_child(label(card_rank_text(c), 12, TIER_LEGENDARY.lightened(0.35) if leg else BONE_DIM))
 	if desc_w > 0.0:
 		var d := label(card_blurb(c, 120), 11, BONE_DIM)
