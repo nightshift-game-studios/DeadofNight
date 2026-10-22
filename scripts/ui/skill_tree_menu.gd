@@ -656,6 +656,14 @@ func _build_tabs() -> void:
 			b.add_theme_stylebox_override(k, st)
 		b.pressed.connect(set_tab.bind(t[0]))
 		b.mouse_entered.connect(_ui_snd.bind("ui_hover"))
+		# Desi bfa5ca4: tab_specialization icon on the SPECIALIZATION tab
+		var tic := UIStyle.icon_key_tex("tab_specialization") if t[0] == "spec" else null
+		if tic:
+			b.icon = tic
+			b.expand_icon = true
+			b.add_theme_constant_override("icon_max_width", 22)
+			b.add_theme_constant_override("h_separation", 8)
+			b.custom_minimum_size.x += 26
 		row.add_child(b)
 		_tab_btns[t[0]] = b
 	row.add_child(UIStyle.key_cap("T", 10))
@@ -723,6 +731,12 @@ func _build_rail() -> void:
 		t.pressed.connect(_jump_to_branch.bind(id))
 		t.mouse_entered.connect(_ui_snd.bind("ui_hover"))
 		t.name = "Tab_" + id
+		var ric := UIStyle.icon_key_tex(str(_branch.get(id, {}).get("icon", "tree_" + str(id))))
+		if ric: # Desi bfa5ca4 tree_<branch> icons
+			t.icon = ric
+			t.expand_icon = true
+			t.add_theme_constant_override("icon_max_width", 18)
+			t.add_theme_constant_override("h_separation", 5)
 		_rail.add_child(t)
 		_rail_tabs[id] = t
 
@@ -796,6 +810,19 @@ func _build_canvas(host: Control) -> void:
 		hl.size = Vector2(span_w, 18)
 		hl.position = Vector2(cx - span_w * 0.5, 0)
 		_canvas.add_child(hl)
+		var bic := UIStyle.icon_key_tex(str(b.get("icon", "tree_" + str(b.id))))
+		var tw: float = UIStyle.FONT_STENCIL.get_string_size(name_s, HORIZONTAL_ALIGNMENT_LEFT, -1, hfs).x
+		if bic and tw + 44.0 <= span_w: # Desi bfa5ca4 tree icon left of the header when it fits the span
+			var bi := TextureRect.new()
+			bi.name = "BranchIcon_" + str(b.id)
+			bi.texture = bic
+			bi.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			bi.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			bi.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+			bi.size = Vector2(18, 18)
+			bi.position = Vector2(cx - tw * 0.5 - 22.0, 0)
+			bi.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_canvas.add_child(bi)
 		var ul := ColorRect.new()
 		ul.color = Color(_accent(str(b.id)), 0.75)
 		ul.size = Vector2(40, 2)

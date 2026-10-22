@@ -134,6 +134,11 @@ func _tree_checks() -> void:
 	var main_n: int = sp.tab_nodes("main").size()
 	check(sm._nodes.size() == main_n and sm._ids.all(func(i): return str(sm._defs[i].get("class", "")) == ""), "v070 #3 MAIN tab: a tile per main-tree node (%d)" % main_n)
 	check(sm._rail_tabs.size() == prog.tree.tabs.main.branches.size() and sm._rail_tabs.size() == sp.main_trees().size(), "v070 #3 rail = the main trees (%d)" % sm._rail_tabs.size())
+	# Desi bfa5ca4: tab_specialization on the SPECIALIZATION tab, tree_<branch> on the rail tabs + branch headers
+	check(sm._tab_btns.spec.icon != null, "v070 SPECIALIZATION tab uses tab_specialization")
+	var iconed: Array = sm._rail_tabs.keys().filter(func(k): return sm._rail_tabs[k].icon != null)
+	check(iconed.size() == sm._rail_tabs.size(), "v070 every main-tree rail tab has its tree_<id> icon (%s)" % str(iconed))
+	check(sm.find_children("BranchIcon_*", "TextureRect", true, false).size() >= 1, "v070 branch headers carry tree icons where they fit")
 	check(sm._content_size.x <= sm._clip.size.x + 1.0, "#14 main trees fit 1280 wide, no side panning (%.0f <= %.0f)" % [sm._content_size.x, sm._clip.size.x])
 	check(_tile_hits(sm).is_empty(), "#14 MAIN: no tile / name overlaps (%s)" % str(_tile_hits(sm).slice(0, 4)))
 	# §24 SPECIALIZATION tab
