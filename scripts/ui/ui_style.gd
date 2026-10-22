@@ -401,6 +401,49 @@ static func set_gravemark_chip_amount(chip: PanelContainer, amount: int) -> void
 		amt.text = str(amount)
 
 
+## Economy v2 (SCRAP_API.md): Scrap balance chip, same plate as the Gravemark chip with an olive "S" glyph
+## (no Scrap icon on main yet). Amount label "ScrapAmount".
+static func scrap_chip(amount: int, icon_size: int = 22) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.name = "ScrapChip"
+	var st := cut_box(Color(INK, 0.9), OLIVE.lightened(0.2), 2, 8)
+	st.set_content_margin_all(6)
+	p.add_theme_stylebox_override("panel", st)
+	p.tooltip_text = "Scrap: from scrapping gear, kept on death. Pays for Armory Rework tiers."
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 6)
+	h.alignment = BoxContainer.ALIGNMENT_CENTER
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_child(h)
+	var g := PanelContainer.new()
+	g.name = "ScrapGlyph"
+	g.add_theme_stylebox_override("panel", cut_box(OLIVE.darkened(0.25), BONE, 2, 4))
+	g.custom_minimum_size = Vector2(icon_size, icon_size)
+	g.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var gl := label("S", maxi(10, icon_size - 8), BONE, true)
+	gl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	gl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	g.add_child(gl)
+	h.add_child(g)
+	var amt := label(str(amount), maxi(14, icon_size - 2), BONE, true)
+	amt.name = "ScrapAmount"
+	h.add_child(amt)
+	return p
+
+
+static func set_scrap_chip_amount(chip: PanelContainer, amount: int) -> void:
+	if chip == null:
+		return
+	var amt := chip.find_child("ScrapAmount", true, false) as Label
+	if amt:
+		amt.text = str(amount)
+
+
+## "25 SCRAP" / "6 GM" for a cost in a given currency id ("scrap" / "gravemark").
+static func cost_text(n: int, currency: String) -> String:
+	return "%d %s" % [n, "SCRAP" if currency == "scrap" else "GM"]
+
+
 # ------------------------------------------------------------------ Item Power breakdown (Armory §1a)
 
 ## "290 rolled + 22 Rework" from Armory.item_power_breakdown(); the Rework part is dropped when the bonus is 0.

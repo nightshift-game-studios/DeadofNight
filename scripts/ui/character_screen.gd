@@ -43,6 +43,7 @@ var _stash_label: Label ## carried_count()/stash_cap in the header
 var _hint_label: Label ## footer controls + mark-all-seen hint
 var _seen_bound: bool = false
 var _gm_chip: PanelContainer ## Gravemark balance in the header
+var _scrap_chip: PanelContainer ## Scrap balance (Economy v2: right-click scrap pays it)
 var _last_card_ip: Dictionary = {} ## Armory.item_power_breakdown() of the last weapon card shown (for tests)
 var _tooltip_item: GearItem ## item on the open card, so IP can re-render on armory/inventory changes
 var _tooltip_equipped: bool = false
@@ -121,6 +122,11 @@ func _ready() -> void:
 	_gm_chip = UIStyle.gravemark_chip(0, 20)
 	_gm_chip.name = "GravemarkChip"
 	header.add_child(_gm_chip)
+	var sp_sc := Control.new()
+	sp_sc.custom_minimum_size.x = 6
+	header.add_child(sp_sc)
+	_scrap_chip = UIStyle.scrap_chip(0, 20)
+	header.add_child(_scrap_chip)
 	var sp2 := Control.new()
 	sp2.custom_minimum_size.x = 12
 	header.add_child(sp2)
@@ -725,7 +731,7 @@ func _refresh_stats(inv: Inventory) -> void:
 		v.add_theme_constant_override("separation", 1)
 		box.add_child(v)
 		var head := HBoxContainer.new()
-		head.add_child(fit_label(UIStyle.label(ArmorItem.STAT_LABELS[s].to_upper(), 13, UIStyle.BONE_DIM)))
+		head.add_child(UIStyle.label(ArmorItem.STAT_LABELS[s].to_upper(), 13, UIStyle.BONE_DIM)) # fixed names: never clipped
 		var sp := Control.new()
 		sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(sp)
@@ -1097,12 +1103,19 @@ func _on_seen_changed(_item = null) -> void:
 	_refresh_stash_count(player.inventory)
 
 
+## What right-click scrap pays (Progress.scrap_value, SCRAP_API.md); 0 without Progress.
+func scrap_yield(item) -> int:
+	var prog := get_node_or_null("/root/Progress")
+	return int(prog.scrap_value(item)) if prog and prog.has_method("scrap_value") and item != null else 0
+
+
 func _refresh_gravemark() -> void:
 	if _gm_chip == null:
 		return
 	var prog := get_node_or_null("/root/Progress")
 	var n := int(prog.gravemark_balance()) if prog and prog.has_method("gravemark_balance") else 0
 	UIStyle.set_gravemark_chip_amount(_gm_chip, n)
+	UIStyle.set_scrap_chip_amount(_scrap_chip, int(prog.scrap_balance()) if prog and prog.has_method("scrap_balance") else 0)
 
 
 func _refresh_stash_count(inv: Inventory) -> void:
@@ -1394,7 +1407,7 @@ func _show_tooltip(item: GearItem, equipped: bool) -> void:
 		fl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		fl.custom_minimum_size.x = CARD_W - 28
 		b.add_child(fl)
-	var foot := UIStyle.label("EQUIPPED" if equipped else "[LMB] EQUIP    [RMB] SCRAP", 12,
+	var foot := UIStyle.label("EQUIPPED" if equipped else "[LMB] EQUIP    [RMB] SCRAP +%d" % scrap_yield(item), 12,
 		UIStyle.OLIVE.lightened(0.4) if equipped else UIStyle.BONE_DIM, true)
 	foot.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	b.add_child(foot)

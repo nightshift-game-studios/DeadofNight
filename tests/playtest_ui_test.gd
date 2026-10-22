@@ -409,6 +409,12 @@ func _in_match() -> void:
 	var nm_l: Label = cs._left.find_child("SlotName", true, false)
 	check(nm_l != null and nm_l.clip_text and nm_l.text_overrun_behavior == TextServer.OVERRUN_TRIM_ELLIPSIS and nm_l.get_global_rect().end.x <= l1.end.x + 0.5, "v070 #6: item name ellipsised inside the weapons column")
 	check(cs.find_child("SuppliesScroll", true, false) is ScrollContainer, "v070 #6: supplies strip is a fixed scroll area")
+	var stn: Label = cs._stats_grid.get_node("Stat_toughness").find_children("*", "Label", true, false)[0]
+	check(stn != null and stn.text == "TOUGHNESS" and not stn.clip_text, "v070 #6: stat names are never clipped (%s)" % (stn.text if stn else "none"))
+	var schip = cs.find_child("ScrapChip", true, false)
+	check(schip != null and schip.find_child("ScrapAmount", true, false).text == str(root.get_node("Progress").scrap_balance()), "v070 Scrap chip on the loadout header shows the balance")
+	var any_eq = inv.equipped.values().filter(func(x): return x != null)
+	check(any_eq.is_empty() or cs.scrap_yield(any_eq[0]) == int(root.get_node("Progress").scrap_value(any_eq[0])), "v070 [RMB] SCRAP shows what scrapping pays")
 	for rn in renamed:
 		rn[0].display_name = rn[1]
 		rn[0].manufacturer = rn[2]

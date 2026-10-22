@@ -12,6 +12,7 @@ var _weapon_id: String = "sidearm"
 var _left: VBoxContainer ## weapon list
 var _right: VBoxContainer ## upgrades + attachments
 var _bal_chip: PanelContainer
+var _scrap_chip: PanelContainer ## Economy v2: Rework tiers are paid in Scrap
 var _title_sub: Label
 var _confirm_overlay: Control ## full-rect dim + centered card (NOT a panel child — PanelContainer stretches kids)
 var _confirm: PanelContainer ## compact ~460x200 card
@@ -60,6 +61,9 @@ func _wire_api() -> void:
 		return
 	if api.has_signal("currency_changed") and not api.currency_changed.is_connected(_on_currency):
 		api.currency_changed.connect(_on_currency)
+	var prog := get_node_or_null("/root/Progress")
+	if prog and prog.has_signal("scrap_changed") and not prog.scrap_changed.is_connected(_on_currency):
+		prog.scrap_changed.connect(_on_currency)
 	if api.has_signal("armory_changed") and not api.armory_changed.is_connected(_on_armory):
 		api.armory_changed.connect(_on_armory)
 
@@ -88,6 +92,8 @@ func _build() -> void:
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(sp)
+	_scrap_chip = UIStyle.scrap_chip(0, 24)
+	head.add_child(_scrap_chip)
 	_bal_chip = UIStyle.gravemark_chip(0, 24)
 	head.add_child(_bal_chip)
 	var line := ColorRect.new()
@@ -221,6 +227,7 @@ func _btn(text: String, cb: Callable) -> Button:
 func _refresh_balance() -> void:
 	var n := int(api.currency_balance()) if api else 0
 	UIStyle.set_gravemark_chip_amount(_bal_chip, n)
+	UIStyle.set_scrap_chip_amount(_scrap_chip, ArmoryScr.balance("scrap"))
 
 
 func open() -> void:
@@ -376,7 +383,8 @@ func _upgrade_track(u: Dictionary) -> PanelContainer:
 	now.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(now)
 	var maxed: bool = bool(u.get("maxed", false))
-	var buy := _btn("MAXED" if maxed else "BUY %s  %d" % [str(u.get("next_tier_name", "")), int(u.get("cost", 0))],
+	var ucur := str(u.get("currency", ArmoryScr.upgrade_currency()))
+	var buy := _btn("MAXED" if maxed else "BUY %s  %s" % [str(u.get("next_tier_name", "")), UIStyle.cost_text(int(u.get("cost", 0)), ucur)],
 		func(): _ask_buy(str(u.id), "upgrade"))
 	buy.disabled = maxed or not bool(u.get("can_afford", false))
 	if buy.disabled and not maxed:
@@ -402,7 +410,9 @@ func _upgrade_track(u: Dictionary) -> PanelContainer:
 		cv.add_theme_constant_override("separation", 1)
 		cell.add_child(cv)
 		cv.add_child(UIStyle.label(str(t.get("name", UIStyle.roman(ti))), 13, UIStyle.BONE if done or cur else UIStyle.BONE_DIM, true))
-		cv.add_child(wrap_label("%d GM  ·  +%d IP" % [int(t.get("cost", 0)), int(t.get("item_power", 0))], 10, UIStyle.BONE_DIM))
+		var tcost := wrap_label("%s  ·  +%d IP" % [UIStyle.cost_text(int(t.get("cost", 0)), str(t.get("currency", ucur))), int(t.get("item_power", 0))], 10, UIStyle.BONE_DIM)
+		tcost.name = "TierCost"
+		cv.add_child(tcost)
 		var sum := str(t.get("summary", ""))
 		if sum != "":
 			cv.add_child(wrap_label(sum, 10, UIStyle.BONE_DIM))

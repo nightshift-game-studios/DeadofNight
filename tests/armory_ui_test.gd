@@ -75,6 +75,18 @@ func _go() -> void:
 	check(prog.scrap == 100 - cost0 and prog.gravemarks == 40 and int(ArmoryScr.upgrade_tier("smg")) == 1, "purchase deducts + marks tier I")
 	menu.refresh()
 	await process_frame
+	# v070 Scrap labels (SCRAP_API.md): Rework costs read Scrap on the tier cells + BUY button; Scrap chip in the header
+	var tier_costs: Array = menu._right.find_children("TierCost", "Label", true, false)
+	check(tier_costs.size() >= 5 and tier_costs.all(func(l): return "SCRAP" in l.text and not "GM" in l.text),
+		"v070 Rework tier costs say SCRAP (%s)" % (tier_costs[0].text if tier_costs.size() > 0 else "none"))
+	var buy_scrap := false
+	for b in menu._right.find_children("*", "Button", true, false):
+		if b.text.begins_with("BUY ") and "SCRAP" in b.text:
+			buy_scrap = true
+	check(buy_scrap, "v070 Rework BUY button shows the Scrap cost")
+	var schip = menu.find_child("ScrapChip", true, false)
+	var samt = schip.find_child("ScrapAmount", true, false) if schip else null
+	check(samt != null and samt.text == str(prog.scrap), "v070 Armory header Scrap chip shows the balance (%s)" % (samt.text if samt else "none"))
 
 	# ---- Disabled reasons
 	prog.gravemarks = 0
@@ -84,7 +96,7 @@ func _go() -> void:
 	menu.refresh()
 	await process_frame
 	var next_id := str(menu.api.list_upgrades("smg")[0].id)
-	check(not menu.api.can_afford(next_id), "cannot afford next tier at 0 GM")
+	check(not menu.api.can_afford(next_id), "cannot afford next tier at 0 Scrap")
 	var reason := menu._disable_reason(next_id, true)
 	check("Gravemark" in reason or "Need" in reason, "disabled reason mentions Gravemarks (%s)" % reason)
 
