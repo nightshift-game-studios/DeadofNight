@@ -270,41 +270,18 @@ func _stat_formulas_static() -> void:
 
 # ------------------------------------------------------------------ #8 tracker (no match)
 func _run_stats_unit() -> void:
-	var t = RunStatsScr.new()
-	root.add_child(t)
-	var ge = root.get_node("GameEvents")
-	var me := Node.new()
-	var other := Node.new()
-	t.player = me
-	ge.emit_event(&"round_started", {"round": 1})
-	for i in 10:
-		ge.emit_event(&"shot_fired", {"player": me, "weapon": null})
-	for i in 3:
-		ge.emit_event(&"shot_missed", {"player": me})
-	ge.emit_event(&"shot_fired", {"player": other, "weapon": null})
-	ge.emit_event(&"hit", {"player": me, "damage": 50.0, "is_headshot": true, "source": "gun"})
-	ge.emit_event(&"hit", {"player": me, "damage": 25.5, "is_headshot": false, "source": "gun"})
-	ge.emit_event(&"hit", {"player": other, "damage": 999.0})
-	ge.emit_event(&"enemy_killed", {"player": me, "source": "melee"})
-	ge.emit_event(&"points_gained", {"player": me, "amount": 60})
-	ge.emit_event(&"points_gained", {"player": other, "amount": 900})
-	ge.emit_event(&"damage_taken", {"player": me, "dealt": 30})
-	ge.emit_event(&"grenade_thrown", {"player": me})
-	ge.emit_event(&"round_started", {"round": 2})
-	var st: Dictionary = t.snapshot()
-	check(st.shots_fired == 10 and st.shots_missed == 3 and is_equal_approx(st.accuracy, 0.7), "#8 accuracy from shot_fired / shot_missed (%.2f)" % st.accuracy)
-	check(is_equal_approx(st.damage_dealt, 75.5) and st.headshots == 1 and st.hits == 2, "#8 damage + headshots from hit events (local player only)")
-	check(st.kills == 1 and st.melee_kills == 1 and st.points_earned == 60 and st.damage_taken == 30 and st.grenades == 1, "#8 kills / points / damage taken / grenades")
-	check(st.rounds == 2 and t.started, "#8 rounds from round_started")
-	check(RunStatsScr.accuracy_of({}) < 0.0, "#8 no shots -> accuracy '-' (not 0%)")
+	# v070: the tally is Skillz's MatchStats; RunStatsTracker only maps summary() to the death-screen keys
+	var m := {"kills": 3, "round_reached": 2, "rounds": 1, "grenades_thrown": 4, "xp": 250, "shots_fired": 10, "shots_hit": 7,
+		"accuracy": 0.7, "headshot_kills": 2, "precision_kills": 2, "healed": 40, "cards_picked": 1, "doors_opened": 2, "melee_kills": 1}
+	var st: Dictionary = RunStatsScr.from_summary(m, {"round": 3, "kills": 7})
+	check(st.grenades == 4 and st.xp_earned == 250 and st.precision_kills == 2 and st.healed == 40 and st.doors_opened == 2,
+		"v070 MatchStats → death keys (grenades / xp / precision kills / healed / doors)")
+	check(st.kills == 7 and st.rounds == 3, "v070 match_ended kills / round (main.gd) win")
+	check(is_equal_approx(st.accuracy, 0.7) and RunStatsScr.from_summary({"shots_fired": 0, "accuracy": 0.0}).accuracy < 0.0, "v070 accuracy from MatchStats; no shots → '-'")
 	check(RunStatsScr.format_time(754.0) == "12:34" and RunStatsScr.format_time(3725.0) == "1:02:05", "#8 time format")
-	ge.emit_event(&"match_ended", {"player": me, "round": 3, "kills": 7})
-	check(t.ended and t.s.kills == 7 and t.s.rounds == 3, "#8 match_ended: main.gd's kill count wins")
-	ge.emit_event(&"hit", {"player": me, "damage": 1000.0})
-	check(is_equal_approx(t.s.damage_dealt, 75.5), "#8 nothing counts after match end")
-	t.queue_free()
-	me.free()
-	other.free()
+	var bridge = RunStatsScr.new()
+	check(not ("s" in bridge), "v070 RunStatsTracker keeps no tally of its own (MatchStats does)")
+	bridge.free()
 
 
 func _game_over_screen_unit() -> void:
@@ -445,7 +422,7 @@ func _in_match() -> void:
 	if not hud.has_method("show_game_over_stats"):
 		print("SKIP  #8 HUD wiring: hud.gd has no show_game_over_stats yet (shared.patch not applied)")
 		return
-	check(hud.run_stats != null and hud.run_stats.player == p, "#8 HUD owns a RunStats tracker bound to the player")
+	check(hud.run_stats != null and hud.run_stats.player == p, "#8 HUD owns the MatchStats bridge bound to the player")
 	var ge = root.get_node("GameEvents")
 	ge.emit_event(&"round_started", {"round": 1})
 	ge.emit_event(&"shot_fired", {"player": p, "weapon": null})
