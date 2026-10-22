@@ -1,6 +1,7 @@
 extends MenuBase
-## Map picker (Gooey). Lists MapRegistry.list() with name, description, a preview (image if the map ships one,
-## else a schematic drawn from the map scene's markers) and a door / area hint; marks the current map.
+## Map picker (Gooey). Lists MapRegistry.list() with name, a short description and a top-down preview (image if the
+## map ships one, else a schematic of walls, doors and key features from Mapz's data/map_previews/<id>.json,
+## format mapz_preview v1, docs/map_contract.md); marks the current map. No door names / costs (playtest 2026-10-22 #4).
 ## Loading calls main.restart_with_map(id) (MapRegistry.select + scene reload).
 ## Opened with M (action "map_next") only before round 1 or at game over. main.gd instances this as map_picker
 ## and calls open() on M; the menu also accepts M while closed as a belt-and-braces path.
@@ -10,7 +11,6 @@ const PREVIEW_PATHS := ["res://maps/%s/preview.png", "res://maps/%s/preview.jpg"
 const HARD_NOTE := "Hard: tougher zombies, better rare-currency drops."
 const DIFF_ORDER := {"easy": 0, "medium": 1, "hard": 2}
 
-static var _meta_cache: Dictionary = {}
 
 var main: Node ## the match scene (has current_round / _game_over / restart_with_map)
 var _ids: Array = []
@@ -22,7 +22,6 @@ var _preview_img: TextureRect
 var _name: Label
 var _cur_tag: PanelContainer
 var _desc: Label
-var _hint: VBoxContainer
 var _play_btn: Button
 var _gate_label: Label
 var restart_calls: Array = [] ## ids passed to restart (tests read this; set dry_run to skip the reload)
@@ -103,7 +102,8 @@ func _build() -> void:
 	var ps := UIStyle.cut_box(Color(0.03, 0.035, 0.03, 0.95), Color(UIStyle.BONE_DIM, 0.5), 2, 12)
 	ps.set_content_margin_all(4)
 	pv.add_theme_stylebox_override("panel", ps)
-	pv.custom_minimum_size = Vector2(0, 250)
+	pv.custom_minimum_size = Vector2(0, 300)
+	pv.size_flags_vertical = Control.SIZE_EXPAND_FILL # the preview takes the spare height, not text
 	detail.add_child(pv)
 	_preview = _Schematic.new()
 	_preview.clip_contents = true
@@ -127,16 +127,14 @@ func _build() -> void:
 	_cur_tag.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_cur_tag.add_child(UIStyle.label("CURRENT", 11, UIStyle.INK, true))
 	nh.add_child(_cur_tag)
-	_desc = UIStyle.label("", 14, UIStyle.BONE)
+	_desc = UIStyle.label("", 13, UIStyle.BONE_DIM)
+	_desc.name = "MapDesc"
 	_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_desc.custom_minimum_size.x = 600
+	_desc.max_lines_visible = 2 # fixed height: a long description can't push the layout
+	_desc.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_desc.custom_minimum_size = Vector2(200, 36)
+	_desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	detail.add_child(_desc)
-	_hint = VBoxContainer.new()
-	_hint.add_theme_constant_override("separation", 2)
-	detail.add_child(_hint)
-	var fill := Control.new()
-	fill.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	detail.add_child(fill)
 	_play_btn = Button.new()
 	_play_btn.focus_mode = Control.FOCUS_NONE
 	_play_btn.custom_minimum_size = Vector2(0, 40)
@@ -156,7 +154,7 @@ func _build() -> void:
 	_diff_note.name = "DiffNote"
 	_diff_note.visible = false
 	_diff_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_diff_note.custom_minimum_size.x = 600
+	_diff_note.custom_minimum_size.x = 200
 	detail.add_child(_diff_note)
 	var foot := HBoxContainer.new()
 	foot.add_theme_constant_override("separation", 6)
@@ -204,7 +202,7 @@ func _make_row(id: String, current: bool) -> Button:
 	var info: Dictionary = MapRegistry.get_info(id)
 	var valid := MapRegistry.is_valid(id)
 	var b := Button.new()
-	b.custom_minimum_size = Vector2(300, 58)
+	b.custom_minimum_size = Vector2(300, 46)
 	b.focus_mode = Control.FOCUS_ALL
 	b.disabled = not valid
 	var c := UIStyle.OLIVE if current else UIStyle.BONE_DIM
@@ -232,9 +230,8 @@ func _make_row(id: String, current: bool) -> Button:
 	h.add_child(difficulty_badge(map_difficulty(id)))
 	if current:
 		h.add_child(UIStyle.label("CURRENT", 10, UIStyle.OLIVE.lightened(0.35), true))
-	var m := map_meta(id)
-	var sub := "MISSING SCENE" if not valid else _short_hint(m)
-	v.add_child(UIStyle.label(sub, 11, UIStyle.BONE_DIM))
+	if not valid:
+		v.add_child(UIStyle.label("MISSING SCENE", 11, UIStyle.BAD))
 	b.focus_entered.connect(select_row.bind(id))
 	b.mouse_entered.connect(func(): if valid: b.grab_focus())
 	b.pressed.connect(load_map.bind(id))
@@ -252,22 +249,13 @@ func select_row(id: String) -> void:
 	_name.text = str(info.get("display_name", id)).to_upper()
 	_cur_tag.visible = cur
 	_desc.text = str(info.get("description", ""))
-	var m := map_meta(id)
 	var img := _preview_texture(id, info)
 	_preview_img.visible = img != null
 	_preview_img.texture = img
 	_preview.visible = img == null
-	_preview.meta = m
-	_preview.walls = map_walls(id)
+	_preview.pv = map_preview(id)
 	_preview.title = _name.text
 	_preview.queue_redraw()
-	for c in _hint.get_children():
-		c.queue_free()
-	for line in hint_lines(m):
-		var l := UIStyle.label(line[0], 12, line[1])
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		l.custom_minimum_size.x = 600
-		_hint.add_child(l)
 	if home_mode:
 		_play_btn.text = (pick_label if pick_label != "" else "DEPLOY ON %s") % _name.text
 	else:
@@ -312,7 +300,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		super._unhandled_input(event)
 
 
-# ---------------------------------------------------------------- map metadata (read from the scene file, no load)
+# ---------------------------------------------------------------- map preview image
 
 func _preview_texture(id: String, info: Dictionary) -> Texture2D:
 	var paths: Array = []
@@ -325,8 +313,6 @@ func _preview_texture(id: String, info: Dictionary) -> Texture2D:
 			return load(p) as Texture2D
 	return null
 
-
-## {doors: [{name, cost, opens, pos}], areas: {area -> [Vector2]}, start, bounds: Rect2, spawn: Vector2, open: bool}
 
 # ---------------------------------------------------------------- difficulty (Pass 5 home / map select)
 
@@ -379,243 +365,60 @@ static func sorted_map_ids() -> Array:
 	return rows.map(func(r): return str(r.id))
 
 
-## Parsed from the .tscn text (doors = nodes with opens_areas; cost defaults to 750 when omitted), cached.
-static func map_meta(id: String) -> Dictionary:
-	if _meta_cache.has(id):
-		return _meta_cache[id]
-	var out := {"doors": [], "areas": {}, "start": "start", "bounds": Rect2(), "spawn": Vector2.ZERO, "open": true, "has_spawn": false}
-	var scene_path := str(MapRegistry.get_info(id).get("scene", ""))
-	if scene_path != "" and FileAccess.file_exists(scene_path):
-		var txt := FileAccess.get_file_as_string(scene_path)
-		var re_t := RegEx.create_from_string("transform = Transform3D\\(([^)]*)\\)")
-		var re_cost := RegEx.create_from_string("\\ncost = (\\d+)")
-		var re_open := RegEx.create_from_string("opens_areas = PackedStringArray\\(([^)]*)\\)")
-		var re_name := RegEx.create_from_string("prompt_name = \"([^\"]*)\"")
-		var re_area := RegEx.create_from_string("metadata/area = &?\"([^\"]*)\"")
-		var re_start := RegEx.create_from_string("\\nstart_area = &?\"([^\"]*)\"")
-		var re_bounds := RegEx.create_from_string("metadata/bounds = AABB\\(([^)]*)\\)")
-		var ms := re_start.search(txt)
-		if ms:
-			out.start = ms.get_string(1)
-		var mb := re_bounds.search(txt)
-		if mb:
-			var b := mb.get_string(1).split(",")
-			if b.size() == 6:
-				out.bounds = Rect2(float(b[0]), float(b[2]), float(b[3]), float(b[5]))
-		for block in txt.split("\n[node "):
-			var mt := re_t.search(block)
-			var pos := Vector2.ZERO
-			if mt:
-				var n := mt.get_string(1).split(",")
-				if n.size() == 12:
-					pos = Vector2(float(n[9]), float(n[11]))
-			var mo := re_open.search(block)
-			var mc := re_cost.search(block)
-			if mo:
-				var opens := Array(mo.get_string(1).replace("\"", "").replace(" ", "").split(",", false))
-				var mn := re_name.search(block)
-				var cost := int(mc.get_string(1)) if mc else 750
-				out.doors.append({"name": mn.get_string(1) if mn else "Door", "cost": cost, "opens": opens, "pos": pos})
-				continue
-			var ma := re_area.search(block)
-			if ma and mt:
-				var a := ma.get_string(1)
-				if not out.areas.has(a):
-					out.areas[a] = []
-				out.areas[a].append(pos)
-			if block.begins_with("name=\"PlayerSpawn\"") and mt:
-				out.spawn = pos
-				out.has_spawn = true
-		out.open = out.doors.is_empty()
-	_meta_cache[id] = out
-	return out
+const PREVIEW_DIR := "res://data/map_previews/%s.json"
+const PREVIEW_FORMAT := "mapz_preview v1"
+const FEATURE_TYPES := ["start", "boss_arena", "perk", "mystery_box", "power_weapon", "chest"]
+
+static var _preview_cache: Dictionary = {}
 
 
-## Top-down wall / floor footprints for the schematic (playtest #26: the preview drew only markers, never walls).
-## Parsed from the map scene's text (no instancing, nothing loaded): every CollisionShape3D with a BoxShape3D under a
-## StaticBody3D, with the parent chain's transforms composed. Clip / NavCarves / Doors / Decor / Props are skipped
-## (invisible clip caps, nav obstacles, doors drawn separately, dressing). The arena (scene "") reads main.tscn's
-## NavigationRegion3D only. Returns [{poly: PackedVector2Array (x, z), kind: "floor" | "wall", top: float, h: float}].
-static var _walls_cache: Dictionary = {}
-const WALL_SKIP_ROOTS := ["Clip", "Decor", "Props", "Dressing", "Merged", "NightKit", "Lights", "Occluders"]
-
-static func map_walls(id: String) -> Array:
-	if _walls_cache.has(id):
-		return _walls_cache[id]
-	var scene_path := str(MapRegistry.get_info(id).get("scene", ""))
-	var only_prefix := ""
-	if scene_path == "":
-		scene_path = "res://scenes/main.tscn"
-		only_prefix = "NavigationRegion3D"
-	var out: Array = []
-	if FileAccess.file_exists(scene_path):
-		out = walls_from_text(FileAccess.get_file_as_string(scene_path), only_prefix)
-	_walls_cache[id] = out
-	return out
-
-
-static func _parse_tf(n: PackedStringArray) -> Transform3D:
-	return Transform3D(Vector3(float(n[0]), float(n[1]), float(n[2])), Vector3(float(n[3]), float(n[4]), float(n[5])),
-		Vector3(float(n[6]), float(n[7]), float(n[8])), Vector3(float(n[9]), float(n[10]), float(n[11])))
-
-
-static func walls_from_text(txt: String, only_prefix: String = "") -> Array:
-	var boxes := {} # sub_resource id -> Vector3 size
-	var re_sub := RegEx.create_from_string("\\[sub_resource type=\"BoxShape3D\" id=\"([^\"]+)\"\\]\\s*\\nsize = Vector3\\(([^)]*)\\)")
-	for m in re_sub.search_all(txt):
-		var v := m.get_string(2).split(",")
-		if v.size() == 3:
-			boxes[m.get_string(1)] = Vector3(float(v[0]), float(v[1]), float(v[2]))
-	var re_head := RegEx.create_from_string("^name=\"([^\"]*)\"(?: type=\"([^\"]*)\")?(?: parent=\"([^\"]*)\")?")
-	var re_t := RegEx.create_from_string("\ntransform = Transform3D\\(([^)]*)\\)")
-	var re_shape := RegEx.create_from_string("\nshape = SubResource\\(\"([^\"]+)\"\\)")
-	var local := {} # path -> Transform3D
-	var types := {} # path -> type
-	var shapes: Array = [] # [path, parent, box id]
-	var blocks := txt.split("\n[node ")
-	for bi in range(1, blocks.size()):
-		var block: String = blocks[bi]
-		var mh := re_head.search(block)
-		if mh == null:
-			continue
-		var nm := mh.get_string(1)
-		var parent := mh.get_string(3)
-		var has_parent := block.contains(" parent=\"")
-		var path := "." if not has_parent else (nm if parent == "." else parent + "/" + nm)
-		var tf := Transform3D.IDENTITY
-		var head_end := block.find("\n[")
-		var body := block if head_end < 0 else block.substr(0, head_end)
-		var mt := re_t.search(body)
-		if mt:
-			var n := mt.get_string(1).split(",")
-			if n.size() == 12:
-				tf = _parse_tf(n)
-		local[path] = tf
-		types[path] = mh.get_string(2)
-		if mh.get_string(2) == "CollisionShape3D":
-			var ms := re_shape.search(body)
-			if ms and boxes.has(ms.get_string(1)):
-				shapes.append([path, parent, ms.get_string(1)])
-	var out: Array = []
-	for sh in shapes:
-		var path: String = sh[0]
-		var parent: String = sh[1]
-		var root_name := path.split("/")[0]
-		if root_name in WALL_SKIP_ROOTS or path.contains("/NavCarves/") or path.contains("/Doors/"):
-			continue
-		if only_prefix != "" and not path.begins_with(only_prefix + "/"):
-			continue
-		if str(types.get(parent, "")) != "StaticBody3D":
-			continue
-		# compose parent chain (skip shapes whose ancestors are not in this file, e.g. inside instanced scenes)
-		var g: Transform3D = local[path]
-		var cur := parent
-		var ok := true
-		while cur != "." and cur != "":
-			if not local.has(cur):
-				ok = false
-				break
-			g = local[cur] * g
-			var cut := cur.rfind("/")
-			cur = "." if cut < 0 else cur.substr(0, cut)
-		if not ok:
-			continue
-		var half: Vector3 = boxes[sh[2]] * 0.5
-		var poly := PackedVector2Array()
-		var ys: Array = []
-		for c in [Vector3(-1, 0, -1), Vector3(1, 0, -1), Vector3(1, 0, 1), Vector3(-1, 0, 1)]:
-			var w: Vector3 = g * (c * half)
-			poly.append(Vector2(w.x, w.z))
-		for sy in [-1.0, 1.0]:
-			ys.append((g * Vector3(0, sy * half.y, 0)).y)
-		var axis_h := (g.basis * Vector3(0, half.y * 2.0, 0)).length()
-		var top: float = maxf(ys[0], ys[1])
-		var kind := "floor" if axis_h <= 1.2 else "wall" # slabs / decks vs walls, blocks, tanks
-		out.append({"poly": poly, "kind": kind, "top": top, "h": axis_h})
-	return out
-
-
-static func walls_bounds(walls: Array) -> Rect2:
-	var b := Rect2()
-	var first := true
-	for w in walls:
-		for p in w.poly:
-			if first:
-				b = Rect2(p, Vector2.ZERO)
-				first = false
-			else:
-				b = b.expand(p)
-	return b
-
-
-static func area_name(a: String) -> String:
-	return "Start area" if a == "start" else a.replace("_", " ").capitalize()
-
-
-static func _short_hint(m: Dictionary) -> String:
-	if m.doors.is_empty():
-		return "OPEN LAYOUT // NO DOORS"
-	var costs: Array = m.doors.map(func(d): return int(d.cost))
-	var areas := {}
-	for d in m.doors:
-		for a in d.opens:
-			areas[a] = true
-	var n: int = m.doors.size()
-	var door_word := "1 DOOR" if n == 1 else "%d DOORS" % n
-	var lo: int = int(costs.min())
-	var hi: int = int(costs.max())
-	var cost_s := str(lo) if lo == hi else "%d-%d" % [lo, hi]
-	var an: int = areas.size()
-	var area_word := "1 AREA TO OPEN" if an == 1 else "%d AREAS TO OPEN" % an
-	return "%s (%s) // %s" % [door_word, cost_s, area_word]
-
-
-## Door / area hint lines: [[text, colour]].
-static func hint_lines(m: Dictionary) -> Array:
-	if m.doors.is_empty():
-		return [["NO DOORS // the whole map is open from the first round.", UIStyle.BONE_DIM]]
-	var out := [["START IN: %s   //   %s" % [area_name(str(m.start)).to_upper(), _short_hint(m)], UIStyle.RUST.lightened(0.25)]]
-	var by_area := {}
-	for d in m.doors:
-		for a in d.opens:
-			if not by_area.has(a):
-				by_area[a] = []
-			by_area[a].append("%s %d" % [str(d.name), int(d.cost)])
-	var parts := []
-	for a in by_area:
-		parts.append("%s (%s)" % [area_name(a), ", ".join(by_area[a])])
-	out.append(["DOORS: " + "  //  ".join(parts), UIStyle.BONE_DIM])
-	out.append(["Spawns open with their area: zombies only come from areas you've bought into.", UIStyle.BONE_DIM])
+## Mapz preview data for `id`, normalised: {ok, bounds: Rect2, walls: [PackedVector2Array], doors: [[a, b]],
+## features: [{type, pos: Vector2, radius}]}. ok = false (empty arrays) when the file is missing or not v1.
+static func map_preview(id: String) -> Dictionary:
+	if _preview_cache.has(id):
+		return _preview_cache[id]
+	var out := {"ok": false, "bounds": Rect2(), "walls": [], "doors": [], "features": []}
+	var path := PREVIEW_DIR % id
+	if id != "" and FileAccess.file_exists(path):
+		var d = JSON.parse_string(FileAccess.get_file_as_string(path))
+		if d is Dictionary and str(d.get("format", "")) == PREVIEW_FORMAT:
+			var b: Array = d.get("bounds", [])
+			if b.size() == 4:
+				out.bounds = Rect2(float(b[0]), float(b[1]), float(b[2]), float(b[3]))
+			for w in d.get("walls", []):
+				var poly := PackedVector2Array()
+				for p in w:
+					poly.append(Vector2(float(p[0]), float(p[1])))
+				if poly.size() >= 3:
+					out.walls.append(poly)
+			for dr in d.get("doors", []):
+				if dr is Dictionary and dr.has("a") and dr.has("b"):
+					out.doors.append([Vector2(float(dr.a[0]), float(dr.a[1])), Vector2(float(dr.b[0]), float(dr.b[1]))])
+			for f in d.get("features", []):
+				if f is Dictionary and str(f.get("type", "")) in FEATURE_TYPES and f.get("pos", []).size() == 2:
+					out.features.append({"type": str(f.type), "pos": Vector2(float(f.pos[0]), float(f.pos[1])), "radius": float(f.get("radius", 0.0))})
+			out.ok = true
+	_preview_cache[id] = out
 	return out
 
 
 # ---------------------------------------------------------------- schematic preview
 
 class _Schematic extends Control:
-	const COLS := [Color(0.45, 0.48, 0.31), Color(0.37, 0.61, 0.58), Color(0.72, 0.54, 0.18), Color(0.70, 0.28, 0.23),
-		Color(0.55, 0.62, 0.70), Color(0.56, 0.36, 0.74)]
-	var meta: Dictionary = {}
+	const FEATURE_LOOK := { ## type -> [colour, legend label]
+		"start": [Color(0.89, 0.85, 0.74), "START"],
+		"boss_arena": [Color(0.78, 0.22, 0.18), "BOSS"],
+		"perk": [Color(0.37, 0.61, 0.58), "PERK"],
+		"mystery_box": [Color(0.72, 0.54, 0.18), "BOX"],
+		"power_weapon": [Color(0.56, 0.36, 0.74), "POWER WPN"],
+		"chest": [Color(0.55, 0.62, 0.70), "CHEST"],
+	}
+	var pv: Dictionary = {} ## map_preview(id)
 	var title: String = ""
-	var walls: Array = [] ## map_walls(id): wall / floor footprints (x, z)
 	var wall_count: int = 0 ## walls drawn last frame (tests)
-
-	static func _bounds_of(ws: Array) -> Rect2:
-		var bb := Rect2()
-		var first := true
-		for w in ws:
-			for p in w.poly:
-				if first:
-					bb = Rect2(p, Vector2.ZERO)
-					first = false
-				else:
-					bb = bb.expand(p)
-		return bb
-
-	static func _xf(poly: PackedVector2Array, to: Callable) -> PackedVector2Array:
-		var o := PackedVector2Array()
-		for p in poly:
-			o.append(to.call(p))
-		return o
+	var door_count: int = 0
+	var feature_count: int = 0
+	var legend_types: Array = [] ## feature types in the legend last frame (tests)
 
 	func _draw() -> void:
 		var r := Rect2(Vector2.ZERO, size)
@@ -629,68 +432,76 @@ class _Schematic extends Control:
 		while y < size.y:
 			draw_line(Vector2(0, y), Vector2(size.x, y), grid, 1.0)
 			y += 20.0
+		wall_count = 0
+		door_count = 0
+		feature_count = 0
+		legend_types = []
 		var f: Font = UIStyle.body_bold()
 		var st: Font = UIStyle.FONT_STENCIL
-		if meta.is_empty():
+		var b: Rect2 = pv.get("bounds", Rect2())
+		if not bool(pv.get("ok", false)) or b.size.x <= 0.0 or b.size.y <= 0.0:
+			var t := "NO PREVIEW"
+			var ts := st.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 30)
+			draw_string(st, (size - ts) * 0.5 + Vector2(0, 20), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Color(UIStyle.BONE_DIM, 0.35))
 			return
-		var b: Rect2 = meta.bounds
-		if b.size == Vector2.ZERO and not walls.is_empty():
-			b = _bounds_of(walls).grow(2.0)
-		var pts: Array = []
-		for a in meta.areas:
-			pts += meta.areas[a]
-		for d in meta.doors:
-			pts.append(d.pos)
-		if b.size == Vector2.ZERO and not pts.is_empty():
-			b = Rect2(pts[0], Vector2.ZERO)
-			for p in pts:
-				b = b.expand(p)
-			b = b.grow(6.0)
-		if b.size == Vector2.ZERO: # open map without markers: stencil plate
-			var t := "OPEN ARENA"
-			var ts := st.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 34)
-			draw_string(st, (size - ts) * 0.5 + Vector2(0, 24), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color(UIStyle.BONE_DIM, 0.35))
-			draw_string(f, Vector2(12, size.y - 12), "NO PREVIEW // NO DOORS", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(UIStyle.BONE_DIM, 0.6))
-			return
-		var pad := 18.0
-		var sc := minf((size.x - pad * 2) / b.size.x, (size.y - pad * 2) / b.size.y)
-		var off := (size - b.size * sc) * 0.5
+		var legend_h := 22.0
+		var pad := 14.0
+		var area := Vector2(size.x - pad * 2, size.y - pad * 2 - legend_h)
+		var sc := minf(area.x / b.size.x, area.y / b.size.y)
+		var off := Vector2(pad, pad) + (area - b.size * sc) * 0.5
 		var to := func(p: Vector2) -> Vector2: return off + (p - b.position) * sc
-		# map edge: the perimeter is invisible clip walls in the scene (skipped), so the bounds frame stands in for it
-		draw_rect(Rect2(off, b.size * sc), Color(UIStyle.BONE, 0.55) if not walls.is_empty() else Color(UIStyle.BONE_DIM, 0.35),
-			false, 3.0 if not walls.is_empty() else 1.5)
-		# floors / decks first (faint), then walls and solid blocks on top (bone) so the layout reads
-		for w in walls:
-			if w.kind == "floor" and float(w.top) <= 6.5: # roofs (high slabs) would hide the rooms
-				draw_colored_polygon(_xf(w.poly, to), Color(0.37, 0.61, 0.58, 0.10 if float(w.top) < 0.6 else 0.22))
-		for w in walls:
-			if w.kind == "wall":
-				var q := _xf(w.poly, to)
-				draw_colored_polygon(q, Color(UIStyle.BONE, 0.62 if float(w.h) >= 2.5 else 0.38))
-				q.append(q[0])
-				draw_polyline(q, Color(UIStyle.INK, 0.8), 1.0)
-		wall_count = walls.filter(func(w): return w.kind == "wall").size()
-		var i := 0
-		var names: Array = meta.areas.keys()
-		for a in names:
-			var col: Color = COLS[i % COLS.size()]
-			var cen := Vector2.ZERO
-			for p in meta.areas[a]:
-				var q: Vector2 = to.call(p)
-				cen += q
-				draw_circle(q, 9.0, Color(col, 0.22))
-				draw_rect(Rect2(q - Vector2(3, 3), Vector2(6, 6)), col)
-			cen /= float(meta.areas[a].size())
-			var lab := "START AREA" if a == str(meta.start) else str(a).replace("_", " ").to_upper()
-			var ls := f.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, 11)
-			draw_string(f, cen + Vector2(-ls.x * 0.5, -12), lab, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, col.lightened(0.35))
-			i += 1
-		for d in meta.doors:
-			var q: Vector2 = to.call(d.pos)
-			draw_rect(Rect2(q - Vector2(8, 3), Vector2(16, 6)), UIStyle.RUST)
-			draw_rect(Rect2(q - Vector2(8, 3), Vector2(16, 6)), UIStyle.INK, false, 1.0)
-			draw_string(f, q + Vector2(10, 4), str(d.cost), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UIStyle.RUST.lightened(0.3))
-		if meta.has_spawn:
-			var sp: Vector2 = to.call(meta.spawn)
-			draw_colored_polygon(PackedVector2Array([sp + Vector2(0, -7), sp + Vector2(6, 5), sp + Vector2(-6, 5)]), UIStyle.BONE)
-		draw_string(f, Vector2(10, size.y - 10), "SCHEMATIC // █ WALLS   ■ SPAWNS + CHESTS BY AREA   ▬ DOORS (COST)   ▲ YOU", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(UIStyle.BONE_DIM, 0.75))
+		draw_rect(Rect2(off, b.size * sc), Color(0.37, 0.61, 0.58, 0.05))
+		for w in pv.walls:
+			var q := PackedVector2Array()
+			for p in w:
+				q.append(to.call(p))
+			draw_colored_polygon(q, Color(UIStyle.BONE, 0.62))
+			wall_count += 1
+		for d in pv.doors:
+			var a: Vector2 = to.call(d[0])
+			var c: Vector2 = to.call(d[1])
+			draw_line(a, c, Color(UIStyle.INK, 0.9), 6.0)
+			draw_line(a, c, UIStyle.RUST.lightened(0.1), 3.5)
+			door_count += 1
+		var seen := {}
+		for ft in pv.features:
+			var p: Vector2 = to.call(ft.pos)
+			var col: Color = FEATURE_LOOK.get(ft.type, [UIStyle.BONE])[0]
+			seen[ft.type] = true
+			feature_count += 1
+			match str(ft.type):
+				"start":
+					draw_colored_polygon(PackedVector2Array([p + Vector2(0, -8), p + Vector2(7, 6), p + Vector2(-7, 6)]), col)
+				"boss_arena":
+					var rr := maxf(float(ft.radius) * sc, 8.0)
+					draw_circle(p, rr, Color(col, 0.14))
+					draw_arc(p, rr, 0.0, TAU, 40, Color(col, 0.8), 2.0)
+					draw_circle(p, 3.0, col)
+				"mystery_box":
+					draw_rect(Rect2(p - Vector2(5, 5), Vector2(10, 10)), col)
+					draw_rect(Rect2(p - Vector2(5, 5), Vector2(10, 10)), UIStyle.INK, false, 1.0)
+				"power_weapon":
+					draw_colored_polygon(PackedVector2Array([p + Vector2(0, -6), p + Vector2(6, 0), p + Vector2(0, 6), p + Vector2(-6, 0)]), col)
+				_:
+					draw_circle(p, 4.5, Color(UIStyle.INK, 0.9))
+					draw_circle(p, 3.5, col)
+		# legend: walls, doors, then the feature types this map has (only what fits)
+		var lx := 10.0
+		var ly := size.y - 9.0
+		var items: Array = [["WALL", Color(UIStyle.BONE, 0.62), "wall"]]
+		if not pv.doors.is_empty():
+			items.append(["DOOR", UIStyle.RUST.lightened(0.1), "door"])
+		for t2 in FEATURE_TYPES_ORDER:
+			if seen.has(t2):
+				items.append([FEATURE_LOOK[t2][1], FEATURE_LOOK[t2][0], t2])
+		for it in items:
+			var lw := f.get_string_size(str(it[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+			if lx + 14 + lw > size.x - 8:
+				break
+			draw_rect(Rect2(lx, ly - 8, 9, 9), it[1])
+			draw_string(f, Vector2(lx + 13, ly), str(it[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(UIStyle.BONE_DIM, 0.85))
+			if not (str(it[2]) in ["wall", "door"]):
+				legend_types.append(str(it[2]))
+			lx += 13 + lw + 14
+
+	const FEATURE_TYPES_ORDER := ["start", "boss_arena", "perk", "mystery_box", "power_weapon", "chest"]

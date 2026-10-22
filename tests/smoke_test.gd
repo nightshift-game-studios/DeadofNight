@@ -528,11 +528,11 @@ func _run() -> void:
 		"M before round 1 opens main.map_picker (map not cycled, still %s)" % map_before)
 	check(mp._rows.size() == MapRegistry.list().size() and mp._rows.size() >= 2, "map picker lists every map (%d)" % mp._rows.size())
 	check(mp._sel == MapRegistry.current_id() and mp._cur_tag.visible, "map picker marks the current map (%s)" % mp._sel)
-	var rw: Dictionary = mp.map_meta("rustwell_foundry")
-	check(rw.doors.size() == 6 and rw.areas.size() >= 4 and mp.hint_lines(rw).size() >= 2 and mp.map_meta("arena").doors.is_empty(),
-		"map picker door/area hint from the map scene (%d doors, %d areas)" % [rw.doors.size(), rw.areas.size()])
+	var rw: Dictionary = mp.map_preview("rustwell_foundry")
+	check(rw.ok and rw.walls.size() > 0 and rw.doors.size() > 0 and mp.map_preview("arena").doors.is_empty(),
+		"map picker reads Mapz preview data (%d walls, %d doors)" % [rw.walls.size(), rw.doors.size()])
 	mp.select_row("rustwell_foundry")
-	check(not mp._cur_tag.visible and mp._preview.meta == rw, "map picker detail follows the selection")
+	check(not mp._cur_tag.visible and mp._preview.pv == rw, "map picker detail follows the selection")
 	var stub_src := GDScript.new()
 	stub_src.source_code = "extends Node\nvar current_round := 0\nvar _game_over := false\nvar calls := []\nfunc restart_with_map(id: String) -> bool:\n\tcalls.append(id)\n\treturn MapRegistry.select(id)\n"
 	stub_src.reload()

@@ -595,15 +595,7 @@ func _go() -> void:
 	check(not cfg3.has_section_key("bindings", "aim"), "legacy aim binding erased from settings.cfg")
 	check(InputMap.has_action("ads"), "ads action exists")
 
-	# ---- Door pluralization + Hard note
-	check(MapPickerScr._short_hint({"doors": [], "areas": {}}) == "OPEN LAYOUT // NO DOORS", "no doors hint")
-	var one = MapPickerScr._short_hint({"doors": [{"cost": 750, "opens": ["a"]}], "areas": {}})
-	check(one.begins_with("1 DOOR (750)") and "1 AREA" in one, "1 DOOR single cost (%s)" % one)
-	var two = MapPickerScr._short_hint({"doors": [{"cost": 750, "opens": ["a"]}, {"cost": 1250, "opens": ["b"]}], "areas": {}})
-	check("2 DOORS (750-1250)" in two, "N DOORS range (%s)" % two)
-	var same = MapPickerScr._short_hint({"doors": [{"cost": 750, "opens": ["a"]}, {"cost": 750, "opens": ["b"]}], "areas": {}})
-	check("2 DOORS (750)" in same and "750-750" not in same, "same min/max shows single cost (%s)" % same)
-
+	# ---- Hard note (v070 #4: no door hints in the picker any more)
 	var mp = MapPickerScr.new()
 	mp.home_mode = true
 	mp.dry_run = true

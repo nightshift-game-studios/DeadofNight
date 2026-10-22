@@ -122,34 +122,16 @@ func _armory() -> void:
 	await frames(2)
 
 
-# ------------------------------------------------------------------ #26 map preview walls
+# ------------------------------------------------------------------ #26 / v070 #4 map preview (Mapz mapz_preview v1)
 func _maps() -> void:
-	for id in ["arena", "rustwell_foundry", "lockout_substation"]:
-		var w: Array = MapPickerScr.map_walls(id)
-		var walls := w.filter(func(x): return x.kind == "wall")
-		check(walls.size() >= 10, "%s: wall footprints parsed from the scene (%d walls, %d floors)" % [id, walls.size(), w.size() - walls.size()])
-		var m: Dictionary = MapPickerScr.map_meta(id)
-		if m.bounds.size != Vector2.ZERO:
-			var inside = walls.filter(func(x): return m.bounds.grow(2.0).has_point(x.poly[0])).size()
-			check(inside >= walls.size() * 0.9, "%s: walls sit inside the map bounds (%d/%d)" % [id, inside, walls.size()])
-	# a known wall: rustwell FlueWall body at (-30.2, -22)
-	var flue = MapPickerScr.map_walls("rustwell_foundry").filter(func(x):
-		var c := Vector2.ZERO
-		for p in x.poly: c += p
-		return (c / 4.0).distance_to(Vector2(-30.2, -22)) < 3.0 and x.kind == "wall")
-	check(not flue.is_empty(), "rustwell FlueWall lands where the scene puts it (-30.2, -22)")
-	var txt := "[sub_resource type=\"BoxShape3D\" id=\"b1\"]\nsize = Vector3(4, 3, 1)\n\n[node name=\"Root\" type=\"Node3D\"]\n\n" \
-		+ "[node name=\"G\" type=\"Node3D\" parent=\".\"]\ntransform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 5)\n\n" \
-		+ "[node name=\"W\" type=\"StaticBody3D\" parent=\"G\"]\ntransform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 1, 1.5, 0)\n\n" \
-		+ "[node name=\"C\" type=\"CollisionShape3D\" parent=\"G/W\"]\nshape = SubResource(\"b1\")\n\n" \
-		+ "[node name=\"Clip\" type=\"Node3D\" parent=\".\"]\n\n[node name=\"K\" type=\"StaticBody3D\" parent=\"Clip\"]\n\n" \
-		+ "[node name=\"C\" type=\"CollisionShape3D\" parent=\"Clip/K\"]\nshape = SubResource(\"b1\")\n"
-	var tw: Array = MapPickerScr.walls_from_text(txt)
-	var bb := Rect2(tw[0].poly[0], Vector2.ZERO) if tw.size() == 1 else Rect2()
-	for p in (tw[0].poly if tw.size() == 1 else []):
-		bb = bb.expand(p)
-	check(tw.size() == 1 and tw[0].kind == "wall" and bb.position.is_equal_approx(Vector2(10.5, 3.0)) and bb.size.is_equal_approx(Vector2(1, 4)),
-		"walls_from_text composes parent transforms + rotation and skips Clip (%s)" % str(bb))
+	for id in MapRegistry.list().map(func(m): return str(m.get("id", ""))):
+		var pv: Dictionary = MapPickerScr.map_preview(id)
+		check(pv.ok and pv.walls.size() >= 4 and pv.bounds.size.x > 0.0, "%s: preview data (%d walls, %d doors, %d features)" % [id, pv.walls.size(), pv.doors.size(), pv.features.size()])
+		var inside = pv.walls.filter(func(w): return pv.bounds.grow(2.0).has_point(w[0])).size()
+		check(inside >= pv.walls.size() * 0.9, "%s: walls inside bounds (%d/%d)" % [id, inside, pv.walls.size()])
+		check(pv.features.any(func(f): return f.type == "start"), "%s: has a start marker" % id)
+	var none: Dictionary = MapPickerScr.map_preview("no_such_map")
+	check(not none.ok and none.walls.is_empty(), "missing preview file → empty state")
 	var mp = MapPickerScr.new()
 	mp.home_mode = true
 	mp.dry_run = true
@@ -158,13 +140,23 @@ func _maps() -> void:
 	mp.open()
 	mp.select_row("rustwell_foundry")
 	await frames(3)
-	check(mp._preview.walls.size() > 0 and mp._preview.visible, "schematic gets the wall list on select")
+	check(mp._preview.pv.ok and mp._preview.visible, "schematic gets the preview data on select")
 	mp._preview.queue_redraw()
 	await frames(3)
-	check(mp._preview.wall_count > 0 or DisplayServer.get_name() == "headless", "schematic drew walls (%d)" % mp._preview.wall_count)
+	var headless := DisplayServer.get_name() == "headless"
+	check(headless or (mp._preview.wall_count > 0 and mp._preview.door_count > 0 and mp._preview.feature_count > 0), "schematic drew walls / doors / features (%d / %d / %d)" % [mp._preview.wall_count, mp._preview.door_count, mp._preview.feature_count])
+	check(mp.find_child("MapDesc", true, false).max_lines_visible == 2, "description is height-capped (2 lines)")
+	var txts := []
+	for l in mp.find_children("*", "Label", true, false):
+		txts.append(str(l.text))
+	check(not txts.any(func(t): return t.contains("DOORS") or t.contains("START IN")), "no door / area text in the picker")
 	mp.select_row("arena")
 	await frames(2)
-	check(mp._preview.walls.size() > 0, "arena (built into main.tscn) also has walls in its preview")
+	check(mp._preview.pv.ok and mp._preview.pv.walls.size() > 0, "arena also has a preview")
+	mp._preview.pv = MapPickerScr.map_preview("no_such_map")
+	mp._preview.queue_redraw()
+	await frames(2)
+	check(mp._preview.wall_count == 0, "missing preview draws the empty state")
 	mp.close()
 	mp.queue_free()
 	await frames(2)
