@@ -410,6 +410,33 @@ func _in_match() -> void:
 	check(label_overlaps(cs._stats_grid).is_empty(), "#34 stat tiles: no overlapping text")
 	var center_ok: bool = cs._right.get_global_rect().end.x <= 1280.5
 	check(center_ok, "#34 wider stat tiles don't push the armor column off screen (%.0f)" % cs._right.get_global_rect().end.x)
+	# v070 #6: fixed-size sections; very long names clip inside their box and move nothing else
+	var l0: Rect2 = cs._left.get_global_rect()
+	var r0: Rect2 = cs._right.get_global_rect()
+	var g0: Rect2 = cs._stats_grid.get_global_rect()
+	var long_name := "THE EXCEPTIONALLY LONG-WINDED GRAVEDIGGER'S ACCURSED HEIRLOOM OF PROLONGED NAMING"
+	var renamed := []
+	for sl in inv.equipped:
+		var gi = inv.equipped[sl]
+		if gi:
+			renamed.append([gi, gi.display_name, gi.manufacturer])
+			gi.display_name = long_name
+			gi.manufacturer = "VERY LONG MANUFACTURER NAME AND SONS LIMITED"
+	cs.refresh()
+	await frames(3)
+	var l1: Rect2 = cs._left.get_global_rect()
+	var r1: Rect2 = cs._right.get_global_rect()
+	var g1: Rect2 = cs._stats_grid.get_global_rect()
+	check(l1.size.x == cs.LEFT_W and r1.size.x == cs.RIGHT_W, "v070 #6: columns keep their fixed widths with long names (%.0f / %.0f)" % [l1.size.x, r1.size.x])
+	check(l1.position.is_equal_approx(l0.position) and r1.position.is_equal_approx(r0.position) and g1.position.is_equal_approx(g0.position), "v070 #6: long names move no other section")
+	var nm_l: Label = cs._left.find_child("SlotName", true, false)
+	check(nm_l != null and nm_l.clip_text and nm_l.text_overrun_behavior == TextServer.OVERRUN_TRIM_ELLIPSIS and nm_l.get_global_rect().end.x <= l1.end.x + 0.5, "v070 #6: item name ellipsised inside the weapons column")
+	check(cs.find_child("SuppliesScroll", true, false) is ScrollContainer, "v070 #6: supplies strip is a fixed scroll area")
+	for rn in renamed:
+		rn[0].display_name = rn[1]
+		rn[0].manufacturer = rn[2]
+	cs.refresh()
+	await frames(2)
 	cs.close()
 	await frames(2)
 	await _run_pick_refusal(m, p)

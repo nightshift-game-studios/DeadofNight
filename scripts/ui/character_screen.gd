@@ -139,7 +139,8 @@ func _ready() -> void:
 	col.add_child(body)
 	_left = VBoxContainer.new()
 	_left.add_theme_constant_override("separation", 8)
-	_left.custom_minimum_size.x = 400
+	_left.custom_minimum_size.x = LEFT_W
+	_left.clip_contents = true # playtest 2026-10-22 #6: fixed-size columns; long text clips / ellipsises inside them
 	body.add_child(_left)
 	var center := VBoxContainer.new()
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -147,7 +148,8 @@ func _ready() -> void:
 	body.add_child(center)
 	_right = VBoxContainer.new()
 	_right.add_theme_constant_override("separation", 6)
-	_right.custom_minimum_size.x = 330
+	_right.custom_minimum_size.x = RIGHT_W
+	_right.clip_contents = true
 	body.add_child(_right)
 
 	center.add_child(_build_character_view())
@@ -164,9 +166,15 @@ func _ready() -> void:
 	footer.add_theme_constant_override("separation", 10)
 	col.add_child(footer)
 	footer.add_child(UIStyle.label("SUPPLIES", 16, UIStyle.RUST, true))
+	var cscroll := ScrollContainer.new() # fixed strip: many / long supplies scroll sideways instead of widening the screen
+	cscroll.name = "SuppliesScroll"
+	cscroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cscroll.custom_minimum_size = Vector2(0, 40)
+	cscroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	footer.add_child(cscroll)
 	_consumables = HBoxContainer.new()
 	_consumables.add_theme_constant_override("separation", 6)
-	footer.add_child(_consumables)
+	cscroll.add_child(_consumables)
 
 	_tooltip = PanelContainer.new()
 	_tooltip.visible = false
@@ -390,6 +398,10 @@ func refresh() -> void:
 		var entry: Dictionary = inv.bag[i]
 		var b := Button.new()
 		b.text = "%s  x%d" % [entry.item.display_name.to_upper(), entry.count]
+		b.tooltip_text = b.text
+		b.custom_minimum_size = Vector2(SUPPLY_W, 34)
+		b.clip_text = true
+		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		b.add_theme_font_override("font", UIStyle.body_bold())
 		b.add_theme_color_override("font_color", UIStyle.BONE)
 		b.add_theme_stylebox_override("normal", UIStyle.cut_box(UIStyle.PANEL, entry.item.color, 2, 8))
@@ -433,6 +445,7 @@ func _build_field_cards() -> void:
 		row.set_meta("card_id", str(entry.id))
 		row.tooltip_text = str(entry.get("description", entry.get("summary", "")))
 		row.mouse_filter = Control.MOUSE_FILTER_PASS
+		row.clip_contents = true
 		_right.add_child(row)
 	if owned.size() > shown:
 		var more := UIStyle.label("+%d MORE" % (owned.size() - shown), 11, UIStyle.BONE_DIM, true)
@@ -443,6 +456,22 @@ func _build_field_cards() -> void:
 func _on_cards_changed() -> void:
 	if visible:
 		refresh()
+
+
+const LEFT_W := 400.0 ## weapons column (fixed)
+const RIGHT_W := 330.0 ## armor + field cards column (fixed)
+const STAT_W := 150.0 ## one stat tile (fixed)
+const SUPPLY_W := 170.0 ## one supplies button (fixed)
+
+
+## A label that takes the space it is given and never asks for more: one line, clipped with an ellipsis.
+static func fit_label(l: Label) -> Label:
+	l.clip_text = true
+	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.custom_minimum_size.x = 1
+	return l
 
 
 func _refresh_avg_ip(inv: Inventory) -> void:
@@ -479,7 +508,10 @@ func _slot_row(inv: Inventory, s: String, mirrored: bool) -> Control:
 		_expanded = "" if _expanded == s else s
 		refresh())
 	var info := VBoxContainer.new()
+	info.name = "SlotInfo"
 	info.alignment = BoxContainer.ALIGNMENT_CENTER
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.custom_minimum_size.x = 1
 	info.add_theme_constant_override("separation", -2)
 	var cap_row := HBoxContainer.new()
 	cap_row.add_theme_constant_override("separation", 4)
@@ -493,12 +525,14 @@ func _slot_row(inv: Inventory, s: String, mirrored: bool) -> Control:
 	cap_row.add_child(slot_bang)
 	info.add_child(cap_row)
 	if g:
-		info.add_child(UIStyle.label(g.display_name.to_upper(), 17 if is_weapon else 14, g.rarity_color().lightened(0.15), false, 3))
+		var nm := fit_label(UIStyle.label(g.display_name.to_upper(), 17 if is_weapon else 14, g.rarity_color().lightened(0.15), false, 3))
+		nm.name = "SlotName"
+		info.add_child(nm)
 		var meta := HBoxContainer.new()
 		meta.add_theme_constant_override("separation", 7)
 		if mirrored:
 			meta.alignment = BoxContainer.ALIGNMENT_END
-		var maker_l := UIStyle.label(g.manufacturer.to_upper(), 11, g.manufacturer_color)
+		var maker_l := fit_label(UIStyle.label(g.manufacturer.to_upper(), 11, g.manufacturer_color))
 		maker_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		var plate := UIStyle.ip_plate(display_ip(g), 12)
 		plate.name = "SlotIP"
@@ -685,12 +719,13 @@ func _refresh_stats(inv: Inventory) -> void:
 		if pv:
 			edge = UIStyle.GOOD if int(row.next_value) > int(row.value) else UIStyle.BAD
 		box.add_theme_stylebox_override("panel", UIStyle.cut_box(UIStyle.PANEL, edge, 2, 8))
-		box.custom_minimum_size = Vector2(150, 0)
+		box.custom_minimum_size = Vector2(STAT_W, 0)
+		box.clip_contents = true
 		var v := VBoxContainer.new()
 		v.add_theme_constant_override("separation", 1)
 		box.add_child(v)
 		var head := HBoxContainer.new()
-		head.add_child(UIStyle.label(ArmorItem.STAT_LABELS[s].to_upper(), 13, UIStyle.BONE_DIM))
+		head.add_child(fit_label(UIStyle.label(ArmorItem.STAT_LABELS[s].to_upper(), 13, UIStyle.BONE_DIM)))
 		var sp := Control.new()
 		sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(sp)
@@ -710,11 +745,8 @@ func _refresh_stats(inv: Inventory) -> void:
 			var lh := HBoxContainer.new()
 			lh.add_theme_constant_override("separation", 3)
 			lh.name = "Line_" + str(ln.key)
-			var ll := UIStyle.label(str(ln.label), 10, UIStyle.BONE_DIM)
+			var ll := fit_label(UIStyle.label(str(ln.label), 10, UIStyle.BONE_DIM))
 			lh.add_child(ll)
-			var lsp := Control.new()
-			lsp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			lh.add_child(lsp)
 			var cur := UIStyle.label(str(ln.now), 11, UIStyle.OLIVE.lightened(0.35))
 			cur.name = "Now"
 			lh.add_child(cur)
