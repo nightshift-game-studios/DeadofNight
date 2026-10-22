@@ -227,3 +227,17 @@ listing `res://maps/*/<id>.tscn`.
 - Verification (map 1, done): headless load with zero errors, bake with doors closed and open, one nav component, every spawn / chest /
   pickup / raised area pathing to PlayerSpawn, staged door unlocks matching spawn reachability, wall-jump routes simulated with the real player.gd, screenshots.
   Test scripts: `/workspace/mapz/_test/fps_wj/tests_mapz/` (verify_map.gd, wj_live.gd, shots.gd, rebake.gd).
+
+## Map-select preview data (playtest #4)
+
+`data/map_previews/<map id>.json` (all 4 maps, arena included), format `mapz_preview v1`. Coordinates are metres in world XZ, as
+`[x, z]` (draw with screen y = z):
+- `bounds`: `[x, z, w, h]`, the play area (the map's root `bounds` meta, or the wall extents for the arena).
+- `walls`: simple filled polygons, `[[x, z], ...]`, with no holes. They cover walls and solid structures at least 2 m tall.
+  Floors, decks, ramps, railings, clip, props, dressing and lintels are left out.
+- `doors`: `{a: [x, z], b: [x, z]}` segments across each doorway. They carry no names, costs or text.
+- `features`: `{type, pos: [x, z]}`, plus `radius` for `boss_arena`. Types: start, boss_arena, perk, mystery_box,
+  power_weapon, chest (the starting chests).
+
+To regenerate after a layout change, run `tools/godot/dump_preview_raw.gd -- <id>=<scene> ... --out=<dir>`, then
+`python tools/build_map_previews.py <dir> data/map_previews` (the second step needs shapely).
