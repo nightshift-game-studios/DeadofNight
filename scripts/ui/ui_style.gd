@@ -565,6 +565,11 @@ static func skill_icon_tex(icon_key: String) -> Texture2D:
 	return null if icon_key == "" else _icon_tex("res://assets/icons/skill_%s.png" % icon_key)
 
 
+## Icon by full key: res://assets/icons/<key>.png ("spec_sexton", "tree_marksman"; SKILLTREE_API §24). Null if missing.
+static func icon_key_tex(key: String) -> Texture2D:
+	return null if key == "" else _icon_tex("res://assets/icons/%s.png" % key)
+
+
 ## Class Q-ability icon by ability id (dash, rally_banner, grave_bell, ...).
 static func ability_icon_tex(ability_id: String) -> Texture2D:
 	return null if ability_id == "" else _icon_tex("res://assets/icons/ability_%s.png" % ability_id)

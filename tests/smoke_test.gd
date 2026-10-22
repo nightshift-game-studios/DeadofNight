@@ -427,15 +427,16 @@ func _run() -> void:
 	progress.xp += 2500 # a few more points for buying through the menu
 	stm.open()
 	await wait(3)
-	check(stm._rail_tabs.size() == progress.branches().size() and progress.branches().size() == 9,
-		"skill tree rail lists all 9 branches (%d tabs)" % stm._rail_tabs.size())
-	# Batch C (59143a1): general nodes + one class dock (the selected class's branch)
-	var shown_ids: Array = progress.all_node_ids().filter(func(i): return str(progress.get_skill(i).get("class", "")) in ["", str(progress.selected_class)])
-	check(stm._nodes.size() == shown_ids.size(), "skill tree: a tile per general + selected-class node (%d/%d)" % [stm._nodes.size(), shown_ids.size()])
+	# §24: MAIN TREES tab = the 5 main trees (Progress.tree.tabs.main); the class trees live on the SPECIALIZATION tab
+	var main_b: Array = progress.tree.get("tabs", {}).get("main", {}).get("branches", [])
+	check(stm.tab == "main" and stm._rail_tabs.size() == main_b.size() and main_b.size() == 5,
+		"skill tree rail lists the 5 main trees (%d tabs)" % stm._rail_tabs.size())
+	var shown_ids: Array = progress.all_node_ids().filter(func(i): return str(progress.get_skill(i).get("tab", "main")) == "main")
+	check(stm._nodes.size() == shown_ids.size(), "skill tree: a tile per main-tree node (%d/%d)" % [stm._nodes.size(), shown_ids.size()])
 	var clip_r: Rect2 = stm._clip.get_global_rect().grow(1.0)
 	var vp_r := Rect2(Vector2.ZERO, stm.get_viewport().get_visible_rect().size).grow(1.0)
-	# Batch C: 8 general rows + the class dock are taller than one screen, so the tree pans vertically only.
-	# Every branch must fit across (no side panning), and panning down must bring the class dock fully into view.
+	# 8 main-tree rows can be taller than one screen, so the tree pans vertically only.
+	# Every branch must fit across (no side panning), and panning down must bring the last row fully into view.
 	var fit_ok := true
 	var low_id := ""
 	for id in stm._nodes:
@@ -447,7 +448,7 @@ func _run() -> void:
 	stm._set_pan(Vector2(0, 1e6))
 	await process_frame
 	var low_r: Rect2 = stm._nodes[low_id].get_global_rect()
-	check(clip_r.encloses(low_r) and vp_r.encloses(low_r) and stm._pan.x == 0.0, "skill tree: panning down shows the class dock's last row (%s)" % low_id)
+	check(clip_r.encloses(low_r) and vp_r.encloses(low_r) and stm._pan.x == 0.0, "skill tree: panning down shows the last row (%s)" % low_id)
 	stm._set_pan(Vector2.ZERO)
 	var had_spotter: bool = progress.skill_ranks.has("mk_spotter")
 	progress.skill_ranks["mk_spotter"] = 1 # temporarily own one side of a fork to see the exclusion state (§24: keystones no longer exclude)

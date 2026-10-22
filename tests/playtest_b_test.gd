@@ -36,6 +36,21 @@ static func label_overlaps(n: Node, min_area: float = 6.0) -> Array:
 	return out
 
 
+static func _tile_hits(sm) -> Array:
+	var rects: Array = []
+	for id in sm._nodes:
+		rects.append([id, sm._nodes[id].body_rect(), sm._nodes[id].name_rect()])
+	var hits: Array = []
+	for i in rects.size():
+		for j in range(i + 1, rects.size()):
+			for a in [1, 2]:
+				for b in [1, 2]:
+					var r: Rect2 = rects[i][a].intersection(rects[j][b])
+					if r.get_area() > 4.0:
+						hits.append("%s/%s" % [rects[i][0], rects[j][0]])
+	return hits
+
+
 func _wipe() -> void:
 	var P = load("res://scripts/autoload/progress.gd")
 	P.delete_save_files(SAVE)
@@ -113,41 +128,96 @@ func _tree_checks() -> void:
 	sm.open()
 	await frames(6)
 	check(sm.spec() != null, "#14 tree uses Characters.spec")
-	var cls_ids: Array = sm._ids.filter(func(i): return str(sm._defs[i].get("class", "")) != "")
-	check(not cls_ids.is_empty() and cls_ids.all(func(i): return str(sm._defs[i].class) == "soldier"), "#14 only your class's dock is shown (%d soldier nodes)" % cls_ids.size())
-	var gen: int = prog.all_node_ids().filter(func(i): return str(prog.get_skill(i).get("class", "")) == "").size()
-	check(sm._nodes.size() == gen + cls_ids.size(), "#14 tiles = general + one class (%d)" % sm._nodes.size())
-	check(sm._content_size.x <= sm._clip.size.x + 1.0, "#14 tree fits 1280 wide, no side panning (%.0f <= %.0f)" % [sm._content_size.x, sm._clip.size.x])
-	# no two tiles / name plates collide
-	var rects: Array = []
-	for id in sm._nodes:
-		rects.append([id, sm._nodes[id].body_rect(), sm._nodes[id].name_rect()])
-	var hits: Array = []
-	for i in rects.size():
-		for j in range(i + 1, rects.size()):
-			for a in [1, 2]:
-				for b in [1, 2]:
-					var r: Rect2 = rects[i][a].intersection(rects[j][b])
-					if r.get_area() > 4.0:
-						hits.append("%s/%s" % [rects[i][0], rects[j][0]])
-	check(hits.is_empty(), "#14 no tile / name overlaps (%s)" % str(hits.slice(0, 4)))
-	var gen_max_y := 0.0
-	for i in sm._ids:
-		if str(sm._defs[i].get("class", "")) == "":
-			gen_max_y = maxf(gen_max_y, sm._nodes[i].position.y)
-	check(cls_ids.all(func(i): return sm._nodes[i].position.y > gen_max_y + 40.0), "#14 class dock sits under the general rows")
-	var dock_name: Label = sm._canvas.find_child("ClassDockName", true, false)
-	check(dock_name != null and dock_name.text == "SOLDIER", "#14 dock is labelled with the class")
-	# rail tab -> another class's dock
-	sm._jump_to_branch("sexton")
-	await frames(3)
-	check(sm.class_view == "sexton" and sm._ids.filter(func(i): return str(sm._defs[i].get("class", "")) == "sexton").size() >= 10, "#14 SEXTON tab shows the Sexton dock")
-	check(sm._ids.all(func(i): return str(sm._defs[i].get("class", "")) in ["", "sexton"]), "#14 ... and only that dock")
-	check(sm.get_children().filter(func(c): return c is PanelContainer and c.z_index == 20).size() == 1, "#14 rebuild keeps one info box")
-	sm.view_class("soldier")
-	await frames(3)
-	# exclusive forks through SkillSpec
 	var sp = sm.spec()
+	# §24 MAIN tab: the 5 main trees, open to every class, laid out from tab_x / tab_y
+	check(sm.tab == "main" and sm._tab_btns.has("main") and sm._tab_btns.has("spec"), "v070 #3 tree opens on MAIN TREES with a SPECIALIZATION tab")
+	var main_n: int = sp.tab_nodes("main").size()
+	check(sm._nodes.size() == main_n and sm._ids.all(func(i): return str(sm._defs[i].get("class", "")) == ""), "v070 #3 MAIN tab: a tile per main-tree node (%d)" % main_n)
+	check(sm._rail_tabs.size() == prog.tree.tabs.main.branches.size() and sm._rail_tabs.size() == sp.main_trees().size(), "v070 #3 rail = the main trees (%d)" % sm._rail_tabs.size())
+	check(sm._content_size.x <= sm._clip.size.x + 1.0, "#14 main trees fit 1280 wide, no side panning (%.0f <= %.0f)" % [sm._content_size.x, sm._clip.size.x])
+	check(_tile_hits(sm).is_empty(), "#14 MAIN: no tile / name overlaps (%s)" % str(_tile_hits(sm).slice(0, 4)))
+	# §24 SPECIALIZATION tab
+	sm.set_tab("spec")
+	await frames(3)
+	var mine: String = sp.current_specialization()
+	var sn: Array = sp.spec_nodes(mine)
+	check(sm.tab == "spec" and sm.class_view == mine and sm._nodes.size() == sn.size() and sm._ids.all(func(i): return str(sm._defs[i].class) == mine),
+		"v070 #3 SPEC tab shows your Specialization's tree (%s, %d nodes)" % [mine, sn.size()])
+	var cols := {}
+	var rws := {}
+	for i in sm._ids:
+		cols[int(sm._defs[i].x)] = true
+		rws[int(sm._defs[i].y)] = true
+	check(cols.size() <= 3 and rws.size() <= 7 and cols.keys().max() <= 2 and rws.keys().max() <= 6, "v070 #3 spec tree is 3 x 7 (tab_x / tab_y)")
+	check(sm._content_size.y <= sm._clip.size.y + 1.0 and sm._content_size.x <= sm._clip.size.x + 1.0, "v070 #3 the whole spec tree fits without panning (%s in %s)" % [sm._content_size, sm._clip.size])
+	check(sm.spec_buttons.size() == 4 and sm.spec_buttons[mine].find_child("SpecStatus", true, false).text.contains("YOUR"), "v070 #8 roster: 4 Specializations, yours marked")
+	check(sm.spec_buttons.values().all(func(b): return b.find_child("SpecIcon", true, false) != null), "v070 #8 roster cards use the spec_<id> icons")
+	check(sm.select_button != null and sm.select_button.disabled and sm.select_button.text.contains("YOUR"), "v070 #8 your Specialization: CHOOSE shows YOUR SPECIALIZATION")
+	check(sm.find_child("ClassStats", true, false) != null and sm.find_child("AbilitySummary", true, false) != null and sm.q_buttons.size() >= 2,
+		"v070 #8 class stats, Q choices (%d) + summary on the Specialization tab" % sm.q_buttons.size())
+	check(sm.find_child("ClassItems", true, false) != null and (sm.find_child("ClassItemRow", true, false) != null or sm.find_child("ClassItemsNone", true, false) != null),
+		"v070 #8 class items (ClassItems.owned_rows) on the Specialization tab")
+	check(_tile_hits(sm).is_empty(), "v070 #3 SPEC: no tile / name overlaps (%s)" % str(_tile_hits(sm).slice(0, 4)))
+	check(label_overlaps(sm.panel).is_empty(), "v070 #3 SPEC: no overlapping text %s" % str(label_overlaps(sm.panel).slice(0, 3)))
+	check(Rect2(Vector2.ZERO, Vector2(1280, 720)).grow(1.0).encloses(sm.panel.get_global_rect()), "v070 #3 SPEC tab fits 1280x720")
+	var all_fit := []
+	for c in sm.tab_branches("spec"):
+		sm.view_class(c)
+		await frames(2)
+		var low := 0.0
+		for id in sm._nodes:
+			low = maxf(low, sm._nodes[id].name_rect().end.y)
+		if not _tile_hits(sm).is_empty() or sm._content_size.y > sm._clip.size.y + 1.0 or low > sm._clip.size.y or not label_overlaps(sm.panel).is_empty():
+			all_fit.append(c)
+	check(all_fit.is_empty(), "v070 #3 all 4 Specialization trees fit (incl. the keystone names) with no overlaps (bad: %s)" % str(all_fit))
+	sm.view_class(mine)
+	await frames(2)
+	# view another Specialization: its tree, other_spec refusal with a friendly reason
+	var other := "sexton" if mine != "sexton" else "scout"
+	sm.view_class(other)
+	await frames(3)
+	check(sm.class_view == other and sm._ids.all(func(i): return str(sm._defs[i].class) == other) and sm._ids.size() == sp.spec_nodes(other).size(), "v070 #3 roster card shows %s's tree" % other)
+	var oroot := ""
+	for i in sm._ids:
+		if prog.state(i) == "available":
+			oroot = i
+			break
+	check(oroot != "" and sm.ui_state(oroot) == "other_spec" and str(sp.can_pick(oroot).code) == "other_spec", "v070 #3 other Specialization's nodes read other_spec")
+	check(not sm.buy(oroot) and sm.toast_text().to_upper().contains("NOT YOUR SPECIALIZATION") and sm.toast_text().to_upper().contains("CHOOSE " + str(sm.spec_row(other).name).to_upper()),
+		"v070 #3 other_spec pick refused with a friendly reason (%s)" % sm.toast_text())
+	sm.nav_input = true
+	sm._show_tooltip(oroot)
+	await frames(1)
+	check(sm._tooltip.find_child("OtherSpec", true, false) != null, "v070 #3 info box explains other_spec")
+	sm.hide_tooltip()
+	# CHOOSE it (select_specialization), then Q (select_q)
+	var fired := [0, 0]
+	sp.specialization_changed.connect(func(_c): fired[0] += 1)
+	sp.q_changed.connect(func(_c, _a): fired[1] += 1)
+	check(not sm.select_button.disabled and sm.choose_spec(other) and prog.selected_class == other and fired[0] == 1,
+		"v070 #8 CHOOSE %s = spec.select_specialization (class saved)" % other)
+	await frames(2)
+	check(sm.select_button.text.contains("YOUR") and sm.spec_buttons[other].find_child("SpecStatus", true, false).text.contains("YOUR") and sm._tab_btns.spec.text.contains(str(sm.spec_row(other).name).to_upper()),
+		"v070 #8 roster + tab follow the new Specialization")
+	check(sm.ui_state(oroot) in ["available", "unaffordable"] and sm.buy(oroot) and prog.rank(oroot) == 1, "v070 #3 now its nodes take points")
+	check(sm.refund(oroot), "v070 #3 free undo survives the Specialization switch")
+	var qa: Array = sm.q_buttons.keys()
+	var cur_q: String = str(chars.ability_for(other))
+	var new_q: String = qa[1] if str(qa[0]) == cur_q else qa[0]
+	check(sm.pick_q(new_q) and str(chars.ability_for(other)) == new_q and fired[1] == 1 and sm.q_buttons[new_q].text == "" and sm.q_buttons[new_q].find_children("*", "Label", true, false)[0].text.begins_with("●"),
+		"v070 #8 Q pick = spec.select_q (%s)" % new_q)
+	check(sm.choose_spec(mine) and prog.selected_class == mine, "v070 #8 switch back to %s" % mine)
+	prog.respec_allowed = false
+	chars.leave_home()
+	sm.view_class(other)
+	await frames(2)
+	check(sm.select_button.disabled and sm.find_child("SelectNote", true, false) != null and sm.find_child("SelectNote", true, false).text != "",
+		"v070 #8 outside the respec window CHOOSE is off with Skillz's reason")
+	chars.enter_home()
+	sm.set_tab("main")
+	await frames(3)
+	check(sm.get_children().filter(func(c): return c is PanelContainer and c.z_index == 20).size() == 1, "#14 rebuild keeps one info box")
+	# exclusive forks through SkillSpec
 	var pair: Array = []
 	for i in sm._ids:
 		var inf: Dictionary = sp.node_info(i)
@@ -228,37 +298,32 @@ func _characters_screen() -> void:
 	check(prog.bound_inventory() != null and chars.blocked_reason() == "", "#21 home kit open (inventory bound) doesn't block slots")
 	cs.select_slot(cs.NEW_ID)
 	await frames(2)
-	check(cs.name_edit != null and cs.create_button != null, "#21 create form (name + class)")
+	check(cs.name_edit != null and cs.create_button != null, "#21 create form (name only)")
+	check(cs.find_child("Classes", true, false) == null and cs.find_children("Class_*", "", true, false).is_empty(), "v070 #8 create form has no class picker")
 	cs.name_edit.text = "   "
 	cs._refresh_create()
 	check(cs.create_button.disabled, "#21 empty name refused")
 	cs.name_edit.text = "Mabel"
-	cs.pick_create_class("sexton")
-	await frames(1)
-	check(cs.name_edit.text == "Mabel" and cs.create_class == "sexton" and not cs.create_button.disabled, "#21 picking a class keeps the typed name")
+	cs._refresh_create()
+	check(not cs.create_button.disabled, "#21 a name is enough")
 	check(cs.create_now(), "#21 CREATE + PLAY AS (even after the home kit was opened)")
 	check(prog.bound_inventory() == null and kp.inventory == null, "#21 home kit drops its Inventory on Characters.switching")
 	kp.queue_free()
 	await frames(2)
-	check(chars.count() == 2 and str(chars.get_character(chars.active_id()).name) == "Mabel" and prog.selected_class == "sexton" and prog.get_level() == 1,
-		"#21 new character is live: own save, level 1, Sexton")
+	check(chars.count() == 2 and str(chars.get_character(chars.active_id()).name) == "Mabel" and prog.selected_class == "soldier" and prog.get_level() == 1,
+		"#21 new character is live: own save, level 1, starts as Soldier")
 	check(cs.slot_buttons.size() >= 3, "#21 both slots listed (+ new)")
-	# #9 loadout
-	check(cs.class_buttons.size() == 4 and cs.class_buttons.has("chandler"), "#9 four classes to pick")
-	check(cs.set_class("chandler") and prog.selected_class == "chandler", "#9 class switch saves per character")
-	await frames(1)
-	var abil: Array = cs.ability_buttons.keys()
-	check(abil.size() >= 2, "#9 Q ability choices for the class (%d)" % abil.size())
-	if abil.size() >= 2:
-		var other: String = abil[1] if str(chars.ability_for("chandler")) == abil[0] else abil[0]
-		check(cs.set_ability("chandler", other) and chars.ability_for("chandler") == other, "#9 Q ability pick saved")
-	check(cs.find_child("ClassStats", true, false) != null and cs.find_child("AbilitySummary", true, false) != null, "#9 class stats + ability summary shown")
-	check(cs.find_child("ClassItems", true, false) != null and (cs.find_child("ClassItemRow", true, false) != null or cs.find_child("ClassItemsNone", true, false) != null),
-		"#9 class items list (ClassItems.owned_rows) in the class picker")
+	# v070 #8: no class / Q picker here any more; a read-only line + where to change it
+	check(cs.find_children("Ability_*", "", true, false).is_empty() and cs.find_child("Classes", true, false) == null and not cs.has_method("set_class") and not cs.has_method("set_ability"),
+		"v070 #8 CHARACTERS has no class / Q picker (moved to SKILLS > SPECIALIZATION)")
+	var spl: Label = cs.find_child("SpecLine", true, false)
+	check(spl != null and spl.text.begins_with("SOLDIER") and cs.find_child("SpecHint", true, false).text.contains("SPECIALIZATION"), "v070 #8 read-only Specialization line + hint (%s)" % (spl.text if spl else "none"))
+	var src := FileAccess.get_file_as_string("res://scripts/ui/character_select.gd")
+	check(not src.contains("set_class(") and not src.contains("set_ability(") and not src.contains("loadout()"), "v070 #8 character_select.gd calls no set_class / set_ability / loadout")
 	var row_meta: Label = cs.find_child("SlotMeta", true, false)
 	check(row_meta != null and row_meta.text.begins_with("BEST ROUND"), "#21 slot rows show best round + games (Characters.list)")
 	await frames(3)
-	check(label_overlaps(cs.panel).is_empty(), "#21/#9 no overlapping text %s" % str(label_overlaps(cs.panel).slice(0, 3)))
+	check(label_overlaps(cs.panel).is_empty(), "#21 no overlapping text %s" % str(label_overlaps(cs.panel).slice(0, 3)))
 	check(Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(cs.panel.get_global_rect()), "#21 fits 1280x720 (%s)" % str(cs.panel.get_global_rect()))
 	# switch back
 	cs.select_slot(first)

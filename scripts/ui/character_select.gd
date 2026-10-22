@@ -1,9 +1,10 @@
 extends MenuBase
-## Gooey, playtest #21 + #9: CHARACTERS screen (home header chip).
+## Gooey, playtest #21: CHARACTERS screen (home header chip) = choosing and naming characters only.
 ##   left : character slots (separate saves, Characters.MAX_CHARACTERS) + "+ NEW CHARACTER"
-##   right: the picked character: PLAY AS / RENAME / DELETE (two-step, Characters.request_delete token),
-##          and for the character you're playing its LOADOUT: class (4) + Q ability (#9).
-##          A free slot shows the create form (name + class).
+##   right: the picked character: PLAY AS / RENAME / DELETE (two-step, Characters.request_delete token).
+##          A free slot shows the create form (name only).
+## §24 (playtest 2026-10-22 #8): class + Q are picked on SKILLS > SPECIALIZATION (skill_tree_menu.gd); this screen
+## only shows them read-only. Uses Characters.list / create(name) / rename / select / request_delete / delete.
 ## Talks to Skillz's Characters autoload (CHARACTER_API.md). Until that autoload is live (MAIN_HOOKS §23a) the screen
 ## shows the current save as the only character and says why slots are off. Class items show on item cards (Kit).
 
@@ -14,8 +15,6 @@ signal character_switched(id: int)
 
 var selected_id: int = 0 ## 0 = the active one, NEW_ID = create form
 var slot_buttons: Dictionary = {} ## character id (int) / "new" -> Button
-var class_buttons: Dictionary = {} ## class id -> Button
-var ability_buttons: Dictionary = {} ## ability id -> Button
 var play_button: Button
 var delete_button: Button
 var rename_button: Button
@@ -23,7 +22,6 @@ var rename_edit: LineEdit
 var create_button: Button
 var name_edit: LineEdit
 var reason_label: Label
-var create_class: String = "soldier"
 var _delete_token: String = ""
 var _delete_t: float = 0.0
 var _left: VBoxContainer
@@ -100,8 +98,6 @@ func refresh() -> void:
 		old.visible = false # queue_free lands next frame; hide now so focus / layout / tests only see the new page
 	clear_content()
 	slot_buttons.clear()
-	class_buttons.clear()
-	ability_buttons.clear()
 	play_button = null
 	delete_button = null
 	create_button = null
@@ -279,110 +275,18 @@ func _build_detail(e: Dictionary) -> void:
 		rename_button = _btn("RENAME", rename_selected, 130)
 		rename_button.name = "Rename"
 		rn.add_child(rename_button)
-	if active:
-		_build_loadout()
-	else:
-		_right.add_child(_wrap("Switch to this character to change its class and Q ability.", 12, UIStyle.BONE_DIM))
-
-
-## #9: class + Q ability for the character you're playing (Characters.loadout()).
-func _build_loadout() -> void:
-	var c := chars()
-	if c == null:
-		_section("CLASS")
-		_right.add_child(_wrap("Class: %s. (Pick it on the game-over screen until the classes update is switched on.)" % str(Progress.selected_class).capitalize(), 12, UIStyle.BONE_DIM))
-		return
-	var lo: Dictionary = c.loadout()
-	var locked := str(lo.get("blocked", ""))
-	_section("CLASS  //  NEXT MATCH SPAWNS AS")
-	var row := HBoxContainer.new()
-	row.name = "Classes"
-	row.add_theme_constant_override("separation", 8)
-	_right.add_child(row)
-	var cur: Dictionary = {}
-	for k in lo.get("classes", []):
-		var on := bool(k.get("selected", false))
-		if on:
-			cur = k
-		var b := _btn(("● " if on else "") + str(k.get("name", k.id)).to_upper(), set_class.bind(str(k.id)), 0, on)
-		b.name = "Class_" + str(k.id)
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.disabled = locked != "" and not on
-		b.tooltip_text = str(k.get("role", ""))
-		row.add_child(b)
-		class_buttons[str(k.id)] = b
-	if not cur.is_empty():
-		var stats := "%s  //  %d HP  //  WALK %.1f  //  SPRINT %.1f  //  %s GRENADE" % [str(cur.get("role", "")).to_upper(),
-			int(cur.get("max_health", 100)), float(cur.get("walk_speed", 5.0)), float(cur.get("sprint_speed", 8.5)),
-			str(cur.get("grenade_id", "frag")).replace("_", " ").to_upper()]
-		var sl := UIStyle.label(stats, 12, UIStyle.BONE, true)
-		sl.name = "ClassStats"
-		_right.add_child(sl)
-		var dl := _wrap(str(cur.get("description", "")), 12, UIStyle.BONE_DIM)
-		dl.name = "ClassBlurb"
-		_right.add_child(dl)
-		_section("Q ABILITY")
-		var ar := HBoxContainer.new()
-		ar.name = "Abilities"
-		ar.add_theme_constant_override("separation", 8)
-		_right.add_child(ar)
-		var pick := str(lo.get("ability", ""))
-		var pick_row: Dictionary = {}
-		for a in cur.get("abilities", []):
-			var on2 := str(a.id) == pick
-			if on2:
-				pick_row = a
-			var ab := _btn(("● " if on2 else "") + str(a.get("name", a.id)).to_upper(), set_ability.bind(str(cur.id), str(a.id)), 0, on2)
-			ab.name = "Ability_" + str(a.id)
-			ab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			ab.disabled = locked != "" and not on2
-			ar.add_child(ab)
-			ability_buttons[str(a.id)] = ab
-		if not pick_row.is_empty():
-			var at := "%s  //  %ss COOLDOWN%s  //  %s" % [str(pick_row.get("kind", "")).to_upper(), ("%.1f" % float(pick_row.get("cooldown", 0))).trim_suffix(".0"),
-				("  //  LASTS %ss" % ("%.1f" % float(pick_row.get("duration", 0))).trim_suffix(".0")) if float(pick_row.get("duration", 0)) >= 0.5 else "", str(pick_row.get("summary", ""))]
-			var al := _wrap(at, 12, UIStyle.BONE_DIM)
-			al.name = "AbilitySummary"
-			_right.add_child(al)
-		_build_class_items(str(cur.id))
-	if locked != "":
-		_right.add_child(_wrap(locked, 12, UIStyle.BAD.lightened(0.2)))
-
-
-## #9: the class items this character owns for the picked class (ClassItems.owned_rows), equipped first.
-func _build_class_items(cid: String) -> void:
-	var rows: Array = ClassItems.owned_rows(cid)
-	_section("%s CLASS ITEMS  //  %d OWNED" % [cid.to_upper(), rows.size()])
-	var box := VBoxContainer.new()
-	box.name = "ClassItems"
-	box.add_theme_constant_override("separation", 2)
-	_right.add_child(box)
-	if rows.is_empty():
-		var none := _wrap("None yet. Class items drop in matches; they work only while you play this class.", 12, UIStyle.BONE_DIM)
-		none.name = "ClassItemsNone"
-		box.add_child(none)
-		return
-	for r in rows.slice(0, 3):
-		var h := HBoxContainer.new()
-		h.name = "ClassItemRow"
-		h.add_theme_constant_override("separation", 8)
-		box.add_child(h)
-		var nm := UIStyle.label(("● " if bool(r.get("equipped", false)) else "") + str(r.get("name", "")).to_upper(), 13, UIStyle.rarity_color(int(r.get("rarity", 0))), true)
-		nm.custom_minimum_size.x = 210
-		nm.clip_text = true
-		h.add_child(nm)
-		var ln := str(r.get("line", ""))
-		if bool(r.get("synergy_owned", false)) and str(r.get("synergy_line", "")) != "":
-			ln += "  +  " + str(r.synergy_line)
-		var l := _wrap(ln, 11, UIStyle.BONE if bool(r.get("active", false)) else UIStyle.BONE_DIM)
-		h.add_child(l)
-	if rows.size() > 3:
-		box.add_child(UIStyle.label("+ %d MORE IN YOUR KIT" % (rows.size() - 3), 11, UIStyle.BONE_DIM))
+	_section("SPECIALIZATION")
+	var spl := UIStyle.label("%s  //  Q %s" % [str(e.get("class_name", e.get("class", ""))).to_upper(), str(e.get("ability_name", e.get("ability", "-"))).to_upper()], 14, UIStyle.BONE, true)
+	spl.name = "SpecLine"
+	_right.add_child(spl)
+	var hint := _wrap(("Change class and Q on SKILLS > SPECIALIZATION." if active else "Play as this character, then change its class and Q on SKILLS > SPECIALIZATION."), 12, UIStyle.BONE_DIM)
+	hint.name = "SpecHint"
+	_right.add_child(hint)
 
 
 func _build_create() -> void:
 	_right.add_child(UIStyle.label("NEW CHARACTER", 28, UIStyle.BONE, true, 2))
-	_right.add_child(_wrap("A fresh save: level 1, its own skills, class and stash. Gravemarks, Armory and Merchant are shared.", 13, UIStyle.BONE_DIM))
+	_right.add_child(_wrap("A fresh save: level 1, its own skills and stash. Starts as Soldier: pick the class and Q on SKILLS > SPECIALIZATION. Gravemarks, Armory and Merchant are shared.", 13, UIStyle.BONE_DIM))
 	_section("NAME")
 	name_edit = LineEdit.new()
 	name_edit.name = "NameEdit"
@@ -394,21 +298,6 @@ func _build_create() -> void:
 	name_edit.text_changed.connect(func(_t): _refresh_create())
 	name_edit.text_submitted.connect(func(_t): create_now())
 	_right.add_child(name_edit)
-	_section("CLASS")
-	var row := HBoxContainer.new()
-	row.name = "Classes"
-	row.add_theme_constant_override("separation", 8)
-	_right.add_child(row)
-	for cid in ClassRoster.ids():
-		var d := ClassRoster.describe(cid)
-		var on := cid == create_class
-		var b := _btn(("● " if on else "") + str(d.get("name", cid)).to_upper(), pick_create_class.bind(cid), 0, on)
-		b.name = "Class_" + cid
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(b)
-		class_buttons[cid] = b
-	var dsc := ClassRoster.describe(create_class)
-	_right.add_child(_wrap("%s: %s" % [str(dsc.get("role", "")).to_upper(), str(dsc.get("description", ""))], 12, UIStyle.BONE_DIM))
 	create_button = _btn("CREATE + PLAY AS", create_now, 260, true)
 	create_button.name = "Create"
 	_right.add_child(create_button)
@@ -499,20 +388,11 @@ func rename_selected() -> bool:
 	return _say(r)
 
 
-func pick_create_class(cid: String) -> void:
-	create_class = cid
-	var keep := name_edit.text if name_edit else ""
-	refresh()
-	name_edit.text = keep
-	name_edit.caret_column = keep.length()
-	_refresh_create()
-
-
 func create_now() -> bool:
 	var c := chars()
 	if c == null or name_edit == null:
 		return false
-	var r: Dictionary = c.create(name_edit.text, create_class, true)
+	var r: Dictionary = c.create(name_edit.text)
 	if not bool(r.ok):
 		return _say(r)
 	selected_id = int(r.id)
@@ -521,29 +401,6 @@ func create_now() -> bool:
 	character_switched.emit(selected_id)
 	refresh()
 	return true
-
-
-func set_class(cid: String) -> bool:
-	var c := chars()
-	if c == null:
-		return false
-	var r: Dictionary = c.set_class(cid)
-	if bool(r.ok):
-		_ui_snd("ui_equip")
-		c.enter_home() # set_class ends the undo session; home keeps one open
-	refresh()
-	return _say(r)
-
-
-func set_ability(cid: String, aid: String) -> bool:
-	var c := chars()
-	if c == null:
-		return false
-	var r: Dictionary = c.set_ability(cid, aid)
-	if bool(r.ok):
-		_ui_snd("ui_equip")
-	refresh()
-	return _say(r)
 
 
 func _process(delta: float) -> void:

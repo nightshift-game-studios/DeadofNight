@@ -7,6 +7,10 @@ extends MenuBase
 ## markers; a hover/focus tooltip with the per-rank table and the drawback in red; keyboard + pad focus.
 ## Built once per open(); purchases update tiles and wires in place from Progress.rank_changed / ranks_changed.
 ## Only the v2 Progress API is used (state / can_afford / rank / next_cost / buy_rank / respec ...).
+## §24 (playtest 2026-10-22 #3 #8): two tabs. MAIN TREES = the 5 main trees (open to every class, one keystone each);
+## SPECIALIZATION = the class roster (pick your class here), the viewed class's 3x7 tree, its Q pick and class items
+## (Characters.spec: specializations / select_specialization / select_q, SKILLTREE_API.md §24). Layout from
+## Progress.tree.tabs and the nodes' tab / tab_x / tab_y.
 
 signal skill_unlocked(id: String) ## main.gd re-applies player stats on this ("" after a respec)
 
@@ -53,7 +57,22 @@ var nav_input := false
 var _hover_id := ""
 ## Playtest #14: 109-node tree. General branches (rows 0-7) always show; ONE class dock shows under them
 ## (class_view, default = your class); its rail tab / Q E switch the dock. Layout comes from Progress.tree.grid.
-var class_view := ""
+var class_view := "" ## Specialization tree shown on the SPECIALIZATION tab ("" = yours)
+var tab := "main" ## §24: "main" / "spec"
+var _row_h := ROW_H
+var _tile := TILE ## tile sizes for the current tab (the 3x7 spec trees use slightly smaller tiles to fit 720 high)
+var _key_tile := KEY_TILE
+var _tab_btns: Dictionary = {} ## "main" / "spec" -> Button
+var _spec_left: VBoxContainer ## roster (4 Specializations)
+var _spec_right: VBoxContainer ## viewed Specialization: CHOOSE, Q pick, class items
+var spec_buttons: Dictionary = {} ## class id -> roster Button
+var q_buttons: Dictionary = {} ## ability id -> Button (viewed Specialization)
+var select_button: Button
+var _spec_reason: Label
+const SPEC_ROW_H := 70.0 ## 7 rows fit the canvas without panning at 1280x720
+const SPEC_PITCH := 118.0
+const SPEC_SIDE_W := 250.0
+const SPEC_INFO_W := 400.0
 var _ids: Array = [] ## visible node ids, file order
 var _toast: Label
 var _toast_t := 0.0
@@ -80,6 +99,62 @@ func _connect_spec() -> void:
 	var sp := spec()
 	if sp and sp.has_signal("tree_changed") and not sp.tree_changed.is_connected(_on_ranks_changed):
 		sp.tree_changed.connect(_on_ranks_changed)
+	if sp and sp.has_signal("specialization_changed") and not sp.specialization_changed.is_connected(_on_spec_changed):
+		sp.specialization_changed.connect(_on_spec_changed)
+	if sp and sp.has_signal("q_changed") and not sp.q_changed.is_connected(_on_q_changed):
+		sp.q_changed.connect(_on_q_changed)
+
+
+## Your Specialization (= class): spec.current_specialization(), else Progress.selected_class.
+func current_spec() -> String:
+	var sp := spec()
+	return str(sp.current_specialization()) if sp and sp.has_method("current_specialization") else str(Progress.selected_class)
+
+
+## Specialization rows (spec.specializations()); without Characters a read-only roster from ClassRoster.
+func spec_rows() -> Array:
+	var sp := spec()
+	if sp and sp.has_method("specializations"):
+		return sp.specializations()
+	var out: Array = []
+	for cid in ClassRoster.ids():
+		var d: Dictionary = ClassRoster.describe(cid).duplicate(true)
+		d["icon"] = "spec_" + cid
+		d["selected"] = cid == str(Progress.selected_class)
+		d["can_select"] = false
+		d["select_code"] = "blocked"
+		d["select_reason"] = "Specializations switch on with the character slots update."
+		d["class_items"] = ClassItems.owned(cid).size()
+		out.append(d)
+	return out
+
+
+func spec_row(cid: String) -> Dictionary:
+	for r in spec_rows():
+		if str(r.id) == cid:
+			return r
+	return {}
+
+
+func _node_tab(d: Dictionary) -> String:
+	return str(d.get("tab", "spec" if str(d.get("class", "")) != "" else "main"))
+
+
+## Branch ids on a tab (Progress.tree.tabs.<tab>.branches), falling back to class-less / class branches.
+func tab_branches(t: String) -> Array:
+	var b: Array = Progress.tree.get("tabs", {}).get(t, {}).get("branches", [])
+	if not b.is_empty():
+		return b
+	return Progress.branches().filter(func(x): return (str(x.get("class", "")) == "") == (t == "main")).map(func(x): return str(x.id))
+
+
+## Friendly text for a refused pick (spec.can_pick / pick codes). other_spec names the Specialization to choose.
+func refusal_text(id: String, code: String, reason: String) -> String:
+	if code == "other_spec":
+		var cid := str(Progress.get_skill(id).get("class", ""))
+		var nm := str(spec_row(cid).get("name", cid.capitalize()))
+		return "Not your Specialization: CHOOSE %s to spend points here." % nm.to_upper()
+	return reason
 
 
 func _class_x0(cls: String) -> float:
@@ -91,52 +166,53 @@ func _class_x0(cls: String) -> float:
 	return 0.0 if x0 > 1e8 else x0
 
 
-## Visible node defs: every general node at its grid spot, plus class_view's dock moved under the general rows,
-## centred (the data puts the 4 class docks side by side in grid.class_rows).
+## Visible node defs for the current tab: MAIN = every main-tree node, SPEC = class_view's Specialization tree;
+## positions from tab_x / tab_y (§24; spec trees are 3 cols x 7 rows).
 func _layout_defs() -> void:
 	_defs.clear()
 	_ids.clear()
 	if class_view == "":
-		class_view = str(Progress.selected_class)
-	var g: Dictionary = Progress.tree.get("grid", {})
-	var crow: Array = g.get("class_rows", [])
-	var gen_max_y := 0.0
-	var gen_max_x := 0.0
+		class_view = current_spec()
+	_row_h = ROW_H if tab == "main" else SPEC_ROW_H
+	_tile = TILE if tab == "main" else 38.0
+	_key_tile = KEY_TILE if tab == "main" else 48.0
 	for id in Progress.all_node_ids():
 		var d := Progress.get_skill(id)
-		if str(d.get("class", "")) == "":
-			gen_max_y = maxf(gen_max_y, float(d.get("y", 0)))
-			gen_max_x = maxf(gen_max_x, float(d.get("x", 0)))
-	var cy0 := float(crow[0]) if crow.size() > 0 else gen_max_y + 2.0
-	var cx0 := _class_x0(class_view)
-	var cw := 0.0
-	for id in Progress.all_node_ids():
-		var d := Progress.get_skill(id)
-		if str(d.get("class", "")) == class_view:
-			cw = maxf(cw, float(d.get("x", 0)) - cx0)
-	var shift_x := roundf((gen_max_x - cw) * 0.5) - cx0
-	var shift_y := (gen_max_y + 1.35) - cy0 # smoke / #14: tight gap so less vertical panning
-	for id in Progress.all_node_ids():
-		var d := Progress.get_skill(id)
-		var cls := str(d.get("class", ""))
-		if cls != "" and cls != class_view:
+		if _node_tab(d) != tab:
 			continue
-		if cls != "":
-			d = d.duplicate()
-			d["x"] = float(d.get("x", 0)) + shift_x
-			d["y"] = float(d.get("y", 0)) + shift_y
+		if tab == "spec" and str(d.get("class", "")) != class_view:
+			continue
+		d = d.duplicate()
+		d["x"] = float(d.get("tab_x", d.get("x", 0)))
+		d["y"] = float(d.get("tab_y", d.get("y", 0)))
 		_defs[id] = d
 		_ids.append(id)
 
 
-## Show another class's dock (rail tab / Q E). Rebuilds the canvas; keeps the pan on the dock.
+## Show a Specialization's tree on the SPECIALIZATION tab (roster card / Q E there). Doesn't choose it.
 func view_class(cls: String) -> void:
-	if cls == class_view and _built:
+	if cls == class_view and tab == "spec" and _built:
 		return
 	class_view = cls
+	tab = "spec"
 	_focus_id = ""
 	_build()
 	_refresh_all()
+
+
+## Switch tab ("main" / "spec"): T / pad SELECT, or the tab buttons.
+func set_tab(t: String) -> void:
+	if t == tab and _built:
+		return
+	tab = t
+	if t == "spec" and class_view == "":
+		class_view = current_spec()
+	_focus_id = ""
+	hide_tooltip()
+	_ui_snd("ui_hover")
+	_build()
+	_refresh_all()
+	_focus_first.call_deferred()
 
 
 func refresh() -> void:
@@ -169,9 +245,33 @@ func _build() -> void:
 		_branch[str(b.id)] = b
 	_fit_panel()
 	content.add_theme_constant_override("separation", 6)
+	spec_buttons.clear()
+	q_buttons.clear()
+	select_button = null
 	_build_header()
-	_build_rail()
-	_build_canvas()
+	_build_tabs()
+	if tab == "main":
+		_build_rail()
+		_build_canvas(content)
+	else:
+		var body := HBoxContainer.new()
+		body.name = "SpecBody"
+		body.add_theme_constant_override("separation", 12)
+		body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		content.add_child(body)
+		_spec_left = VBoxContainer.new()
+		_spec_left.name = "SpecRoster"
+		_spec_left.custom_minimum_size.x = SPEC_SIDE_W
+		_spec_left.add_theme_constant_override("separation", 6)
+		body.add_child(_spec_left)
+		_build_canvas(body)
+		_spec_right = VBoxContainer.new()
+		_spec_right.name = "SpecInfo"
+		_spec_right.custom_minimum_size.x = SPEC_INFO_W
+		_spec_right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_spec_right.add_theme_constant_override("separation", 6)
+		body.add_child(_spec_right)
+		_rebuild_spec_side()
 	_build_footer()
 	if _tooltip and is_instance_valid(_tooltip):
 		_tooltip.free()
@@ -249,6 +349,327 @@ func _build_header() -> void:
 	content.add_child(line)
 
 
+# ---------------------------------------------------------------- §24 Specialization tab (class + Q + class items)
+
+func _on_spec_changed(_cid: String = "") -> void:
+	if _built and visible:
+		class_view = current_spec() if tab != "spec" else class_view
+		_build()
+		_refresh_all()
+
+
+func _on_q_changed(_cid: String = "", _aid: String = "") -> void:
+	if _built and visible and tab == "spec":
+		_rebuild_spec_side()
+
+
+func _spec_icon(key: String, sz: float, fallback: String) -> Control:
+	var tex := UIStyle.icon_key_tex(key)
+	if tex:
+		var tr := TextureRect.new()
+		tr.name = "SpecIcon"
+		tr.texture = tex
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.custom_minimum_size = Vector2(sz, sz)
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		return tr
+	var g := PanelContainer.new()
+	g.name = "SpecGlyph"
+	g.add_theme_stylebox_override("panel", UIStyle.cut_box(UIStyle.INK, UIStyle.BONE_DIM, 2, 5))
+	g.custom_minimum_size = Vector2(sz, sz)
+	g.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var l := UIStyle.label(UIStyle.initials(fallback), int(sz * 0.4), UIStyle.BONE, true)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	g.add_child(l)
+	return g
+
+
+func _side_btn(cb: Callable, on: bool, primary: bool = false) -> Button:
+	var b := Button.new()
+	b.focus_mode = Control.FOCUS_ALL
+	b.clip_text = true
+	b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	b.add_theme_font_override("font", UIStyle.FONT_STENCIL)
+	b.add_theme_font_size_override("font_size", 14)
+	b.add_theme_color_override("font_color", UIStyle.BONE)
+	b.add_theme_color_override("font_disabled_color", Color(UIStyle.BONE_DIM, 0.55))
+	var bg := Color(0.30, 0.16, 0.07, 0.95) if primary else (Color(0.16, 0.12, 0.08, 0.95) if on else Color(UIStyle.INK, 0.9))
+	b.add_theme_stylebox_override("normal", UIStyle.cut_box(bg, UIStyle.RUST if (on or primary) else Color(UIStyle.BONE_DIM, 0.6), 3 if on else 2, 8))
+	b.add_theme_stylebox_override("hover", UIStyle.cut_box(Color(0.16, 0.12, 0.08, 0.95), UIStyle.RUST, 2, 8))
+	b.add_theme_stylebox_override("pressed", UIStyle.cut_box(Color(0.16, 0.12, 0.08, 0.95), UIStyle.RUST, 3, 8))
+	b.add_theme_stylebox_override("focus", UIStyle.cut_box(Color(0.16, 0.12, 0.08, 0.95), UIStyle.BONE, 3, 8))
+	b.add_theme_stylebox_override("disabled", UIStyle.cut_box(Color(0.12, 0.13, 0.085, 0.95) if on else Color(UIStyle.INK, 0.6),
+		UIStyle.OLIVE.lightened(0.3) if on else Color(UIStyle.BONE_DIM, 0.3), 2, 8))
+	b.pressed.connect(cb)
+	b.mouse_entered.connect(_ui_snd.bind("ui_hover"))
+	return b
+
+
+func _side_wrap(t: String, fs: int, col: Color, w: float) -> Label:
+	var l := UIStyle.label(t, fs, col)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size.x = w
+	return l
+
+
+## Roster (left) + the viewed Specialization's CHOOSE / Q / class items (right). Rebuilt on any tree / Q change.
+func _rebuild_spec_side() -> void:
+	if _spec_left == null or not is_instance_valid(_spec_left) or _spec_right == null or not is_instance_valid(_spec_right):
+		return
+	for host in [_spec_left, _spec_right]:
+		for c in host.get_children():
+			host.remove_child(c)
+			c.queue_free()
+	spec_buttons.clear()
+	q_buttons.clear()
+	var rows := spec_rows()
+	var view: Dictionary = {}
+	_spec_left.add_child(UIStyle.label("SPECIALIZATIONS", 13, UIStyle.RUST.lightened(0.25), true))
+	for r in rows:
+		var cid := str(r.id)
+		var mine := bool(r.get("selected", false))
+		var viewing := cid == class_view
+		if viewing:
+			view = r
+		var b := _side_btn(view_class.bind(cid), viewing)
+		b.name = "Spec_" + cid
+		b.custom_minimum_size = Vector2(SPEC_SIDE_W, 74)
+		b.tooltip_text = str(r.get("role", ""))
+		var h := HBoxContainer.new()
+		h.set_anchors_preset(Control.PRESET_FULL_RECT)
+		h.offset_left = 8
+		h.offset_right = -8
+		h.add_theme_constant_override("separation", 8)
+		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(h)
+		var ic := _spec_icon(str(r.get("icon", "spec_" + cid)), 52, str(r.get("name", cid)))
+		ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(ic)
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", 0)
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		v.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		h.add_child(v)
+		var acc := UIStyle.accent(str(r.get("accent", "")), r.get("color", null))
+		v.add_child(UIStyle.label(str(r.get("name", cid)).to_upper(), 17, UIStyle.BONE if viewing or mine else UIStyle.BONE_DIM, true))
+		var role := UIStyle.label(str(r.get("role", "")).to_upper(), 10, acc)
+		role.clip_text = true
+		role.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		v.add_child(role)
+		var stt := UIStyle.label("● YOUR SPECIALIZATION" if mine else "%d PTS IN TREE" % int(r.get("points_spent", 0)), 10,
+			UIStyle.GOOD if mine else UIStyle.BONE_DIM, true)
+		stt.name = "SpecStatus"
+		v.add_child(stt)
+		_spec_left.add_child(b)
+		spec_buttons[cid] = b
+	if view.is_empty():
+		return
+	var cid2 := str(view.id)
+	var mine2 := bool(view.get("selected", false))
+	var acc2 := UIStyle.accent(str(view.get("accent", "")), view.get("color", null))
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 10)
+	_spec_right.add_child(top)
+	top.add_child(_spec_icon(str(view.get("icon", "spec_" + cid2)), 56, str(view.get("name", cid2))))
+	var tv := VBoxContainer.new()
+	tv.add_theme_constant_override("separation", 0)
+	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(tv)
+	var nm := UIStyle.label(str(view.get("name", cid2)).to_upper(), 26, UIStyle.BONE, true)
+	nm.name = "SpecName"
+	tv.add_child(nm)
+	tv.add_child(UIStyle.label(str(view.get("role", "")).to_upper(), 11, acc2, true))
+	var stats := "%d HP  //  WALK %.1f  //  SPRINT %.1f  //  %s GRENADE" % [int(view.get("max_health", 100)), float(view.get("walk_speed", 5.0)),
+		float(view.get("sprint_speed", 8.5)), str(view.get("grenade_id", "frag")).replace("_", " ").to_upper()]
+	var sl := UIStyle.label(stats, 11, UIStyle.BONE, true)
+	sl.name = "ClassStats"
+	_spec_right.add_child(sl)
+	var bl := _side_wrap(str(view.get("description", "")), 12, UIStyle.BONE_DIM, SPEC_INFO_W - 10)
+	bl.name = "SpecBlurb"
+	bl.max_lines_visible = 3
+	_spec_right.add_child(bl)
+	select_button = _side_btn(choose_spec.bind(cid2), mine2, not mine2)
+	select_button.name = "SelectSpec"
+	select_button.custom_minimum_size = Vector2(0, 40)
+	select_button.text = "● YOUR SPECIALIZATION" if mine2 else "CHOOSE %s" % str(view.get("name", cid2)).to_upper()
+	select_button.disabled = mine2 or not bool(view.get("can_select", false))
+	if not mine2 and str(view.get("select_reason", "")) != "":
+		select_button.tooltip_text = str(view.select_reason)
+	_spec_right.add_child(select_button)
+	if not mine2:
+		var note := _side_wrap(str(view.get("select_reason", "")) if not bool(view.get("can_select", false)) else
+			"Your class next match. Ranks in your current Specialization are kept and run again when you switch back.", 11,
+			UIStyle.BAD.lightened(0.2) if not bool(view.get("can_select", false)) else UIStyle.BONE_DIM, SPEC_INFO_W - 10)
+		note.name = "SelectNote"
+		_spec_right.add_child(note)
+	# Q ability
+	_spec_right.add_child(UIStyle.label("Q ABILITY", 13, UIStyle.RUST.lightened(0.25), true))
+	var qr := HBoxContainer.new()
+	qr.name = "Abilities"
+	qr.add_theme_constant_override("separation", 8)
+	_spec_right.add_child(qr)
+	var q_now: Dictionary = {}
+	var blocked := str(view.get("select_code", "")) == "blocked"
+	for a in view.get("abilities", []):
+		var on := bool(a.get("selected", false)) or str(a.id) == str(view.get("ability", ""))
+		if on:
+			q_now = a
+		var qb := _side_btn(pick_q.bind(str(a.id)), on)
+		qb.name = "Ability_" + str(a.id)
+		qb.custom_minimum_size = Vector2(0, 44)
+		qb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		qb.disabled = blocked and not on
+		qb.tooltip_text = str(a.get("summary", ""))
+		var qh := HBoxContainer.new()
+		qh.set_anchors_preset(Control.PRESET_FULL_RECT)
+		qh.offset_left = 6
+		qh.offset_right = -6
+		qh.add_theme_constant_override("separation", 6)
+		qh.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		qb.add_child(qh)
+		var atex := UIStyle.ability_icon_tex(str(a.get("icon", a.id)).trim_prefix("ability_"))
+		if atex == null:
+			atex = UIStyle.ability_icon_tex(str(a.get("icon_fallback", "")).trim_prefix("ability_"))
+		if atex:
+			var tr := TextureRect.new()
+			tr.texture = atex
+			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			tr.custom_minimum_size = Vector2(32, 32)
+			tr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			qh.add_child(tr)
+		var an := UIStyle.label(("● " if on else "") + str(a.get("name", a.id)).to_upper(), 13, UIStyle.BONE if on else UIStyle.BONE_DIM, true)
+		an.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		an.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		an.clip_text = true
+		an.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		qh.add_child(an)
+		qr.add_child(qb)
+		q_buttons[str(a.id)] = qb
+	if not q_now.is_empty():
+		var dur := float(q_now.get("duration", 0))
+		var at := "%s  //  %ss COOLDOWN%s  //  %s" % [str(q_now.get("kind", "")).to_upper(), ("%.1f" % float(q_now.get("cooldown", 0))).trim_suffix(".0"),
+			("  //  LASTS %ss" % ("%.1f" % dur).trim_suffix(".0")) if dur >= 0.5 else "", str(q_now.get("summary", ""))]
+		var al := _side_wrap(at, 11, UIStyle.BONE_DIM, SPEC_INFO_W - 10)
+		al.name = "AbilitySummary"
+		al.max_lines_visible = 3
+		_spec_right.add_child(al)
+	# class items (ClassItems.owned_rows), equipped first
+	var ci: Array = ClassItems.owned_rows(cid2)
+	_spec_right.add_child(UIStyle.label("CLASS ITEMS  //  %d OWNED" % ci.size(), 13, UIStyle.RUST.lightened(0.25), true))
+	var box := VBoxContainer.new()
+	box.name = "ClassItems"
+	box.add_theme_constant_override("separation", 2)
+	_spec_right.add_child(box)
+	if ci.is_empty():
+		var none := _side_wrap("None yet. Class items drop in matches; they work only while this is your Specialization.", 11, UIStyle.BONE_DIM, SPEC_INFO_W - 10)
+		none.name = "ClassItemsNone"
+		box.add_child(none)
+	for r2 in ci.slice(0, 3):
+		var h2 := HBoxContainer.new()
+		h2.name = "ClassItemRow"
+		h2.add_theme_constant_override("separation", 8)
+		box.add_child(h2)
+		var iname := UIStyle.label(("● " if bool(r2.get("equipped", false)) else "") + str(r2.get("name", "")).to_upper(), 12, UIStyle.rarity_color(int(r2.get("rarity", 0))), true)
+		iname.custom_minimum_size.x = 170
+		iname.clip_text = true
+		iname.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		h2.add_child(iname)
+		var ln := str(r2.get("line", ""))
+		if bool(r2.get("synergy_owned", false)) and str(r2.get("synergy_line", "")) != "":
+			ln += "  +  " + str(r2.synergy_line)
+		var il := UIStyle.label(ln, 11, UIStyle.BONE if bool(r2.get("active", false)) else UIStyle.BONE_DIM)
+		il.clip_text = true
+		il.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		il.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		il.custom_minimum_size.x = 1
+		il.tooltip_text = ln
+		il.mouse_filter = Control.MOUSE_FILTER_PASS
+		h2.add_child(il)
+	if ci.size() > 3:
+		box.add_child(UIStyle.label("+ %d MORE IN YOUR KIT" % (ci.size() - 3), 10, UIStyle.BONE_DIM))
+	_spec_reason = _side_wrap("", 11, UIStyle.BAD.lightened(0.2), SPEC_INFO_W - 10)
+	_spec_reason.name = "SpecReason"
+	_spec_right.add_child(_spec_reason)
+
+
+## CHOOSE: make `cid` your Specialization (= class) through spec.select_specialization. Free undo stays open.
+func choose_spec(cid: String = "") -> bool:
+	if cid == "":
+		cid = class_view
+	var sp := spec()
+	var r: Dictionary = sp.select_specialization(cid) if sp else {"ok": false, "reason": str(spec_row(cid).get("select_reason", ""))}
+	if not bool(r.get("ok", false)):
+		_spec_say(str(r.get("reason", "")))
+		return false
+	_ui_snd("ui_equip")
+	skill_unlocked.emit("") # main.gd / home re-apply stats + class
+	class_view = cid
+	_build()
+	_refresh_all()
+	return true
+
+
+## Q pick for the viewed Specialization (spec.select_q(ability_id, class_view)).
+func pick_q(aid: String) -> bool:
+	var sp := spec()
+	var r: Dictionary = sp.select_q(aid, class_view) if sp else {"ok": false, "reason": "Specializations switch on with the character slots update."}
+	if not bool(r.get("ok", false)):
+		_spec_say(str(r.get("reason", "")))
+		return false
+	_ui_snd("ui_equip")
+	skill_unlocked.emit("")
+	_rebuild_spec_side()
+	return true
+
+
+func _spec_say(t: String) -> void:
+	show_toast(t)
+	if _spec_reason and is_instance_valid(_spec_reason):
+		_spec_reason.text = t
+
+
+## §24 tab strip: MAIN TREES / SPECIALIZATION // <YOURS> + what each tab is for.
+func _build_tabs() -> void:
+	_tab_btns.clear()
+	var row := HBoxContainer.new()
+	row.name = "TabStrip"
+	row.add_theme_constant_override("separation", 8)
+	content.add_child(row)
+	for t in [["main", "MAIN TREES"], ["spec", "SPECIALIZATION  //  %s" % str(spec_row(current_spec()).get("name", current_spec())).to_upper()]]:
+		var on: bool = t[0] == tab
+		var b := Button.new()
+		b.name = "TreeTab_" + t[0]
+		b.text = t[1]
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(230, 32)
+		b.add_theme_font_override("font", UIStyle.FONT_STENCIL)
+		b.add_theme_font_size_override("font_size", 15)
+		b.add_theme_color_override("font_color", UIStyle.BONE if on else UIStyle.BONE_DIM)
+		b.add_theme_color_override("font_hover_color", UIStyle.BONE)
+		var st := UIStyle.cut_box(Color(0.16, 0.12, 0.08, 0.95) if on else Color(UIStyle.INK, 0.9), UIStyle.RUST if on else Color(UIStyle.BONE_DIM, 0.45), 3 if on else 2, 8)
+		for k in ["normal", "hover", "pressed"]:
+			b.add_theme_stylebox_override(k, st)
+		b.pressed.connect(set_tab.bind(t[0]))
+		b.mouse_entered.connect(_ui_snd.bind("ui_hover"))
+		row.add_child(b)
+		_tab_btns[t[0]] = b
+	row.add_child(UIStyle.key_cap("T", 10))
+	row.add_child(UIStyle.label("SWITCH", 11, UIStyle.BONE_DIM))
+	var sp := Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(sp)
+	var hint := UIStyle.label("OPEN TO EVERY CLASS  //  ONE KEYSTONE PER TREE" if tab == "main"
+		else "PICK YOUR CLASS + Q HERE  //  ONLY YOUR SPECIALIZATION TAKES POINTS", 11, UIStyle.BONE_DIM, true)
+	hint.name = "TabHint"
+	hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(hint)
+
+
 ## Stamped plate: solid tab on the left, contents HBox (child 0) on the right.
 func _plate(tab_text: String, tab_col: Color) -> PanelContainer:
 	var p := PanelContainer.new()
@@ -287,8 +708,7 @@ func _build_rail() -> void:
 	_rail = HBoxContainer.new()
 	_rail.add_theme_constant_override("separation", 6)
 	content.add_child(_rail)
-	for b in Progress.branches():
-		var id := str(b.id)
+	for id in tab_branches("main"):
 		var t := Button.new()
 		t.focus_mode = Control.FOCUS_NONE
 		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -312,14 +732,15 @@ func _accent(branch_id: String) -> Color:
 	return UIStyle.accent(str(b.get("accent", "")), b.get("color", null))
 
 
-func _build_canvas() -> void:
+func _build_canvas(host: Control) -> void:
 	_clip = Control.new()
+	_clip.name = "TreeCanvas"
 	_clip.clip_contents = true
-	_clip.custom_minimum_size = Vector2(0, CANVAS_H)
+	_clip.custom_minimum_size = Vector2(ORIGIN.x * 2.0 + 2.0 * SPEC_PITCH + 16.0 if tab == "spec" else 0.0, CANVAS_H)
 	_clip.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_clip.mouse_filter = Control.MOUSE_FILTER_PASS
 	_clip.gui_input.connect(_on_canvas_input)
-	content.add_child(_clip)
+	host.add_child(_clip)
 	var grid_bg := ColorRect.new() # faint backdrop so the canvas reads as a field
 	grid_bg.color = Color(0.0, 0.0, 0.0, 0.18)
 	grid_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -334,7 +755,9 @@ func _build_canvas() -> void:
 	_toast.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_toast.anchor_left = 0.0
 	_toast.anchor_right = 1.0
-	_toast.offset_top = -30
+	_toast.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_toast.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	_toast.offset_top = -48
 	_toast.offset_bottom = -8
 	_toast.modulate.a = 0.0
 	_toast.z_index = 5
@@ -345,56 +768,12 @@ func _build_canvas() -> void:
 	for id in _defs:
 		max_x = maxf(max_x, float(_defs[id].get("x", 0)))
 		max_y = maxf(max_y, float(_defs[id].get("y", 0)))
-	max_x = maxf(max_x, float(g.get("cols", 1)) - 1.0)
+	var tg: Dictionary = Progress.tree.get("tabs", {}).get(tab, g)
+	max_x = maxf(max_x, float(tg.get("cols", 1)) - 1.0)
 	var clip_w := panel.custom_minimum_size.x - 40.0
-	_pitch = maxf((clip_w - ORIGIN.x * 2.0) / maxf(max_x, 1.0), MIN_PITCH)
-	_content_size = Vector2(ORIGIN.x * 2.0 + max_x * _pitch, ORIGIN.y + max_y * ROW_H + 64.0)
+	_pitch = SPEC_PITCH if tab == "spec" else maxf((clip_w - ORIGIN.x * 2.0) / maxf(max_x, 1.0), MIN_PITCH)
+	_content_size = Vector2(ORIGIN.x * 2.0 + max_x * _pitch, ORIGIN.y + max_y * _row_h + (64.0 if tab == "main" else 76.0))
 	_canvas.size = _content_size
-	# class lines dock (behind wires)
-	var cls_ids := _defs.keys().filter(func(i): return str(_defs[i].get("class", "")) != "")
-	if not cls_ids.is_empty():
-		var x0 := 1e9
-		var x1 := -1e9
-		var y0 := 1e9
-		var y1 := -1e9
-		for i in cls_ids:
-			var p := _grid_pos(i)
-			x0 = minf(x0, p.x); x1 = maxf(x1, p.x); y0 = minf(y0, p.y); y1 = maxf(y1, p.y)
-		var dock := Panel.new()
-		var ds := StyleBoxFlat.new()
-		ds.bg_color = Color(0.08, 0.085, 0.06, 0.55)
-		ds.border_color = Color(UIStyle.BONE_DIM, 0.22)
-		ds.set_border_width_all(2)
-		dock.add_theme_stylebox_override("panel", ds)
-		dock.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		dock.position = Vector2(x0 - _pitch * 0.9, y0 - ROW_H * 0.48)
-		dock.size = Vector2(x1 - x0 + _pitch * 1.65, y1 - y0 + ROW_H * 0.98)
-		_canvas.add_child(dock)
-		var dl := UIStyle.label(" CLASS LINE  //  ACTIVE ONLY WHILE PLAYING THAT CLASS  //  OTHER CLASSES: RAIL TABS ", 10, UIStyle.BONE_DIM)
-		dl.position = dock.position + Vector2(10, -8)
-		var dlb := ColorRect.new()
-		dlb.color = Color(0.05, 0.05, 0.04, 1.0)
-		dlb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		dlb.position = dl.position + Vector2(0, 2)
-		dlb.size = Vector2(UIStyle.body_bold().get_string_size(dl.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x + 4, 13)
-		_canvas.add_child(dlb)
-		_canvas.add_child(dl)
-		var seen := {}
-		for i in cls_ids:
-			var bid := str(_defs[i].branch)
-			if seen.has(bid):
-				continue
-			seen[bid] = true
-			var rows := cls_ids.filter(func(j): return str(_defs[j].branch) == bid)
-			var l := UIStyle.label(str(_branch.get(bid, {}).get("name", bid)).to_upper(), 14, _accent(bid), true)
-			l.name = "ClassDockName"
-			l.position = Vector2(dock.position.x + dock.size.x + 12, dock.position.y + 10)
-			l.set_meta("class_branch", bid)
-			_canvas.add_child(l)
-			var sub := UIStyle.label("", 10, UIStyle.BONE_DIM)
-			sub.position = Vector2(dock.position.x + dock.size.x + 12, dock.position.y + 30)
-			sub.set_meta("class_sub", bid)
-			_canvas.add_child(sub)
 	_wires = Wires.new()
 	_wires.menu = self
 	_wires.size = _content_size
@@ -402,8 +781,6 @@ func _build_canvas() -> void:
 	_canvas.add_child(_wires)
 	# branch headers, centred over each non-class branch's span
 	for b in Progress.branches():
-		if str(b.get("class", "")) != "":
-			continue
 		var ids := _defs.keys().filter(func(i): return str(_defs[i].branch) == str(b.id))
 		if ids.is_empty():
 			continue
@@ -432,7 +809,7 @@ func _build_canvas() -> void:
 		t.id = id
 		t.def = _defs[id]
 		t.accent = _accent(str(_defs[id].branch))
-		var s := KEY_TILE if str(_defs[id].get("type", "")) == "keystone" else TILE
+		var s := _key_tile if str(_defs[id].get("type", "")) == "keystone" else _tile
 		t.size = Vector2(s, s)
 		t.set_meta("skill_id", id)
 		t.position = _grid_pos(id) - Vector2(s, s) * 0.5
@@ -448,7 +825,7 @@ func _build_footer() -> void:
 	var foot := HBoxContainer.new()
 	foot.add_theme_constant_override("separation", 6)
 	content.add_child(foot)
-	for ks in [["ARROWS", "D-PAD", "MOVE"], ["Q  E", "LB  RB", "BRANCH"], ["LMB", "A", "BUY RANK"],
+	for ks in [["ARROWS", "D-PAD", "MOVE"], ["Q  E", "LB  RB", "BRANCH" if tab == "main" else "SPEC"], ["LMB", "A", "BUY RANK"],
 			["RMB DRAG", "R-STICK", "PAN"], ["U", "X", "UNDO"], ["R", "Y", "RESPEC"], ["K", "B", "CLOSE"]]:
 		if ks[2] == "UNDO" and self.spec() == null:
 			continue
@@ -464,7 +841,7 @@ func _build_footer() -> void:
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	foot.add_child(sp)
-	foot.add_child(UIStyle.label("Bonuses apply at match start  //  respec at home, round 0, game over", 11, UIStyle.BONE_DIM))
+	foot.add_child(UIStyle.label("Applies at match start  //  respec: home, round 0, game over", 11, UIStyle.BONE_DIM))
 
 
 ## Largest font size in [lo, hi] that fits `text` in `w` px (single line).
@@ -477,12 +854,12 @@ static func fit_font_size(f: Font, text: String, w: float, hi: int, lo: int) -> 
 
 ## Name plate width under a tile: never wider than the column pitch, so neighbours' names can't touch.
 func name_width() -> float:
-	return minf(96.0, _pitch - 10.0)
+	return minf(110.0 if tab == "spec" else 96.0, _pitch - 10.0)
 
 
 func _grid_pos(id: String) -> Vector2:
 	var d: Dictionary = _defs[id]
-	return ORIGIN + Vector2(float(d.get("x", 0)) * _pitch, float(d.get("y", 0)) * ROW_H + 20.0)
+	return ORIGIN + Vector2(float(d.get("x", 0)) * _pitch, float(d.get("y", 0)) * _row_h + (20.0 if tab == "main" else 12.0))
 
 
 # ---------------------------------------------------------------- state (in place)
@@ -490,6 +867,9 @@ func _grid_pos(id: String) -> Vector2:
 ## UI state for a node: Progress.state() plus "unaffordable" for available nodes we can't pay for.
 func ui_state(id: String) -> String:
 	var s: String = Progress.state(id)
+	var cls := str(Progress.get_skill(id).get("class", ""))
+	if cls != "" and cls != current_spec() and s == "available":
+		return "other_spec" # §24: only your Specialization takes points
 	if s == "available" and not Progress.can_afford(id):
 		return "unaffordable"
 	return s
@@ -506,13 +886,15 @@ func _refresh_all() -> void:
 	_level_label.text = "LEVEL %d  //  %d XP" % [Progress.get_level(), Progress.xp]
 	_xp_fill.size.x = 130.0 * float(Progress.xp % per) / float(per)
 	_xp_next.text = "%d XP TO NEXT POINT" % (per - Progress.xp % per)
-	_class_label.text = str(Progress.selected_class).to_upper()
-	var key_owned := ""
-	for id in _defs:
-		if str(_defs[id].get("type", "")) == "keystone" and Progress.rank(id) > 0:
-			key_owned = str(_defs[id].name)
-	_key_label.text = ("1/1  " + key_owned.to_upper()) if key_owned != "" else "0/1  OPEN"
-	_key_label.add_theme_color_override("font_color", UIStyle.BONE if key_owned != "" else UIStyle.RUST.lightened(0.2))
+	_class_label.text = "SPEC  //  " + str(spec_row(current_spec()).get("name", current_spec())).to_upper()
+	var k_total := 0
+	var k_owned := 0
+	for id in _defs: # §24: one keystone per tree (main tab: 5; spec tab: the viewed tree's)
+		if str(_defs[id].get("type", "")) == "keystone":
+			k_total += 1
+			k_owned += 1 if Progress.rank(id) > 0 else 0
+	_key_label.text = "%d/%d" % [k_owned, k_total]
+	_key_label.add_theme_color_override("font_color", UIStyle.BONE if k_owned > 0 else UIStyle.RUST.lightened(0.2))
 	_refresh_respec()
 	for id in _nodes:
 		_nodes[id].queue_redraw()
@@ -531,9 +913,8 @@ func _refresh_all() -> void:
 					spent += int(costs[i])
 		var t: Button = _rail_tabs[bid]
 		var cls := str(_branch[bid].get("class", ""))
-		var mark := "" if cls == "" else ("  *" if cls == Progress.selected_class else "  -")
-		t.text = "  %s%s   %d/%d" % [str(_branch[bid].name).to_upper(), mark, spent, total]
-		var on: bool = (_focus_id != "" and str(_defs.get(_focus_id, {}).get("branch", "")) == bid) or (cls != "" and cls == class_view)
+		t.text = "  %s   %d/%d" % [str(_branch[bid].name).to_upper(), spent, total]
+		var on: bool = _focus_id != "" and str(_defs.get(_focus_id, {}).get("branch", "")) == bid
 		var st := UIStyle.cut_box(Color(0.13, 0.135, 0.1, 0.95) if on else Color(0.07, 0.075, 0.06, 0.9),
 			Color(UIStyle.BONE, 0.8) if on else Color(UIStyle.BONE_DIM, 0.25), 1, 6)
 		st.border_width_left = 5
@@ -550,10 +931,8 @@ func _refresh_all() -> void:
 		t.add_theme_stylebox_override("pressed", stripe)
 		t.add_theme_color_override("font_color", UIStyle.BONE if on else UIStyle.BONE_DIM)
 		t.modulate.a = 1.0 if cls == "" or cls == Progress.selected_class else 0.7
-	for c in _canvas.get_children():
-		if c.has_meta("class_sub"):
-			var bid2: String = c.get_meta("class_sub")
-			c.text = "YOUR CLASS" if str(_branch[bid2].get("class", "")) == Progress.selected_class else "INACTIVE"
+	if tab == "spec":
+		_rebuild_spec_side()
 	if _tooltip.visible and _tip_id != "":
 		_show_tooltip(_tip_id)
 
@@ -600,12 +979,15 @@ func buy(id: String) -> bool:
 	if sp:
 		var r: Dictionary = sp.pick(id)
 		if not bool(r.get("ok", false)):
-			show_toast(str(r.get("reason", "")))
+			show_toast(refusal_text(id, str(r.get("code", "")), str(r.get("reason", ""))))
 			return false
 		_last_bought = id
 		_ui_snd("ui_skill_unlock")
 		skill_unlocked.emit(id)
 		return true
+	if ui_state(id) == "other_spec":
+		show_toast(refusal_text(id, "other_spec", ""))
+		return false
 	if Progress.buy_rank(id):
 		_last_bought = id
 		_ui_snd("ui_skill_unlock")
@@ -770,9 +1152,10 @@ func _focus_first() -> void:
 
 func _jump_to_branch(bid: String) -> void:
 	_ui_snd("ui_hover")
-	var bcls := str(_branch.get(bid, {}).get("class", ""))
-	if bcls != "" and bcls != class_view:
-		view_class(bcls)
+	if bid in tab_branches("spec"):
+		view_class(bid)
+	elif tab != "main":
+		set_tab("main")
 	var ids := _ids.filter(func(i): return str(_defs[i].branch) == bid)
 	if ids.is_empty():
 		return
@@ -784,13 +1167,16 @@ func _jump_to_branch(bid: String) -> void:
 	_nodes[pick].grab_focus()
 
 
+## Q / E: next main tree (MAIN tab) or next Specialization (SPEC tab).
 func _branch_step(dir: int) -> void:
-	var order: Array = Progress.branches().map(func(b): return str(b.id))
-	var cur := order.find(str(_defs.get(_focus_id, {}).get("branch", order[0])))
-	var fb := str(_defs.get(_focus_id, {}).get("branch", ""))
-	if fb != "" and str(_branch.get(fb, {}).get("class", "")) != "" and str(_branch.get(fb, {}).get("class", "")) != class_view:
-		cur = order.find(class_view)
-	_jump_to_branch(order[posmod(cur + dir, order.size())])
+	if tab == "spec":
+		var order: Array = tab_branches("spec")
+		view_class(order[posmod(order.find(class_view) + dir, order.size())])
+		_focus_first.call_deferred()
+		return
+	var order2: Array = tab_branches("main")
+	var cur := order2.find(str(_defs.get(_focus_id, {}).get("branch", order2[0])))
+	_jump_to_branch(order2[posmod(cur + dir, order2.size())])
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -804,6 +1190,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				_branch_step(1)
 			KEY_R:
 				_on_respec_pressed()
+			KEY_T:
+				set_tab("spec" if tab == "main" else "main")
 			KEY_U, KEY_BACKSPACE:
 				refund(_focus_id)
 			_:
@@ -819,6 +1207,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				_branch_step(1)
 			JOY_BUTTON_Y:
 				_on_respec_pressed()
+			JOY_BUTTON_BACK:
+				set_tab("spec" if tab == "main" else "main")
 			JOY_BUTTON_X:
 				refund(_focus_id)
 			JOY_BUTTON_B:
@@ -975,7 +1365,7 @@ func _show_tooltip(id: String) -> void:
 		var others := _defs.keys().filter(func(o): return o != id and str(_defs[o].get("choice_group", "")) == grp)
 		var names2 := PackedStringArray(others.map(func(o): return str(_defs[o].name).to_upper()))
 		if grp == "keystone":
-			var kb := UIStyle.label("KEYSTONE: ONLY ONE IN THE WHOLE TREE", 10, UIStyle.BLOOD.lightened(0.45))
+			var kb := UIStyle.label("KEYSTONE: ONE PER TREE", 10, UIStyle.BLOOD.lightened(0.45))
 			v.add_child(kb)
 		var ex := Progress.excluded_by(id)
 		if ex != "" and r == 0:
@@ -984,10 +1374,15 @@ func _show_tooltip(id: String) -> void:
 			v.add_child(UIStyle.label("PICK 1 OF %d  //  EXCLUDES %s" % [others.size() + 1, ", ".join(names2)], 10, UIStyle.BONE_DIM))
 	var cls := str(d.get("class", ""))
 	if cls != "":
-		if Progress.class_active(id):
-			v.add_child(UIStyle.label("%s LINE  //  ACTIVE FOR YOUR CLASS" % cls.to_upper(), 10, _accent(str(d.branch))))
+		var cnm := str(spec_row(cls).get("name", cls.capitalize())).to_upper()
+		if cls == current_spec():
+			v.add_child(UIStyle.label("%s SPECIALIZATION  //  YOURS" % cnm, 10, _accent(str(d.branch))))
 		else:
-			v.add_child(UIStyle.label("%s ONLY  //  BUYABLE NOW, ACTIVE WHEN YOU PLAY %s" % [cls.to_upper(), cls.to_upper()], 10, _accent(str(d.branch)).lightened(0.2)))
+			var os := UIStyle.label(refusal_text(id, "other_spec", "") if r == 0 else "%s SPECIALIZATION  //  KEPT, RUNS AGAIN WHEN YOU CHOOSE %s" % [cnm, cnm], 10, _accent(str(d.branch)).lightened(0.2))
+			os.name = "OtherSpec"
+			os.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			os.custom_minimum_size.x = 280
+			v.add_child(os)
 	_tip_spec_lines(v, id)
 	# footer
 	v.add_child(_tip_rule())
@@ -1005,6 +1400,9 @@ func _show_tooltip(id: String) -> void:
 			act_col = UIStyle.BONE_DIM
 		"locked":
 			act = "LOCKED"
+			act_col = UIStyle.BONE_DIM
+		"other_spec":
+			act = "CHOOSE %s TO SPEND HERE" % str(spec_row(str(d.get("class", ""))).get("name", "")).to_upper()
 			act_col = UIStyle.BONE_DIM
 		_:
 			if Progress.can_afford(id):
@@ -1137,7 +1535,7 @@ class SkillTile extends Button:
 				glyph_c = UIStyle.BONE
 				name_c = UIStyle.BONE
 				bw = 3.0
-			"unaffordable":
+			"unaffordable", "other_spec":
 				fill = Color(0.07, 0.07, 0.06)
 				edge = Color(UIStyle.BONE_DIM, 0.5)
 				glyph_c = UIStyle.BONE_DIM
@@ -1199,7 +1597,7 @@ class SkillTile extends Button:
 			var tint := Color(1, 1, 1, a)
 			match st:
 				"locked": tint = Color(0.42, 0.42, 0.38, 0.75 * a)
-				"unaffordable": tint = Color(0.72, 0.70, 0.64, a)
+				"unaffordable", "other_spec": tint = Color(0.72, 0.70, 0.64, a)
 				"excluded": tint = Color(0.45, 0.33, 0.28, 0.7 * a)
 			draw_texture_rect(icon_tex, ic, false, tint)
 		else:
@@ -1219,7 +1617,7 @@ class SkillTile extends Button:
 				draw_rect(cr, Color(0.04, 0.04, 0.035, a))
 				draw_rect(cr, Color(edge, a), false, 1.5)
 		# cost badge (next rank) while buyable
-		if st in ["available", "unaffordable", "owned"]:
+		if st in ["available", "unaffordable", "owned", "other_spec"]:
 			var c := str(Progress.next_cost(id))
 			var cw := maxf(bf.get_string_size(c, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x + 6, 13)
 			var br := Rect2(size.x - cw + 6, -7, cw, 13)
@@ -1318,18 +1716,17 @@ class Wires extends Control:
 		for id in defs:
 			if str(defs[id].get("type", "")) == "keystone" and str(defs[id].get("class", "")) == "":
 				ky = maxf(ky, menu._grid_pos(id).y)
-		if ky > 0:
-			var y: float = ky - menu.ROW_H * 0.55
-			var kn: int = defs.keys().filter(func(i): return str(defs[i].get("type", "")) == "keystone" and str(defs[i].get("class", "")) == "").size()
-			# playtest #29: the label used to sit on the guide line at x 14, right under column 0's name plate.
-			# It now runs vertically in the left margin beside the keystone row, where no tile or name reaches.
-			var ktxt := "KEYSTONE · PICK 1 OF %d" % kn
+		if ky > 0 and menu.tab == "main":
+			var y: float = ky - menu._row_h * 0.55
+			# playtest #29: the label runs vertically in the left margin beside the keystone row.
+			# §24: keystones no longer exclude each other; each main tree has its own.
+			var ktxt := "KEYSTONES · ONE PER TREE"
 			var tw: float = bf.get_string_size(ktxt, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
 			draw_set_transform(Vector2(13, ky + tw * 0.5), -PI * 0.5)
 			draw_string(bf, Vector2.ZERO, ktxt, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(0.8, 0.35, 0.28, 0.9))
 			draw_set_transform(Vector2.ZERO)
 			keystone_label_rect = Rect2(Vector2(13 - 9, ky - tw * 0.5), Vector2(11, tw))
-			_dash(Vector2(menu.ORIGIN.x - menu.KEY_TILE * 0.5 - 10, y), Vector2(size.x - 12, y), Color(0.7, 0.25, 0.2, 0.45), 1.0, 6, 4)
+			_dash(Vector2(menu.ORIGIN.x - menu._key_tile * 0.5 - 10, y), Vector2(size.x - 12, y), Color(0.7, 0.25, 0.2, 0.45), 1.0, 6, 4)
 		var chips := []
 		for id in defs:
 			var d: Dictionary = defs[id]
@@ -1361,7 +1758,7 @@ class Wires extends Control:
 			draw_string(bf, Vector2(r.position.x + 4, r.end.y - 3), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, UIStyle.BONE_DIM)
 
 	func _half(id: String) -> float:
-		return (menu.KEY_TILE if str(menu._defs[id].get("type", "")) == "keystone" else menu.TILE) * 0.5
+		return (menu._key_tile if str(menu._defs[id].get("type", "")) == "keystone" else menu._tile) * 0.5
 
 	func _edge(from_id: String, to_id: String, any: bool) -> void:
 		if not menu._defs.has(from_id):
