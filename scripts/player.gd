@@ -264,8 +264,7 @@ func apply_stats() -> void:
 		grenade_data = GearDB.grenade("frag")
 		if ability:
 			cd_template = ability.cooldown
-	if has_meta("grenade_override"): # MAIN_HOOKS §24c: a grenade picked up this match beats the class grenade
-		grenade_data = GearDB.grenade(str(get_meta("grenade_override")))
+	grenade_data = GrenadeItem.resolve(self, grenade_data) # §25: equipped grenade item > §24c override > class grenade
 	_base_jump_velocity = jump
 	_ability_base_cd = cd_template
 	var was_full: bool = health >= max_health or max_health <= 0
