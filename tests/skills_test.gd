@@ -171,7 +171,7 @@ func _run() -> void:
 func _data_checks() -> void:
 	var t: Dictionary = prog.tree
 	check(int(t.get("version", 0)) == 2 and t.has("grid"), "skill_tree.json is v2 with a grid")
-	check(prog.all_node_ids().size() == 109 and prog.branches().size() == 9, "109 nodes in 9 branches (%d / %d)" % [prog.all_node_ids().size(), prog.branches().size()])
+	check(prog.all_node_ids().size() == 110 and prog.branches().size() == 9, "110 nodes in 9 branches (%d / %d)" % [prog.all_node_ids().size(), prog.branches().size()])
 	var schema_ok := true
 	var text_ok := true
 	var draw_ok := true
@@ -275,11 +275,11 @@ func _progress_checks() -> void:
 	check(prog.state("mk_legend") == "available", "capstone opens via requires_any")
 	prog.buy_rank("mk_legend")
 	check(prog.buy_rank("mk_key"), "keystone Glass Sight bought")
-	# keystone exclusivity across branches
+	# §24: every main tree keeps its own keystone (no exclusivity across main trees any more)
 	prog.skill_ranks.merge({"sp_root": 1, "sp_powder": 1, "sp_volt_coil": 1, "sp_legend": 1})
 	prog._recompute_spent()
-	check(prog.state("sp_key") == "excluded" and prog.excluded_by("sp_key") == "mk_key" and not prog.buy_rank("sp_key"),
-		"only one keystone: sp_key excluded by mk_key")
+	check(prog.state("sp_key") == "available" and prog.excluded_by("sp_key") == "",
+		"§24: sp_key stays open next to mk_key (one keystone per main tree)")
 	# requires_rank
 	prog.skill_ranks.merge({"lg_spare": 1, "lg_lucky": 1})
 	prog._recompute_spent()
@@ -291,7 +291,7 @@ func _progress_checks() -> void:
 	runner.rebuild()
 	check(runner.effects_from("sc_ghost").is_empty(), "inactive class node contributes no effects")
 	prog.skill_ranks.erase("sc_ghost")
-	check(prog.branches().size() == 9 and prog.all_node_ids().size() == 109, "v2 data: 9 branches, 109 nodes via branches()/all_node_ids()")
+	check(prog.branches().size() == 9 and prog.all_node_ids().size() == 110, "v2 data: 9 branches, 110 nodes via branches()/all_node_ids()")
 	# respec
 	var earned: int = prog.skill_points_earned()
 	prog.respec_allowed = false
@@ -630,14 +630,17 @@ func _effect_checks() -> void:
 	hit(z, 100.0, {"source": "melee"})
 	check(eff("drop_pickup").dropped == 1 and player.health == 60, "drop_pickup: Bone Harvest melee kill drops ammo + heals 10")
 
-	# ability_mod (Twin Stride charges, Battering Dash contact)
+	# ability_mod (Twin Stride charges) + §24 Breach Rush tuned by Ram's Shoulder
 	await reset({"so_ram": 1, "so_twin": 1})
-	check(player.ability_charges_max == 2, "ability_mod: Twin Stride 2 dash charges")
+	check(player.ability_charges_max == 2, "ability_mod: Twin Stride 2 Breach Rush charges")
+	check(near(player.mod_stat("ab_rush_damage", 45.0), 85.0) and near(player.mod_stat("ab_rush_radius", 1.6), 2.1), "Ram's Shoulder: rush damage 45 -> 85, width 1.6 -> 2.1")
 	z = zombie(Vector3(0.9, 0, 0), 1000)
 	await wait(1)
-	player._ev(&"ability_used", {"ability": player.ability})
-	player._ev(&"ability_tick", {"ability": player.ability})
-	check(eff("ability_mod").touches == 1 and near(z.health, 960.0), "ability_mod: Battering Dash hits each zombie once for 40 (%.0f)" % z.health)
+	player.use_ability()
+	player.ability.process_active(player, 0.016)
+	check(player.ability is BreachRushAbility and player.ability.hits == 1 and z.health < 1000.0 and z.health > 800.0,
+		"Breach Rush hits each zombie once (%.0f)" % z.health)
+	player.set_ability_active_time(0.0)
 
 	# ability_refund (Breacher's Rhythm)
 	await reset({"so_ram": 1, "so_twin": 1, "so_breacher": 1})
@@ -647,7 +650,7 @@ func _effect_checks() -> void:
 	player.ability_charges = 0
 	player._ability_cd = 5.0
 	hit(z, 100.0)
-	check(player.ability_charges == 1, "ability_refund: kill within 1 s of a dash refunds a charge")
+	check(player.ability_charges == 1, "ability_refund: kill within 1 s of a Breach Rush refunds a charge")
 
 	# grenade_mod (Powder Keg Frame charges/cd, Cluster Doctrine)
 	await reset({})
@@ -756,8 +759,8 @@ func _effect_checks() -> void:
 	z = zombie(Vector3(4, 0, 0), 10)
 	await wait(1)
 	hit(z, 100.0)
-	check(player.ability_active_time() > 2.3, "ability_mod: Fed Rush kills extend Adrenaline (%.2f)" % player.ability_active_time())
-	check(near(player.mod_stat("fire_rate_mult", 1.0), 1.25), "Racing Heart: +25% fire rate while Adrenaline is active")
+	check(player.ability_active_time() > 2.3, "ability_mod: Fed Rush kills extend Hare's Break (%.2f)" % player.ability_active_time())
+	check(near(player.mod_stat("fire_rate_mult", 1.0), 1.25), "Racing Heart: +25% fire rate while Hare's Break is active")
 	runner.rng.seed = 3
 	var dodged := 0
 	for i in 200:
@@ -771,15 +774,15 @@ func _effect_checks() -> void:
 	await reset({"sc_fed": 1, "sc_ghost": 1, "sc_racing_heart": 1}, ["L_redline"], "scout")
 	var focus_k: float = float(player.get_stat_effects().from_armor.ability_cd_mult) if player.has_method("get_stat_effects") \
 		else 1.0 - float(player.armor_stats.get("focus", 0)) * 0.004 # armor Focus scales the +4 s too (pre-§21b: linear)
-	check(near(player.ability.cooldown, acd0 + 4.0 * focus_k, 0.3), "Racing Heart drawback: +4 s Adrenaline cooldown (x%.2f Focus: %.1f vs %.1f)" % [focus_k, player.ability.cooldown, acd0])
+	check(near(player.ability.cooldown, acd0 + 4.0 * focus_k, 0.3), "Racing Heart drawback: +4 s Hare's Break cooldown (x%.2f Focus: %.1f vs %.1f)" % [focus_k, player.ability.cooldown, acd0])
 	player._ev(&"ability_used", {"ability": player.ability})
-	check(player.ability_active_time() >= 7.9 and player.mod_stat("force_precision", 0.0, {}) >= 1.0, "Redline: Adrenaline lasts 8 s, every hit precision")
+	check(player.ability_active_time() >= 7.9 and player.mod_stat("force_precision", 0.0, {}) >= 1.0, "Redline: Hare's Break lasts 8 s, every hit precision")
 	player.set_ability_active_time(0.0)
 	await reset({"so_ram": 1, "so_twin": 1, "so_breacher": 1}, ["L_breakline"])
 	z = zombie(Vector3(2, 0, 0), 1000)
 	await wait(1)
 	player._ev(&"ability_ended", {"ability": player.ability})
-	check(z.health < 1000, "on_event_explode: Breakline Charge blasts at dash end (%.0f)" % z.health)
+	check(z.health < 1000, "on_event_explode: Breakline Charge blasts at Breach Rush end (%.0f)" % z.health)
 
 
 # ---------------------------------------------------------------- every node and every card

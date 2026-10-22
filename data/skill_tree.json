@@ -30,7 +30,12 @@
 			],
 			"x": 0,
 			"class": "",
-			"blurb": "Precision"
+			"blurb": "Precision",
+			"kind": "main",
+			"icon": "tree_marksman",
+			"keystones": [
+				"mk_key"
+			]
 		},
 		{
 			"id": "sapper",
@@ -43,7 +48,12 @@
 			],
 			"x": 3,
 			"class": "",
-			"blurb": "Explosives and elements"
+			"blurb": "Explosives and elements",
+			"kind": "main",
+			"icon": "tree_sapper",
+			"keystones": [
+				"sp_key"
+			]
 		},
 		{
 			"id": "ledger",
@@ -56,7 +66,12 @@
 			],
 			"x": 7,
 			"class": "",
-			"blurb": "Field Card economy"
+			"blurb": "Field Card economy",
+			"kind": "main",
+			"icon": "tree_ledger",
+			"keystones": [
+				"lg_key"
+			]
 		},
 		{
 			"id": "survivor",
@@ -69,7 +84,12 @@
 			],
 			"x": 9,
 			"class": "",
-			"blurb": "Sustain"
+			"blurb": "Sustain",
+			"kind": "main",
+			"icon": "tree_survivor",
+			"keystones": [
+				"sv_key"
+			]
 		},
 		{
 			"id": "freerunner",
@@ -82,7 +102,12 @@
 			],
 			"x": 12,
 			"class": "",
-			"blurb": "Movement"
+			"blurb": "Movement",
+			"kind": "main",
+			"icon": "tree_freerunner",
+			"keystones": [
+				"fr_key"
+			]
 		},
 		{
 			"id": "soldier",
@@ -95,7 +120,17 @@
 			],
 			"x": 0,
 			"class": "soldier",
-			"blurb": "Dash | Rally Banner"
+			"blurb": "Breach Rush | Rally Banner",
+			"kind": "spec",
+			"icon": "spec_soldier",
+			"keystones": [
+				"so_key_vanguard",
+				"so_key_quartermaster"
+			],
+			"abilities": [
+				"breach_rush",
+				"rally_banner"
+			]
 		},
 		{
 			"id": "scout",
@@ -108,7 +143,17 @@
 			],
 			"x": 4,
 			"class": "scout",
-			"blurb": "Adrenaline | Chalk Mark"
+			"blurb": "Hare's Break | Chalk Mark",
+			"kind": "spec",
+			"icon": "spec_scout",
+			"keystones": [
+				"sc_key_lookout",
+				"sc_key_quicksilver"
+			],
+			"abilities": [
+				"hares_break",
+				"chalk_mark"
+			]
 		},
 		{
 			"id": "sexton",
@@ -121,7 +166,17 @@
 			],
 			"x": 8,
 			"class": "sexton",
-			"blurb": "Grave Bell | Headstone"
+			"blurb": "Grave Bell | Headstone",
+			"kind": "spec",
+			"icon": "spec_sexton",
+			"keystones": [
+				"sx_key_pallbearer",
+				"sx_key_vesper"
+			],
+			"abilities": [
+				"grave_bell",
+				"headstone"
+			]
 		},
 		{
 			"id": "chandler",
@@ -134,7 +189,17 @@
 			],
 			"x": 12,
 			"class": "chandler",
-			"blurb": "Vigil Candle | Ember Brand"
+			"blurb": "Vigil Candle | Ember Brand",
+			"kind": "spec",
+			"icon": "spec_chandler",
+			"keystones": [
+				"ch_key_pyre",
+				"ch_key_wick"
+			],
+			"abilities": [
+				"vigil_candle",
+				"ember_brand"
+			]
 		}
 	],
 	"nodes": [
@@ -186,7 +251,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"marksman"
-			]
+			],
+			"tab": "main",
+			"tab_x": 1,
+			"tab_y": 0
 		},
 		{
 			"id": "mk_aim",
@@ -236,7 +304,10 @@
 			"tags": [
 				"marksman",
 				"filler"
-			]
+			],
+			"tab": "main",
+			"tab_x": 1,
+			"tab_y": 1
 		},
 		{
 			"id": "mk_spotter",
@@ -283,7 +354,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"marksman"
-			]
+			],
+			"tab": "main",
+			"tab_x": 0,
+			"tab_y": 2
 		},
 		{
 			"id": "mk_longcount",
@@ -332,7 +406,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"marksman"
-			]
+			],
+			"tab": "main",
+			"tab_x": 2,
+			"tab_y": 2
 		},
 		{
 			"id": "mk_legend",
@@ -379,7 +456,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"marksman"
-			]
+			],
+			"tab": "main",
+			"tab_x": 1,
+			"tab_y": 4
 		},
 		{
 			"id": "mk_key",
@@ -398,7 +478,7 @@
 				"mk_legend"
 			],
 			"requires_any": [],
-			"choice_group": "keystone",
+			"choice_group": "",
 			"class": "",
 			"description": "Precision hits +{head_pct}% damage.",
 			"drawback": "Body hits -{body_pct}% damage.",
@@ -426,7 +506,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"marksman"
-			]
+			],
+			"tab": "main",
+			"tab_x": 1,
+			"tab_y": 5
 		},
 		{
 			"id": "sp_root",
@@ -475,7 +558,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"sapper"
-			]
+			],
+			"tab": "main",
+			"tab_x": 4,
+			"tab_y": 0
 		},
 		{
 			"id": "sp_powder",
@@ -525,7 +611,10 @@
 			"tags": [
 				"sapper",
 				"filler"
-			]
+			],
+			"tab": "main",
+			"tab_x": 4,
+			"tab_y": 1
 		},
 		{
 			"id": "sp_volt_coil",
@@ -573,7 +662,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"sapper"
-			]
+			],
+			"tab": "main",
+			"tab_x": 3,
+			"tab_y": 2
 		},
 		{
 			"id": "sp_kindling",
@@ -619,7 +711,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"sapper"
-			]
+			],
+			"tab": "main",
+			"tab_x": 5,
+			"tab_y": 2
 		},
 		{
 			"id": "sp_legend",
@@ -666,7 +761,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"sapper"
-			]
+			],
+			"tab": "main",
+			"tab_x": 4,
+			"tab_y": 4
 		},
 		{
 			"id": "sp_key",
@@ -685,7 +783,7 @@
 				"sp_legend"
 			],
 			"requires_any": [],
-			"choice_group": "keystone",
+			"choice_group": "",
 			"class": "",
 			"description": "{charges} grenade charges.",
 			"drawback": "Each charge recharges {slow_pct}% slower.",
@@ -706,7 +804,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"sapper"
-			]
+			],
+			"tab": "main",
+			"tab_x": 4,
+			"tab_y": 5
 		},
 		{
 			"id": "lg_spare",
@@ -749,7 +850,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"ledger"
-			]
+			],
+			"tab": "main",
+			"tab_x": 7,
+			"tab_y": 0
 		},
 		{
 			"id": "lg_wide",
@@ -787,7 +891,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"ledger"
-			]
+			],
+			"tab": "main",
+			"tab_x": 6,
+			"tab_y": 1
 		},
 		{
 			"id": "lg_lucky",
@@ -832,7 +939,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"ledger"
-			]
+			],
+			"tab": "main",
+			"tab_x": 8,
+			"tab_y": 1
 		},
 		{
 			"id": "lg_black",
@@ -870,7 +980,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"ledger"
-			]
+			],
+			"tab": "main",
+			"tab_x": 6,
+			"tab_y": 2
 		},
 		{
 			"id": "lg_gilded",
@@ -908,7 +1021,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"ledger"
-			]
+			],
+			"tab": "main",
+			"tab_x": 8,
+			"tab_y": 2
 		},
 		{
 			"id": "sv_root",
@@ -954,7 +1070,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"survivor"
-			]
+			],
+			"tab": "main",
+			"tab_x": 10,
+			"tab_y": 0
 		},
 		{
 			"id": "sv_skin",
@@ -1004,7 +1123,10 @@
 			"tags": [
 				"survivor",
 				"filler"
-			]
+			],
+			"tab": "main",
+			"tab_x": 10,
+			"tab_y": 1
 		},
 		{
 			"id": "sv_breath",
@@ -1056,7 +1178,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"survivor"
-			]
+			],
+			"tab": "main",
+			"tab_x": 9,
+			"tab_y": 2
 		},
 		{
 			"id": "sv_harvest",
@@ -1112,7 +1237,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"survivor"
-			]
+			],
+			"tab": "main",
+			"tab_x": 11,
+			"tab_y": 2
 		},
 		{
 			"id": "sv_legend",
@@ -1159,7 +1287,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"survivor"
-			]
+			],
+			"tab": "main",
+			"tab_x": 10,
+			"tab_y": 4
 		},
 		{
 			"id": "sv_key",
@@ -1178,7 +1309,7 @@
 				"sv_legend"
 			],
 			"requires_any": [],
-			"choice_group": "keystone",
+			"choice_group": "",
 			"class": "",
 			"description": "Every kill heals {heal} and grants {os} overshield.",
 			"drawback": "No health regen. Overshield cap drops to {cap}.",
@@ -1225,7 +1356,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"survivor"
-			]
+			],
+			"tab": "main",
+			"tab_x": 10,
+			"tab_y": 5
 		},
 		{
 			"id": "fr_root",
@@ -1272,7 +1406,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"freerunner"
-			]
+			],
+			"tab": "main",
+			"tab_x": 13,
+			"tab_y": 0
 		},
 		{
 			"id": "fr_step",
@@ -1322,7 +1459,10 @@
 			"tags": [
 				"freerunner",
 				"filler"
-			]
+			],
+			"tab": "main",
+			"tab_x": 13,
+			"tab_y": 1
 		},
 		{
 			"id": "fr_battery",
@@ -1365,7 +1505,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"freerunner"
-			]
+			],
+			"tab": "main",
+			"tab_x": 12,
+			"tab_y": 2
 		},
 		{
 			"id": "fr_skyplate",
@@ -1411,7 +1554,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"freerunner"
-			]
+			],
+			"tab": "main",
+			"tab_x": 14,
+			"tab_y": 2
 		},
 		{
 			"id": "fr_legend",
@@ -1458,7 +1604,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"freerunner"
-			]
+			],
+			"tab": "main",
+			"tab_x": 13,
+			"tab_y": 4
 		},
 		{
 			"id": "fr_key",
@@ -1477,7 +1626,7 @@
 				"fr_legend"
 			],
 			"requires_any": [],
-			"choice_group": "keystone",
+			"choice_group": "",
 			"class": "",
 			"description": "+{jumps} wall jump and +{speed_pct}% move speed.",
 			"drawback": "Max health -{hp_pct}%.",
@@ -1513,11 +1662,14 @@
 			"unlocks_cards": [],
 			"tags": [
 				"freerunner"
-			]
+			],
+			"tab": "main",
+			"tab_x": 13,
+			"tab_y": 5
 		},
 		{
 			"id": "so_ram",
-			"name": "Battering Dash",
+			"name": "Ram's Shoulder",
 			"branch": "soldier",
 			"type": "active",
 			"keystone": false,
@@ -1534,18 +1686,25 @@
 			"requires_any": [],
 			"choice_group": "",
 			"class": "soldier",
-			"description": "Dash hits zombies in your path for {damage} damage and knocks them back.",
+			"description": "Breach Rush hits +{damage} harder and catches zombies {r}m wider.",
 			"drawback": "",
 			"values": {
-				"damage": 40
+				"damage": 40,
+				"r": 0.5
 			},
 			"effects": [
 				{
-					"script": "ability_mod",
+					"script": "stat_mod",
 					"params": {
-						"contact_damage": 40,
-						"knockback": 8.0,
-						"radius": 1.5
+						"stat": "ab_rush_damage",
+						"add": 40.0
+					}
+				},
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "ab_rush_radius",
+						"add": 0.5
 					}
 				}
 			],
@@ -1554,7 +1713,10 @@
 			"tags": [
 				"soldier"
 			],
-			"ability": "dash"
+			"ability": "breach_rush",
+			"tab": "spec",
+			"tab_x": 0,
+			"tab_y": 1
 		},
 		{
 			"id": "so_twin",
@@ -1575,7 +1737,7 @@
 			"requires_any": [],
 			"choice_group": "",
 			"class": "soldier",
-			"description": "Dash has {charges} charges.",
+			"description": "Breach Rush has {charges} charges.",
 			"drawback": "",
 			"values": {
 				"charges": 2
@@ -1593,7 +1755,10 @@
 			"tags": [
 				"soldier"
 			],
-			"ability": "dash"
+			"ability": "breach_rush",
+			"tab": "spec",
+			"tab_x": 0,
+			"tab_y": 2
 		},
 		{
 			"id": "so_breacher",
@@ -1614,7 +1779,7 @@
 			"requires_any": [],
 			"choice_group": "",
 			"class": "soldier",
-			"description": "A kill within {window}s of dashing refunds a dash charge. Unlocks the Soldier legendary card.",
+			"description": "A kill within {window}s of a Breach Rush refunds a charge. Unlocks the Soldier legendary card.",
 			"drawback": "",
 			"values": {
 				"window": 1.0
@@ -1639,7 +1804,10 @@
 			"tags": [
 				"soldier"
 			],
-			"ability": "dash"
+			"ability": "breach_rush",
+			"tab": "spec",
+			"tab_x": 0,
+			"tab_y": 3
 		},
 		{
 			"id": "sc_fed",
@@ -1660,7 +1828,7 @@
 			"requires_any": [],
 			"choice_group": "",
 			"class": "scout",
-			"description": "Kills during Adrenaline extend it by {extend}s (max +{max_extend}s).",
+			"description": "Kills during Hare's Break extend it by {extend}s (max +{max_extend}s).",
 			"drawback": "",
 			"values": {
 				"extend": 0.5,
@@ -1680,7 +1848,10 @@
 			"tags": [
 				"scout"
 			],
-			"ability": "adrenaline"
+			"ability": "hares_break",
+			"tab": "spec",
+			"tab_x": 0,
+			"tab_y": 1
 		},
 		{
 			"id": "sc_ghost",
@@ -1701,7 +1872,7 @@
 			"requires_any": [],
 			"choice_group": "",
 			"class": "scout",
-			"description": "During Adrenaline, zombie swings have a {dodge_pct}% chance to miss you.",
+			"description": "During Hare's Break, zombie swings have a {dodge_pct}% chance to miss you.",
 			"drawback": "",
 			"values": {
 				"dodge_pct": 50
@@ -1720,7 +1891,10 @@
 			"tags": [
 				"scout"
 			],
-			"ability": "adrenaline"
+			"ability": "hares_break",
+			"tab": "spec",
+			"tab_x": 0,
+			"tab_y": 2
 		},
 		{
 			"id": "sc_racing_heart",
@@ -1741,8 +1915,8 @@
 			"requires_any": [],
 			"choice_group": "",
 			"class": "scout",
-			"description": "Adrenaline also gives +{rate_pct}% fire rate. Unlocks the Scout legendary card.",
-			"drawback": "Adrenaline cooldown +{cd_add}s.",
+			"description": "Hare's Break also gives +{rate_pct}% fire rate. Unlocks the Scout legendary card.",
+			"drawback": "Hare's Break cooldown +{cd_add}s.",
 			"values": {
 				"rate_pct": 25,
 				"cd_add": 4
@@ -1775,7 +1949,10 @@
 			"tags": [
 				"scout"
 			],
-			"ability": "adrenaline"
+			"ability": "hares_break",
+			"tab": "spec",
+			"tab_x": 0,
+			"tab_y": 3
 		},
 		{
 			"id": "mk_painted",
@@ -1817,7 +1994,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"marksman"
-			]
+			],
+			"tab": "main",
+			"tab_x": 0,
+			"tab_y": 3
 		},
 		{
 			"id": "mk_patient",
@@ -1859,7 +2039,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"marksman"
-			]
+			],
+			"tab": "main",
+			"tab_x": 2,
+			"tab_y": 3
 		},
 		{
 			"id": "mk_cadence",
@@ -1899,7 +2082,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"marksman"
-			]
+			],
+			"tab": "main",
+			"tab_x": 0,
+			"tab_y": 5
 		},
 		{
 			"id": "mk_culling",
@@ -1940,7 +2126,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"marksman"
-			]
+			],
+			"tab": "main",
+			"tab_x": 2,
+			"tab_y": 5
 		},
 		{
 			"id": "mk_called",
@@ -1976,7 +2165,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"marksman"
-			]
+			],
+			"tab": "main",
+			"tab_x": 0,
+			"tab_y": 6
 		},
 		{
 			"id": "mk_verdict",
@@ -2022,7 +2214,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"marksman"
-			]
+			],
+			"tab": "main",
+			"tab_x": 2,
+			"tab_y": 6
 		},
 		{
 			"id": "mk_mastery",
@@ -2069,7 +2264,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"marksman"
-			]
+			],
+			"tab": "main",
+			"tab_x": 1,
+			"tab_y": 7
 		},
 		{
 			"id": "sp_forked",
@@ -2115,7 +2313,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"sapper"
-			]
+			],
+			"tab": "main",
+			"tab_x": 3,
+			"tab_y": 3
 		},
 		{
 			"id": "sp_cinders",
@@ -2160,7 +2361,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"sapper"
-			]
+			],
+			"tab": "main",
+			"tab_x": 5,
+			"tab_y": 3
 		},
 		{
 			"id": "sp_satchel",
@@ -2198,7 +2402,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"sapper"
-			]
+			],
+			"tab": "main",
+			"tab_x": 3,
+			"tab_y": 5
 		},
 		{
 			"id": "sp_bomblet",
@@ -2242,7 +2449,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"sapper"
-			]
+			],
+			"tab": "main",
+			"tab_x": 5,
+			"tab_y": 5
 		},
 		{
 			"id": "sp_quickfuse",
@@ -2281,7 +2491,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"sapper"
-			]
+			],
+			"tab": "main",
+			"tab_x": 3,
+			"tab_y": 6
 		},
 		{
 			"id": "sp_thunder",
@@ -2333,7 +2546,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"sapper"
-			]
+			],
+			"tab": "main",
+			"tab_x": 5,
+			"tab_y": 6
 		},
 		{
 			"id": "sp_mastery",
@@ -2380,7 +2596,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"sapper"
-			]
+			],
+			"tab": "main",
+			"tab_x": 4,
+			"tab_y": 7
 		},
 		{
 			"id": "sv_gasp",
@@ -2421,7 +2640,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"survivor"
-			]
+			],
+			"tab": "main",
+			"tab_x": 9,
+			"tab_y": 3
 		},
 		{
 			"id": "sv_marrow",
@@ -2463,7 +2685,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"survivor"
-			]
+			],
+			"tab": "main",
+			"tab_x": 11,
+			"tab_y": 3
 		},
 		{
 			"id": "sv_rampart",
@@ -2512,7 +2737,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"survivor"
-			]
+			],
+			"tab": "main",
+			"tab_x": 9,
+			"tab_y": 5
 		},
 		{
 			"id": "sv_bloodtithe",
@@ -2553,7 +2781,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"survivor"
-			]
+			],
+			"tab": "main",
+			"tab_x": 11,
+			"tab_y": 5
 		},
 		{
 			"id": "sv_nerve",
@@ -2592,7 +2823,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"survivor"
-			]
+			],
+			"tab": "main",
+			"tab_x": 9,
+			"tab_y": 6
 		},
 		{
 			"id": "sv_redharvest",
@@ -2636,7 +2870,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"survivor"
-			]
+			],
+			"tab": "main",
+			"tab_x": 11,
+			"tab_y": 6
 		},
 		{
 			"id": "sv_mastery",
@@ -2683,7 +2920,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"survivor"
-			]
+			],
+			"tab": "main",
+			"tab_x": 10,
+			"tab_y": 7
 		},
 		{
 			"id": "fr_vault",
@@ -2725,7 +2965,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"freerunner"
-			]
+			],
+			"tab": "main",
+			"tab_x": 12,
+			"tab_y": 3
 		},
 		{
 			"id": "fr_falcon",
@@ -2770,7 +3013,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"freerunner"
-			]
+			],
+			"tab": "main",
+			"tab_x": 14,
+			"tab_y": 3
 		},
 		{
 			"id": "fr_skid",
@@ -2814,7 +3060,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"freerunner"
-			]
+			],
+			"tab": "main",
+			"tab_x": 12,
+			"tab_y": 5
 		},
 		{
 			"id": "fr_parkour",
@@ -2853,7 +3102,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"freerunner"
-			]
+			],
+			"tab": "main",
+			"tab_x": 14,
+			"tab_y": 5
 		},
 		{
 			"id": "fr_hotrails",
@@ -2892,7 +3144,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"freerunner"
-			]
+			],
+			"tab": "main",
+			"tab_x": 12,
+			"tab_y": 6
 		},
 		{
 			"id": "fr_catplate",
@@ -2935,7 +3190,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"freerunner"
-			]
+			],
+			"tab": "main",
+			"tab_x": 14,
+			"tab_y": 6
 		},
 		{
 			"id": "fr_mastery",
@@ -2982,7 +3240,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"freerunner"
-			]
+			],
+			"tab": "main",
+			"tab_x": 13,
+			"tab_y": 7
 		},
 		{
 			"id": "lg_purse",
@@ -3022,7 +3283,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"ledger"
-			]
+			],
+			"tab": "main",
+			"tab_x": 6,
+			"tab_y": 3
 		},
 		{
 			"id": "lg_notes",
@@ -3063,7 +3327,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"ledger"
-			]
+			],
+			"tab": "main",
+			"tab_x": 8,
+			"tab_y": 3
 		},
 		{
 			"id": "lg_gleaning",
@@ -3102,7 +3369,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"ledger"
-			]
+			],
+			"tab": "main",
+			"tab_x": 6,
+			"tab_y": 4
 		},
 		{
 			"id": "lg_draft",
@@ -3140,7 +3410,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"ledger"
-			]
+			],
+			"tab": "main",
+			"tab_x": 8,
+			"tab_y": 4
 		},
 		{
 			"id": "so_core",
@@ -3185,7 +3458,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"soldier"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 1,
+			"tab_y": 0
 		},
 		{
 			"id": "so_colors",
@@ -3233,7 +3509,10 @@
 			"tags": [
 				"soldier"
 			],
-			"ability": "rally_banner"
+			"ability": "rally_banner",
+			"tab": "spec",
+			"tab_x": 2,
+			"tab_y": 1
 		},
 		{
 			"id": "so_muster",
@@ -3274,7 +3553,10 @@
 			"tags": [
 				"soldier"
 			],
-			"ability": "rally_banner"
+			"ability": "rally_banner",
+			"tab": "spec",
+			"tab_x": 2,
+			"tab_y": 2
 		},
 		{
 			"id": "so_bulwark",
@@ -3322,7 +3604,10 @@
 			"tags": [
 				"soldier"
 			],
-			"ability": "rally_banner"
+			"ability": "rally_banner",
+			"tab": "spec",
+			"tab_x": 2,
+			"tab_y": 3
 		},
 		{
 			"id": "so_oath_iron",
@@ -3362,7 +3647,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"soldier"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 0,
+			"tab_y": 4
 		},
 		{
 			"id": "so_oath_breach",
@@ -3409,7 +3697,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"soldier"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 2,
+			"tab_y": 4
 		},
 		{
 			"id": "so_capstone",
@@ -3456,7 +3747,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"soldier"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 1,
+			"tab_y": 5
 		},
 		{
 			"id": "so_key_vanguard",
@@ -3520,7 +3814,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"soldier"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 0,
+			"tab_y": 6
 		},
 		{
 			"id": "so_key_quartermaster",
@@ -3572,7 +3869,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"soldier"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 2,
+			"tab_y": 6
 		},
 		{
 			"id": "sc_core",
@@ -3611,7 +3911,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"scout"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 1,
+			"tab_y": 0
 		},
 		{
 			"id": "sc_broad",
@@ -3659,7 +3962,10 @@
 			"tags": [
 				"scout"
 			],
-			"ability": "chalk_mark"
+			"ability": "chalk_mark",
+			"tab": "spec",
+			"tab_x": 2,
+			"tab_y": 1
 		},
 		{
 			"id": "sc_deepscore",
@@ -3699,7 +4005,10 @@
 			"tags": [
 				"scout"
 			],
-			"ability": "chalk_mark"
+			"ability": "chalk_mark",
+			"tab": "spec",
+			"tab_x": 2,
+			"tab_y": 2
 		},
 		{
 			"id": "sc_tallyman",
@@ -3745,7 +4054,10 @@
 			"tags": [
 				"scout"
 			],
-			"ability": "chalk_mark"
+			"ability": "chalk_mark",
+			"tab": "spec",
+			"tab_x": 2,
+			"tab_y": 3
 		},
 		{
 			"id": "sc_oath_skylark",
@@ -3790,7 +4102,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"scout"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 0,
+			"tab_y": 4
 		},
 		{
 			"id": "sc_oath_thicket",
@@ -3834,7 +4149,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"scout"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 2,
+			"tab_y": 4
 		},
 		{
 			"id": "sc_capstone",
@@ -3881,7 +4199,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"scout"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 1,
+			"tab_y": 5
 		},
 		{
 			"id": "sc_key_lookout",
@@ -3948,7 +4269,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"scout"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 0,
+			"tab_y": 6
 		},
 		{
 			"id": "sc_key_quicksilver",
@@ -4002,7 +4326,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"scout"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 2,
+			"tab_y": 6
 		},
 		{
 			"id": "sx_core",
@@ -4047,7 +4374,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"sexton"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 1,
+			"tab_y": 0
 		},
 		{
 			"id": "sx_peal",
@@ -4087,7 +4417,10 @@
 			"tags": [
 				"sexton"
 			],
-			"ability": "grave_bell"
+			"ability": "grave_bell",
+			"tab": "spec",
+			"tab_x": 0,
+			"tab_y": 1
 		},
 		{
 			"id": "sx_clapper",
@@ -4135,7 +4468,10 @@
 			"tags": [
 				"sexton"
 			],
-			"ability": "grave_bell"
+			"ability": "grave_bell",
+			"tab": "spec",
+			"tab_x": 0,
+			"tab_y": 2
 		},
 		{
 			"id": "sx_lasttoll",
@@ -4180,7 +4516,10 @@
 			"tags": [
 				"sexton"
 			],
-			"ability": "grave_bell"
+			"ability": "grave_bell",
+			"tab": "spec",
+			"tab_x": 0,
+			"tab_y": 3
 		},
 		{
 			"id": "sx_granite",
@@ -4220,7 +4559,10 @@
 			"tags": [
 				"sexton"
 			],
-			"ability": "headstone"
+			"ability": "headstone",
+			"tab": "spec",
+			"tab_x": 2,
+			"tab_y": 1
 		},
 		{
 			"id": "sx_plot",
@@ -4260,7 +4602,10 @@
 			"tags": [
 				"sexton"
 			],
-			"ability": "headstone"
+			"ability": "headstone",
+			"tab": "spec",
+			"tab_x": 2,
+			"tab_y": 2
 		},
 		{
 			"id": "sx_epitaph",
@@ -4305,7 +4650,10 @@
 			"tags": [
 				"sexton"
 			],
-			"ability": "headstone"
+			"ability": "headstone",
+			"tab": "spec",
+			"tab_x": 2,
+			"tab_y": 3
 		},
 		{
 			"id": "sx_oath_mourner",
@@ -4350,7 +4698,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"sexton"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 0,
+			"tab_y": 4
 		},
 		{
 			"id": "sx_oath_wake",
@@ -4392,7 +4743,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"sexton"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 2,
+			"tab_y": 4
 		},
 		{
 			"id": "sx_capstone",
@@ -4439,7 +4793,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"sexton"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 1,
+			"tab_y": 5
 		},
 		{
 			"id": "sx_key_pallbearer",
@@ -4485,7 +4842,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"sexton"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 0,
+			"tab_y": 6
 		},
 		{
 			"id": "sx_key_vesper",
@@ -4548,7 +4908,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"sexton"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 2,
+			"tab_y": 6
 		},
 		{
 			"id": "ch_core",
@@ -4593,7 +4956,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"chandler"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 1,
+			"tab_y": 0
 		},
 		{
 			"id": "ch_taper",
@@ -4633,7 +4999,10 @@
 			"tags": [
 				"chandler"
 			],
-			"ability": "vigil_candle"
+			"ability": "vigil_candle",
+			"tab": "spec",
+			"tab_x": 0,
+			"tab_y": 1
 		},
 		{
 			"id": "ch_candelabra",
@@ -4673,7 +5042,10 @@
 			"tags": [
 				"chandler"
 			],
-			"ability": "vigil_candle"
+			"ability": "vigil_candle",
+			"tab": "spec",
+			"tab_x": 0,
+			"tab_y": 2
 		},
 		{
 			"id": "ch_votive",
@@ -4713,7 +5085,10 @@
 			"tags": [
 				"chandler"
 			],
-			"ability": "vigil_candle"
+			"ability": "vigil_candle",
+			"tab": "spec",
+			"tab_x": 0,
+			"tab_y": 3
 		},
 		{
 			"id": "ch_widebrand",
@@ -4753,7 +5128,10 @@
 			"tags": [
 				"chandler"
 			],
-			"ability": "ember_brand"
+			"ability": "ember_brand",
+			"tab": "spec",
+			"tab_x": 2,
+			"tab_y": 1
 		},
 		{
 			"id": "ch_whitehot",
@@ -4793,7 +5171,10 @@
 			"tags": [
 				"chandler"
 			],
-			"ability": "ember_brand"
+			"ability": "ember_brand",
+			"tab": "spec",
+			"tab_x": 2,
+			"tab_y": 2
 		},
 		{
 			"id": "ch_cinderchain",
@@ -4833,7 +5214,10 @@
 			"tags": [
 				"chandler"
 			],
-			"ability": "ember_brand"
+			"ability": "ember_brand",
+			"tab": "spec",
+			"tab_x": 2,
+			"tab_y": 3
 		},
 		{
 			"id": "ch_oath_smoke",
@@ -4881,7 +5265,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"chandler"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 0,
+			"tab_y": 4
 		},
 		{
 			"id": "ch_oath_flare",
@@ -4926,7 +5313,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"chandler"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 2,
+			"tab_y": 4
 		},
 		{
 			"id": "ch_capstone",
@@ -4973,7 +5363,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"chandler"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 1,
+			"tab_y": 5
 		},
 		{
 			"id": "ch_key_pyre",
@@ -5020,7 +5413,10 @@
 			"unlocks_cards": [],
 			"tags": [
 				"chandler"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 0,
+			"tab_y": 6
 		},
 		{
 			"id": "ch_key_wick",
@@ -5082,7 +5478,62 @@
 			"unlocks_cards": [],
 			"tags": [
 				"chandler"
-			]
+			],
+			"tab": "spec",
+			"tab_x": 2,
+			"tab_y": 6
+		},
+		{
+			"id": "lg_key",
+			"name": "Red Ink",
+			"branch": "ledger",
+			"type": "keystone",
+			"keystone": true,
+			"icon": "lg_key",
+			"x": 7,
+			"y": 5,
+			"ranks": 1,
+			"cost": [
+				4
+			],
+			"requires": [],
+			"requires_any": [
+				"lg_gleaning",
+				"lg_draft"
+			],
+			"choice_group": "",
+			"class": "",
+			"description": "Field Card offers show {size} more card and every match starts with {rerolls} more free reroll.",
+			"drawback": "Points from kills -{pen_pct}%.",
+			"values": {
+				"size": 1,
+				"rerolls": 2,
+				"pen_pct": 20
+			},
+			"effects": [
+				{
+					"script": "offer_mod",
+					"params": {
+						"size": 1,
+						"free_rerolls": 2
+					}
+				},
+				{
+					"script": "stat_mod",
+					"params": {
+						"stat": "points_kill_mult",
+						"add": -0.2
+					}
+				}
+			],
+			"requires_rank": {},
+			"unlocks_cards": [],
+			"tags": [
+				"ledger"
+			],
+			"tab": "main",
+			"tab_x": 7,
+			"tab_y": 5
 		}
 	],
 	"respec": {
@@ -5092,5 +5543,29 @@
 		"per_point": 2,
 		"min": 10,
 		"max": 200
+	},
+	"tabs": {
+		"_help": "§24: two tabs. main = the 5 main trees (any class); spec = one Specialization tree per class, where the class and its Q are picked too. Nodes carry tab, tab_x, tab_y (x/y stay the old combined grid).",
+		"main": {
+			"cols": 15,
+			"rows": 8,
+			"branches": [
+				"marksman",
+				"sapper",
+				"ledger",
+				"survivor",
+				"freerunner"
+			]
+		},
+		"spec": {
+			"cols": 3,
+			"rows": 7,
+			"branches": [
+				"soldier",
+				"scout",
+				"sexton",
+				"chandler"
+			]
+		}
 	}
 }

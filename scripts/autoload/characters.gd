@@ -178,7 +178,7 @@ func list() -> Array:
 
 
 static func _pick_ability(cls: String, picks) -> String:
-	var a := str(picks.get(cls, "")) if typeof(picks) == TYPE_DICTIONARY else ""
+	var a := ClassRoster.canonical_ability(str(picks.get(cls, ""))) if typeof(picks) == TYPE_DICTIONARY else ""
 	return a if a in ClassRoster.ability_ids(cls) else ClassRoster.default_ability(cls)
 
 
@@ -407,8 +407,9 @@ func select(id: int) -> Dictionary:
 	return {"ok": true, "reason": ""}
 
 
-## Home loadout: the active character's class (persisted per character).
-func set_class(class_id: String) -> Dictionary:
+## The active character's class (persisted per character). §24: the player picks it on the Skills menu's
+## Specialization tab (Characters.spec.select_specialization, which passes keep_session = true so free undo survives).
+func set_class(class_id: String, keep_session := false) -> Dictionary:
 	var why := loadout_blocked_reason()
 	if why == "" and not ClassRoster.has(class_id):
 		why = "Unknown class."
@@ -416,7 +417,7 @@ func set_class(class_id: String) -> Dictionary:
 		return {"ok": false, "reason": why}
 	var prog := _prog()
 	prog.selected_class = class_id
-	if spec:
+	if spec and not keep_session:
 		spec.end_session()
 	prog.save_data()
 	class_changed.emit(active_id(), class_id)
@@ -429,6 +430,7 @@ func set_ability(class_id: String, ability_id: String) -> Dictionary:
 	var why := loadout_blocked_reason()
 	if why == "" and not ClassRoster.has(class_id):
 		why = "Unknown class."
+	ability_id = ClassRoster.canonical_ability(ability_id)
 	if why == "" and not (ability_id in ClassRoster.ability_ids(class_id)):
 		why = "That ability isn't part of this class."
 	if why != "":
@@ -441,7 +443,7 @@ func set_ability(class_id: String, ability_id: String) -> Dictionary:
 
 ## The Q ability the active character uses for `class_id` (class default when never picked).
 func ability_for(class_id: String) -> String:
-	var a := str(abilities.get(class_id, ""))
+	var a := ClassRoster.canonical_ability(str(abilities.get(class_id, "")))
 	return a if a in ClassRoster.ability_ids(class_id) else ClassRoster.default_ability(class_id)
 
 
@@ -579,7 +581,10 @@ func _fill_char_cfg(cfg: ConfigFile, id: int, e: Dictionary, prog: Node) -> void
 
 func _read_char_meta(cfg: ConfigFile) -> void:
 	var ab = cfg.get_value("character", "abilities", {})
-	abilities = ab.duplicate() if typeof(ab) == TYPE_DICTIONARY else {}
+	abilities = {}
+	if typeof(ab) == TYPE_DICTIONARY:
+		for k in ab: # §24: dash / adrenaline picks -> Breach Rush / Hare's Break
+			abilities[k] = ClassRoster.canonical_ability(str(ab[k]))
 	respecs_used = maxi(int(cfg.get_value("character", "respecs_used", 0)), 0)
 
 

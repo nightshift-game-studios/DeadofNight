@@ -17,6 +17,8 @@ signal tree_changed ## any change: pick, refund, respec, character / class switc
 signal points_changed(available: int)
 signal respec_done(cost: int)
 signal pick_refused(id: String, code: String, reason: String)
+signal specialization_changed(class_id: String) ## §24: the class was picked on the Specialization tab
+signal q_changed(class_id: String, ability_id: String) ## §24: the Q pick changed on the Specialization tab
 
 const STAT_LABELS := {"max_health": "Max health", "max_health_mult": "Max health", "move_speed": "Move speed",
 	"reload_time_mult": "Reload time", "fire_rate_mult": "Fire rate", "headshot_mult_add": "Precision multiplier",
@@ -31,7 +33,9 @@ const STAT_LABELS := {"max_health": "Max health", "max_health_mult": "Max health
 	"ab_stone_radius": "Headstone radius (m)", "ab_stone_amp": "Headstone damage taken", "ab_candle_time": "Candle time (s)",
 	"ab_candle_count": "Candles at once", "ab_candle_dps": "Candle burn (dps)", "ab_candle_radius": "Candle radius (m)",
 	"ab_brand_count": "Ember Brand targets", "ab_brand_dps": "Brand burn (dps)", "ab_brand_burst": "Brand burst damage",
-	"ab_brand_time": "Brand time (s)"}
+	"ab_brand_time": "Brand time (s)", "ab_rush_damage": "Breach Rush damage", "ab_rush_radius": "Breach Rush width (m)",
+	"ab_rush_os": "Breach Rush overshield", "ab_rush_knock": "Breach Rush knockback", "ab_hare_speed": "Hare's Break speed",
+	"ab_hare_reload": "Hare's Break reload"}
 
 var session_picks: Array = [] ## [id, ...] ranks bought this home visit, in order (undo stack)
 var session_open := false
@@ -94,7 +98,9 @@ func node_info(id: String) -> Dictionary:
 	var r: int = prog.rank(id)
 	var cp := can_pick(id)
 	var ex: String = prog.excluded_by(id)
-	return {"id": id, "name": str(n.name), "branch": str(n.branch), "class": str(n.get("class", "")),
+	return {"id": id, "name": str(n.name), "branch": str(n.branch), "class": str(n.get("class", "")), "icon": str(n.get("icon", id)),
+		"tab": str(n.get("tab", "spec" if str(n.get("class", "")) != "" else "main")),
+		"tab_x": float(n.get("tab_x", n.x)), "tab_y": float(n.get("tab_y", n.y)),
 		"ability": str(n.get("ability", "")), "type": str(n.type), "keystone": bool(n.keystone), "x": float(n.x), "y": float(n.y),
 		"rank": r, "max_rank": int(n.ranks), "next_cost": prog.next_cost(id), "state": prog.state(id),
 		"active": inactive_reason(id) == "", "inactive_reason": inactive_reason(id),
@@ -121,7 +127,7 @@ func inactive_reason(id: String) -> String:
 	var n: Dictionary = prog.get_skill(id)
 	var c := str(n.get("class", ""))
 	if c != "" and c != str(prog.selected_class):
-		return "%s only: play %s to use it." % [ClassRoster.template(c).display_name, ClassRoster.template(c).display_name]
+		return "%s Specialization: choose it on the Specialization tab to use this." % ClassRoster.template(c).display_name
 	var need := str(n.get("ability", ""))
 	if need != "":
 		var ch := _chars()
@@ -132,8 +138,9 @@ func inactive_reason(id: String) -> String:
 	return ""
 
 
-## {ok, code, reason}. Codes: unknown, maxed, locked, excluded, no_points. (Nodes of another class or ability path can
-## still be picked; node_info().inactive_reason tells the player they won't run yet.)
+## {ok, code, reason}. Codes: unknown, maxed, other_spec, excluded, locked, no_points. §24: points go only into the main
+## trees and the chosen Specialization (other_spec otherwise; ranks you already own there are kept). Nodes of a Q path
+## you haven't equipped can still be picked; node_info().inactive_reason says they won't run yet.
 func can_pick(id: String) -> Dictionary:
 	var prog := _prog()
 	var n: Dictionary = prog.get_skill(id)
@@ -142,6 +149,10 @@ func can_pick(id: String) -> Dictionary:
 	var st: String = prog.state(id)
 	if st == "maxed":
 		return {"ok": false, "code": "maxed", "reason": "Already at max rank."}
+	var cls := str(n.get("class", ""))
+	if cls != "" and cls != str(prog.selected_class):
+		var cn := ClassRoster.template(cls).display_name
+		return {"ok": false, "code": "other_spec", "reason": "Choose %s as your Specialization to spend points here." % cn}
 	if st == "excluded":
 		var ex: String = prog.excluded_by(id)
 		var how := " Undo or respec to switch." if not session_picks.has(ex) else " Refund it to switch."
@@ -343,7 +354,8 @@ static func _ability_base(a: Ability, key: String) -> float:
 		"bell_damage": "damage", "bell_heal": "heal_per_zombie", "bell_slow": "slow", "stone_time": "stone_time",
 		"stone_radius": "radius", "stone_slow": "slow", "stone_amp": "amp", "candle_time": "candle_time",
 		"candle_radius": "radius", "candle_dps": "dps", "candle_count": "max_candles", "brand_count": "max_targets",
-		"brand_time": "brand_time", "brand_dps": "dps", "brand_burst": "burst"}
+		"brand_time": "brand_time", "brand_dps": "dps", "brand_burst": "burst", "rush_damage": "damage", "rush_radius": "radius",
+		"rush_os": "overshield", "rush_knock": "knockback", "hare_speed": "speed_multiplier", "hare_reload": "reload_fraction"}
 	var prop: String = map.get(key, key)
 	return float(a.get(prop)) if prop in a else 0.0
 
@@ -383,3 +395,150 @@ func _after_change(id: String) -> void:
 		node_changed.emit(id, prog.rank(id))
 	points_changed.emit(prog.skill_points_available())
 	tree_changed.emit()
+
+
+# ---------------------------------------------------------------- §24 tabs: main trees + Specialization
+
+## Rows for the main tab: [{id, name, accent, color, blurb, icon, keystones: [{id, name, owned, state}], points_spent,
+## nodes_owned}]. Main trees are open to every class.
+func main_trees() -> Array:
+	var out: Array = []
+	for b in _prog().branches():
+		if str(b.get("kind", "spec" if str(b.get("class", "")) != "" else "main")) == "main":
+			out.append(_branch_row(b))
+	return out
+
+
+func current_specialization() -> String:
+	return str(_prog().selected_class)
+
+
+## Rows for the Specialization tab (ClassRoster order): [{id, name, role, description, accent, color, icon, selected,
+## max_health, walk_speed, sprint_speed, jump_velocity, grenade_id, ability, abilities: [{id, name, kind, summary,
+## cooldown, duration, default, movement, icon, selected}], keystones, points_spent, nodes_owned, class_items,
+## can_select, select_code, select_reason}].
+func specializations() -> Array:
+	var out: Array = []
+	var by_branch := {}
+	for b in _prog().branches():
+		by_branch[str(b.id)] = b
+	for cid in ClassRoster.ids():
+		var row := ClassRoster.describe(cid)
+		var b: Dictionary = by_branch.get(cid, {"id": cid, "name": row.name, "class": cid})
+		row.merge(_branch_row(b), false)
+		row["icon"] = "spec_" + cid
+		row["selected"] = cid == current_specialization()
+		var q := _q_for(cid)
+		row["ability"] = q
+		for a in row.abilities:
+			a["selected"] = str(a.id) == q
+		row["class_items"] = _class_item_count(cid)
+		var cs := can_select_specialization(cid)
+		row["can_select"] = cs.ok
+		row["select_code"] = cs.code
+		row["select_reason"] = cs.reason
+		out.append(row)
+	return out
+
+
+## {ok, code, reason}. Codes: unknown, selected (already yours), blocked (outside home / round 0 / game over).
+func can_select_specialization(class_id: String) -> Dictionary:
+	if not ClassRoster.has(class_id):
+		return {"ok": false, "code": "unknown", "reason": "Unknown Specialization."}
+	if class_id == current_specialization():
+		return {"ok": false, "code": "selected", "reason": "Already your Specialization."}
+	var why := _loadout_why()
+	if why != "":
+		return {"ok": false, "code": "blocked", "reason": why}
+	return {"ok": true, "code": "", "reason": ""}
+
+
+## Picks the class from the Specialization tab (saved per character). The undo session stays open, and ranks in the
+## old Specialization are kept (they run again when you switch back). Returns {ok, code, reason}.
+func select_specialization(class_id: String) -> Dictionary:
+	var cs := can_select_specialization(class_id)
+	if not cs.ok:
+		return cs
+	var ch := _chars()
+	if ch and ch.is_bound():
+		var r: Dictionary = ch.set_class(class_id, true)
+		if not r.ok:
+			return {"ok": false, "code": "blocked", "reason": str(r.reason)}
+	else:
+		_prog().selected_class = class_id
+		_prog().save_data()
+	specialization_changed.emit(class_id)
+	_after_change("")
+	return {"ok": true, "code": "", "reason": ""}
+
+
+## The Q pick for a Specialization ("" class = the current one). Returns {ok, code, reason}. Codes: unknown, blocked.
+func select_q(ability_id: String, class_id: String = "") -> Dictionary:
+	if class_id == "":
+		class_id = current_specialization()
+	ability_id = ClassRoster.canonical_ability(ability_id)
+	if not ClassRoster.has(class_id) or ClassRoster.find_ability(class_id, ability_id) == null:
+		return {"ok": false, "code": "unknown", "reason": "That Q isn't part of this Specialization."}
+	var ch := _chars()
+	if ch and ch.is_bound():
+		var r: Dictionary = ch.set_ability(class_id, ability_id)
+		if not r.ok:
+			return {"ok": false, "code": "blocked", "reason": str(r.reason)}
+	else:
+		var why := _loadout_why()
+		if why != "":
+			return {"ok": false, "code": "blocked", "reason": why}
+		if ch:
+			ch.abilities[class_id] = ability_id
+	q_changed.emit(class_id, ability_id)
+	tree_changed.emit()
+	return {"ok": true, "code": "", "reason": ""}
+
+
+## Node rows of one Specialization tree (layout: tab_x 0-2, tab_y 0-6).
+func spec_nodes(class_id: String) -> Array:
+	return list_nodes({"class": class_id})
+
+
+## Node rows of one tab ("main" or "spec").
+func tab_nodes(tab: String) -> Array:
+	return list_nodes({"tab": tab})
+
+
+func _q_for(cid: String) -> String:
+	var ch := _chars()
+	return str(ch.ability_for(cid)) if ch else ClassRoster.default_ability(cid)
+
+
+func _loadout_why() -> String:
+	var ch := _chars()
+	if ch and ch.is_bound():
+		return str(ch.loadout_blocked_reason())
+	return "" if _prog().respec_allowed else "Change Specialization at home, before round 1 or after game over."
+
+
+func _class_item_count(cid: String) -> int:
+	return ClassItems.owned(cid).size()
+
+
+func _branch_row(b: Dictionary) -> Dictionary:
+	var prog := _prog()
+	var bid := str(b.get("id", ""))
+	var spent := 0
+	var owned := 0
+	var keys: Array = []
+	for id in prog.all_node_ids():
+		var n: Dictionary = prog.get_skill(id)
+		if str(n.branch) != bid:
+			continue
+		var r: int = prog.rank(id)
+		if r > 0:
+			owned += 1
+			var costs: Array = n.get("cost", [1])
+			for i in r:
+				spent += int(costs[mini(i, costs.size() - 1)])
+		if bool(n.keystone):
+			keys.append({"id": id, "name": str(n.name), "owned": r > 0, "state": prog.state(id)})
+	return {"id": bid, "name": str(b.get("name", bid)), "accent": str(b.get("accent", "")), "color": b.get("color", [1, 1, 1]),
+		"blurb": str(b.get("blurb", "")), "icon": str(b.get("icon", "tree_" + bid)), "keystones": keys,
+		"points_spent": spent, "nodes_owned": owned}

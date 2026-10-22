@@ -90,3 +90,10 @@ static func pin(p: Object) -> bool:
 static func clear(p: Object) -> void:
 	if p and is_instance_valid(p) and p.has_meta(META):
 		p.remove_meta(META)
+
+
+## Hare's Break (§24.4): drop every active slow (roots stay: a Crawler still holds on).
+static func clear_slows(p: Object) -> void:
+	var st := _st(p)
+	if not st.is_empty():
+		st.slows.clear()

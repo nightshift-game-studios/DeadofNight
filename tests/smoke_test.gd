@@ -449,10 +449,12 @@ func _run() -> void:
 	var low_r: Rect2 = stm._nodes[low_id].get_global_rect()
 	check(clip_r.encloses(low_r) and vp_r.encloses(low_r) and stm._pan.x == 0.0, "skill tree: panning down shows the class dock's last row (%s)" % low_id)
 	stm._set_pan(Vector2.ZERO)
-	progress.skill_ranks["mk_key"] = 1 # temporarily own a keystone to see the exclusion state
+	var had_spotter: bool = progress.skill_ranks.has("mk_spotter")
+	progress.skill_ranks["mk_spotter"] = 1 # temporarily own one side of a fork to see the exclusion state (§24: keystones no longer exclude)
 	var states_ok: bool = stm.ui_state("sv_root") in ["owned", "maxed"] and stm.ui_state("lg_spare") in ["available", "unaffordable"] \
-		and stm.ui_state("lg_gilded") == "locked" and stm.ui_state("sp_key") == "excluded"
-	progress.skill_ranks.erase("mk_key")
+		and stm.ui_state("lg_gilded") == "locked" and stm.ui_state("mk_longcount") == "excluded"
+	if not had_spotter:
+		progress.skill_ranks.erase("mk_spotter")
 	check(states_ok, "skill tree node states: owned / available / locked / excluded")
 	var ub := [0]
 	stm.skill_unlocked.connect(func(_id): ub[0] += 1)

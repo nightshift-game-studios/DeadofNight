@@ -158,7 +158,8 @@ node("lg_draft", "Second Draft", "ledger", c + 1, 4, "Each normal offer slot has
 # r10 core | r11-13 one path per Q ability (A left, B right; a path's nodes only run while that ability is equipped)
 # | r14 oath fork | r15 capstone (unlocks the class legendaries) | r16 two class keystones (one per class).
 CLS = {"soldier": 1, "scout": 5, "sexton": 9, "chandler": 13}
-ABIL = {"soldier": ("dash", "rally_banner"), "scout": ("adrenaline", "chalk_mark"),
+# §24 (playtest 2026-10-22 #9): every Q is class-unique. Dash -> Breach Rush, Adrenaline -> Hare's Break.
+ABIL = {"soldier": ("breach_rush", "rally_banner"), "scout": ("hares_break", "chalk_mark"),
         "sexton": ("grave_bell", "headstone"), "chandler": ("vigil_candle", "ember_brand")}
 
 
@@ -292,7 +293,41 @@ klass("chandler", "ch",
      [E("stat_mod", {"stat": "ability_cd_mult", "mult": 0.65}), E("stat_mod", {"stat": "ab_candle_count", "add": 1.0}),
       E("stat_mod", {"stat": "ab_candle_time", "mult": 0.7}), E("stat_mod", {"stat": "ab_brand_time", "mult": 0.7})]))
 
-# so/sc existing nodes: keep their chains; costs untouched.
+# so/sc existing nodes: keep their chains and costs; §24 retexts them for Breach Rush / Hare's Break.
+move("so_ram", by_id["so_ram"]["x"], by_id["so_ram"]["y"], name="Ram's Shoulder",
+     description="Breach Rush hits +{damage} harder and catches zombies {r}m wider.", values={"damage": 40, "r": 0.5},
+     effects=[E("stat_mod", {"stat": "ab_rush_damage", "add": 40.0}), E("stat_mod", {"stat": "ab_rush_radius", "add": 0.5})])
+move("so_twin", by_id["so_twin"]["x"], by_id["so_twin"]["y"], description="Breach Rush has {charges} charges.")
+move("so_breacher", by_id["so_breacher"]["x"], by_id["so_breacher"]["y"],
+     description="A kill within {window}s of a Breach Rush refunds a charge. Unlocks the Soldier legendary card.")
+move("sc_fed", by_id["sc_fed"]["x"], by_id["sc_fed"]["y"],
+     description="Kills during Hare's Break extend it by {extend}s (max +{max_extend}s).")
+move("sc_ghost", by_id["sc_ghost"]["x"], by_id["sc_ghost"]["y"],
+     description="During Hare's Break, zombie swings have a {dodge_pct}% chance to miss you.")
+move("sc_racing_heart", by_id["sc_racing_heart"]["x"], by_id["sc_racing_heart"]["y"],
+     description="Hare's Break also gives +{rate_pct}% fire rate. Unlocks the Scout legendary card.",
+     drawback="Hare's Break cooldown +{cd_add}s.")
+
+# ------------------------------------------------------------------ §24 Specialization rework (playtest 2026-10-22 #3, #8)
+# Main trees (Marksman, Sapper, Ledger, Survivor, Freerunner): open to every class; each keeps its own keystone (the old
+# one-keystone-across-the-tree group is gone). Ledger gets one (Red Ink) so every main path has a keystone.
+# Specialization trees (Soldier, Scout, Sexton, Chandler): the old class branches, same ids; only the chosen
+# Specialization (= class) can spend points there; picks in other Specializations are kept and run again when you switch back.
+for k in ("mk_key", "sp_key", "sv_key", "fr_key"):
+    by_id[k]["choice_group"] = ""
+if "lg_key" not in by_id:
+    node("lg_key", "Red Ink", "ledger", GEN["ledger"], 5,
+         "Field Card offers show {size} more card and every match starts with {rerolls} more free reroll.", {"size": 1, "rerolls": 2, "pen_pct": 20},
+         [E("offer_mod", {"size": 1, "free_rerolls": 2}), E("stat_mod", {"stat": "points_kill_mult", "add": -0.2})],
+         cost=[4], requires_any=["lg_gleaning", "lg_draft"], typ="keystone", drawback="Points from kills -{pen_pct}%.")
+for n in by_id.values():
+    if n.get("class", ""):
+        n["tab"] = "spec"
+        n["tab_x"] = n["x"] - (CLS[n["class"]] - 1)
+        n["tab_y"] = n["y"] - 10
+    else:
+        n["tab"] = "main"
+        n["tab_x"], n["tab_y"] = n["x"], n["y"]
 tree["nodes"] = list(by_id.values())
 tree["grid"] = {"cols": 15, "rows": 17, "cell_w": 112, "cell_h": 96, "class_rows": [10, 16]}
 for b in tree["branches"]:
@@ -300,11 +335,21 @@ for b in tree["branches"]:
         b["x"] = GEN[b["id"]] - (0 if b["id"] == "ledger" else 1)
     if b["id"] in CLS:
         b["x"] = CLS[b["id"]] - 1
-        b["blurb"] = {"soldier": "Dash | Rally Banner", "scout": "Adrenaline | Chalk Mark"}.get(b["id"], b["blurb"])
+        b["blurb"] = {"soldier": "Breach Rush | Rally Banner", "scout": "Hare's Break | Chalk Mark"}.get(b["id"], b["blurb"])
 if "sexton" not in [b["id"] for b in tree["branches"]]:
     tree["branches"] += [
         {"id": "sexton", "name": "Sexton", "accent": "sexton_slate", "color": [0.6, 0.58, 0.68], "x": CLS["sexton"] - 1, "class": "sexton", "blurb": "Grave Bell | Headstone"},
         {"id": "chandler", "name": "Chandler", "accent": "chandler_ember", "color": [0.92, 0.55, 0.22], "x": CLS["chandler"] - 1, "class": "chandler", "blurb": "Vigil Candle | Ember Brand"}]
+for b in tree["branches"]:
+    b["kind"] = "spec" if b.get("class", "") else "main"
+    b["icon"] = ("spec_" + b["id"]) if b["kind"] == "spec" else ("tree_" + b["id"])
+    b["keystones"] = [n["id"] for n in tree["nodes"] if n["branch"] == b["id"] and n["keystone"]]
+    if b["kind"] == "spec":
+        b["abilities"] = list(ABIL[b["id"]])
+tree["tabs"] = {"_help": "§24: two tabs. main = the 5 main trees (any class); spec = one Specialization tree per class, where the "
+                "class and its Q are picked too. Nodes carry tab, tab_x, tab_y (x/y stay the old combined grid).",
+                "main": {"cols": 15, "rows": 8, "branches": [b for b in GEN]},
+                "spec": {"cols": 3, "rows": 7, "branches": list(CLS)}}
 tree["respec"] = {"_help": "DESIGN §23.6. Undo of a pick made this home visit is free. A full respec: first one per character free, then Scrap = clamp(per_point x points spent, min, max).",
                   "currency": "scrap", "free_full_respecs": 1, "per_point": 2, "min": 10, "max": 200}
 tree["_help"] = ("v2 meta tree (DESIGN §16, §23). See /workspace/skillz/SKILLTREE_API.md. Rank-indexed params are arrays (index = rank-1); "
@@ -314,8 +359,12 @@ tree["_help"] = ("v2 meta tree (DESIGN §16, §23). See /workspace/skillz/SKILLT
 # ------------------------------------------------------------------ class legendary cards
 cards = json.load(open(CARDS))
 cmap = {c["id"]: c for c in cards["cards"]}
-cmap["L_breakline"]["ability"] = "dash"
-cmap["L_redline"]["ability"] = "adrenaline"
+cmap["L_breakline"]["ability"] = "breach_rush"
+cmap["L_breakline"]["description"] = "The end of a Breach Rush detonates your grenade type at {frac_pct}% damage ({icd}s cooldown)."
+cmap["L_breakline"]["summary"] = "Breach Rushes end in a grenade blast."
+cmap["L_redline"]["ability"] = "hares_break"
+cmap["L_redline"]["description"] = "Hare's Break lasts {dur}s and every hit during it counts as precision."
+cmap["L_redline"]["summary"] = "Long Hare's Break where every hit is precision."
 
 
 def card(id, name, cls, ability, req, summary, desc, values, effects):

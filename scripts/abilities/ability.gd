@@ -13,6 +13,8 @@ extends Resource
 @export var summary: String = ""
 @export var cooldown: float = 5.0 ## seconds
 @export var duration: float = 0.0 ## seconds the effect lasts (0 = instant)
+## Sfx key played on cast (§24, player.gd patch ability_sfx_key). "" = the old dash / adrenaline_boost fallback.
+@export var sfx: String = ""
 
 
 ## Called when the player presses Q and the ability is off cooldown.

@@ -1,16 +1,18 @@
 [gd_resource type="Resource" script_class="PlayerClass" format=3]
 
 [ext_resource type="Script" path="res://scripts/classes/player_class.gd" id="1_pc"]
-[ext_resource type="Script" path="res://scripts/abilities/speed_boost_ability.gd" id="2_boost"]
+[ext_resource type="Script" path="res://scripts/abilities/hares_break_ability.gd" id="2_boost"]
 [ext_resource type="Script" path="res://scripts/abilities/chalk_mark_ability.gd" id="3_chalk"]
 
 [sub_resource type="Resource" id="Resource_boost"]
 script = ExtResource("2_boost")
 speed_multiplier = 1.6
-display_name = "Adrenaline"
-id = "adrenaline"
+reload_fraction = 1.0
+display_name = "Hare's Break"
+id = "hares_break"
+sfx = "q_hares_break"
 kind = "movement"
-summary = "Run 60% faster for 4 seconds."
+summary = "Break away: run 60% faster for 4 s, reload at once and shake off slows."
 cooldown = 10.0
 duration = 4.0
 
@@ -18,6 +20,7 @@ duration = 4.0
 script = ExtResource("3_chalk")
 display_name = "Chalk Mark"
 id = "chalk_mark"
+sfx = "q_chalk_mark"
 kind = "mark"
 summary = "Mark up to 8 zombies ahead: they take 25% more damage for 8 seconds."
 cooldown = 12.0
@@ -28,7 +31,7 @@ script = ExtResource("1_pc")
 display_name = "Scout"
 id = "scout"
 role = "Flanker"
-description = "Fragile but fast. Q: Adrenaline or Chalk Mark. G: Tremor Charge."
+description = "Fragile but fast. Q: Hare's Break or Chalk Mark. G: Tremor Charge."
 max_health = 75
 walk_speed = 5.8
 sprint_speed = 9.5

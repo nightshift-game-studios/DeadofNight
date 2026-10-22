@@ -8,6 +8,8 @@ extends RefCounted
 const IDS: Array[String] = ["soldier", "scout", "sexton", "chandler"] ## picker order
 const DIR := "res://resources/classes/%s.tres"
 const MOVEMENT := "movement"
+## §24 (playtest 2026-10-22 #9): the two generic Qs became class-unique ones. Old saves / cards / nodes map here.
+const ABILITY_ALIASES := {"dash": "breach_rush", "adrenaline": "hares_break"}
 
 static var _cache: Dictionary = {}
 
@@ -53,10 +55,16 @@ static func default_ability(class_id: String) -> String:
 
 
 static func find_ability(class_id: String, ability_id: String) -> Ability:
+	ability_id = canonical_ability(ability_id)
 	for a in abilities(class_id):
 		if str(a.id) == ability_id:
 			return a
 	return null
+
+
+## Current id for a (possibly pre-§24) ability id.
+static func canonical_ability(ability_id: String) -> String:
+	return str(ABILITY_ALIASES.get(ability_id, ability_id))
 
 
 ## Loadout rows: [{id, name, kind, summary, cooldown, duration, default, movement}].
@@ -65,7 +73,8 @@ static func ability_info(class_id: String) -> Array:
 	var d := default_ability(class_id)
 	for a in abilities(class_id):
 		out.append({"id": str(a.id), "name": a.display_name, "kind": str(a.kind), "summary": str(a.summary),
-			"cooldown": a.cooldown, "duration": a.duration, "default": str(a.id) == d, "movement": str(a.kind) == MOVEMENT})
+			"cooldown": a.cooldown, "duration": a.duration, "default": str(a.id) == d, "movement": str(a.kind) == MOVEMENT,
+			"icon": "q_" + str(a.id), "sfx": str(a.get("sfx")) if a.get("sfx") != null else ""})
 	return out
 
 

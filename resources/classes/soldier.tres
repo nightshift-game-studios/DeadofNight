@@ -1,23 +1,29 @@
 [gd_resource type="Resource" script_class="PlayerClass" format=3]
 
 [ext_resource type="Script" path="res://scripts/classes/player_class.gd" id="1_pc"]
-[ext_resource type="Script" path="res://scripts/abilities/dash_ability.gd" id="2_dash"]
+[ext_resource type="Script" path="res://scripts/abilities/breach_rush_ability.gd" id="2_rush"]
 [ext_resource type="Script" path="res://scripts/abilities/rally_banner_ability.gd" id="3_banner"]
 
-[sub_resource type="Resource" id="Resource_dash"]
-script = ExtResource("2_dash")
-dash_speed = 22.0
-display_name = "Dash"
-id = "dash"
+[sub_resource type="Resource" id="Resource_rush"]
+script = ExtResource("2_rush")
+damage = 45.0
+radius = 1.6
+overshield = 15.0
+knockback = 7.0
+dash_speed = 20.0
+display_name = "Breach Rush"
+id = "breach_rush"
+sfx = "q_breach_rush"
 kind = "movement"
-summary = "Burst a few metres in the direction you are moving."
-cooldown = 4.0
-duration = 0.18
+summary = "Shoulder-charge 6 m: gain 15 overshield and plough through zombies for 45 damage each."
+cooldown = 7.0
+duration = 0.3
 
 [sub_resource type="Resource" id="Resource_banner"]
 script = ExtResource("3_banner")
 display_name = "Rally Banner"
 id = "rally_banner"
+sfx = "q_rally_banner"
 kind = "deployable"
 summary = "Plant a banner: stand near it to build overshield; zombies near it slow down."
 cooldown = 16.0
@@ -28,11 +34,11 @@ script = ExtResource("1_pc")
 display_name = "Soldier"
 id = "soldier"
 role = "Front line"
-description = "Balanced health and speed. Q: Dash or Rally Banner. G: Frag Grenade."
+description = "Balanced health and speed. Q: Breach Rush or Rally Banner. G: Frag Grenade."
 max_health = 100
 walk_speed = 5.0
 sprint_speed = 8.5
 jump_velocity = 5.0
 grenade_id = "frag"
-ability = SubResource("Resource_dash")
-abilities = Array[Resource]([SubResource("Resource_dash"), SubResource("Resource_banner")])
+ability = SubResource("Resource_rush")
+abilities = Array[Resource]([SubResource("Resource_rush"), SubResource("Resource_banner")])

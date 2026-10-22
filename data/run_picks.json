@@ -2122,8 +2122,8 @@
 			"tags": [
 				"soldier"
 			],
-			"summary": "Dashes end in a grenade blast.",
-			"description": "The end of a dash detonates your grenade type at {frac_pct}% damage ({icd}s cooldown).",
+			"summary": "Breach Rushes end in a grenade blast.",
+			"description": "The end of a Breach Rush detonates your grenade type at {frac_pct}% damage ({icd}s cooldown).",
 			"drawback": "",
 			"values": {
 				"frac_pct": 50,
@@ -2142,7 +2142,7 @@
 					]
 				}
 			],
-			"ability": "dash"
+			"ability": "breach_rush"
 		},
 		{
 			"id": "L_redline",
@@ -2160,8 +2160,8 @@
 			"tags": [
 				"scout"
 			],
-			"summary": "Long Adrenaline where every hit is precision.",
-			"description": "Adrenaline lasts {dur}s and every hit during it counts as precision.",
+			"summary": "Long Hare's Break where every hit is precision.",
+			"description": "Hare's Break lasts {dur}s and every hit during it counts as precision.",
 			"drawback": "",
 			"values": {
 				"dur": 8
@@ -2180,7 +2180,7 @@
 					}
 				}
 			],
-			"ability": "adrenaline"
+			"ability": "hares_break"
 		},
 		{
 			"id": "L_unstruck",

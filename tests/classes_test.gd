@@ -93,8 +93,8 @@ func _roster_checks() -> void:
 	check(every_has_non_move, "every class has a non-movement ability (deployable / aura / mark)")
 	check(kinds.has("deployable") and kinds.has("aura") and kinds.has("mark"), "deployable, aura and mark kinds all exist")
 	var b := ClassRoster.build("soldier", "rally_banner")
-	check(b.ability.id == "rally_banner" and ClassRoster.template("soldier").ability.id == "dash", "build() swaps the Q ability on a private copy")
-	check(ClassRoster.build("soldier", "nope").ability.id == "dash" and ClassRoster.build("ghost").id == "soldier", "unknown ability -> default; unknown class -> Soldier")
+	check(b.ability.id == "rally_banner" and ClassRoster.template("soldier").ability.id == "breach_rush", "build() swaps the Q ability on a private copy")
+	check(ClassRoster.build("soldier", "nope").ability.id == "breach_rush" and ClassRoster.build("ghost").id == "soldier", "unknown ability -> default; unknown class -> Soldier")
 	check(ClassRoster.describe("sexton").max_health == 125 and ClassRoster.describe("chandler").abilities.size() == 2, "describe() card data")
 
 
@@ -105,8 +105,8 @@ func _tree_checks() -> void:
 	for id in prog.all_node_ids():
 		var b: String = prog.get_skill(id).branch
 		counts[b] = int(counts.get(b, 0)) + 1
-	check(prog.all_node_ids().size() == 109, "109 nodes (%d)" % prog.all_node_ids().size())
-	check(counts.get("marksman") == 13 and counts.get("ledger") == 9 and counts.get("sexton") == 12 and counts.get("chandler") == 12, "branch sizes %s" % str(counts))
+	check(prog.all_node_ids().size() == 110, "110 nodes (%d)" % prog.all_node_ids().size())
+	check(counts.get("marksman") == 13 and counts.get("ledger") == 10 and counts.get("sexton") == 12 and counts.get("chandler") == 12, "branch sizes %s" % str(counts))
 	var groups := {}
 	for id in prog.all_node_ids():
 		var g: String = prog.get_skill(id).choice_group
@@ -128,6 +128,15 @@ func _tree_checks() -> void:
 	check(prog.state("sx_key_pallbearer") == "available" and prog.buy_rank("sx_key_pallbearer"), "class keystone available alongside a general keystone")
 	check(prog.state("sx_key_vesper") == "excluded", "second Sexton keystone excluded")
 	check(prog.state("mk_cadence") == "available", "doctrine fork open after the legend")
+	# §24: every main tree keeps its own keystone (no one-keystone-across-the-tree group any more)
+	prog.skill_ranks.merge({"sv_root": 1, "sv_skin": 1, "sv_breath": 1, "sv_legend": 1})
+	prog._recompute_spent()
+	check(prog.state("sv_key") == "available" and prog.excluded_by("sv_key") == "", "§24: Survivor keystone open next to Glass Sight")
+	for k in ["mk_key", "sp_key", "lg_key", "sv_key", "fr_key"]:
+		check(prog.get_skill(k).keystone and prog.get_skill(k).choice_group == "" and prog.get_skill(k).tab == "main", "§24: %s is its main tree's own keystone" % k)
+	for k in ["sv_root", "sv_skin", "sv_breath", "sv_legend"]:
+		prog.skill_ranks.erase(k)
+	prog._recompute_spent()
 	prog.buy_rank("mk_cadence")
 	check(prog.state("mk_culling") == "excluded" and prog.state("mk_called") == "available", "doctrine fork: Cadence locks Culling; its follow-up opens")
 	prog.skill_ranks = {}
@@ -366,8 +375,9 @@ func _spec_checks() -> void:
 	check(spec.refund("mk_spotter").ok and spec.can_pick("mk_longcount").ok, "undo this visit's pick frees the other fork")
 	var info: Dictionary = spec.node_info("so_colors")
 	check(info.ability == "rally_banner" and info.inactive_reason.begins_with("Needs Rally Banner"), "ability-path node explains it needs Rally Banner")
-	check(spec.node_info("sx_core").inactive_reason.begins_with("Sexton only"), "other class's node explains it")
-	check(spec.list_nodes({"branch": "soldier"}).size() == 12 and spec.list_nodes({"class": ""}).size() == 61, "list_nodes filters")
+	check(spec.node_info("sx_core").inactive_reason.begins_with("Sexton Specialization"), "other Specialization's node explains it")
+	check(spec.list_nodes({"branch": "soldier"}).size() == 12 and spec.list_nodes({"class": ""}).size() == 62, "list_nodes filters")
+	_specialization_checks()
 	var pv: Dictionary = spec.preview("so_core")
 	var hp_line: Dictionary = pv.lines.filter(func(l): return l.stat == "max_health")[0]
 	check(near(hp_line.before, 100.0) and near(hp_line.after, 115.0) and pv.text_next != "", "preview: Max health 100 -> 115")
@@ -392,6 +402,46 @@ func _spec_checks() -> void:
 	prog.respec_allowed = true
 	prog.skill_ranks = {}
 	prog._recompute_spent()
+
+
+## §24 (playtest 2026-10-22 #3 #8 #9): main tab + Specialization tab, class picked there.
+func _specialization_checks() -> void:
+	var mains: Array = spec.main_trees()
+	check(mains.map(func(r): return r.id) == ["marksman", "sapper", "ledger", "survivor", "freerunner"], "main_trees(): the 5 main trees")
+	check(mains.all(func(r): return r.keystones.size() == 1), "every main tree has exactly one keystone")
+	var rows: Array = spec.specializations()
+	check(rows.map(func(r): return r.id) == ["soldier", "scout", "sexton", "chandler"] and rows[0].selected and rows[0].icon == "spec_soldier",
+		"specializations(): 4 rows, Soldier selected")
+	check(rows.all(func(r): return r.abilities.size() == 2 and r.keystones.size() == 2 and r.abilities.any(func(a): return a.selected)), "each row: 2 Qs (one selected) + 2 keystones")
+	var qids := {}
+	var dup := false
+	for r in rows:
+		for a in r.abilities:
+			dup = dup or qids.has(a.id)
+			qids[a.id] = true
+	check(not dup and not qids.has("dash") and not qids.has("adrenaline"), "§24: every Q is class-unique (no Dash / Adrenaline)")
+	check(spec.tab_nodes("spec").size() == 48 and spec.spec_nodes("sexton").all(func(r): return r.tab_x >= 0 and r.tab_x <= 2 and r.tab_y >= 0 and r.tab_y <= 6),
+		"spec tab: 48 nodes, each tree on a 3x7 grid")
+	var cp: Dictionary = spec.can_pick("sx_core")
+	check(not cp.ok and cp.code == "other_spec" and "Sexton" in cp.reason, "can't spend in another Specialization (%s)" % cp.reason)
+	check(spec.can_pick("so_core").ok, "own Specialization open")
+	spec.pick("so_core")
+	var heard: Array = []
+	spec.specialization_changed.connect(func(c): heard.append(c))
+	check(spec.select_specialization("sexton").ok and prog.selected_class == "sexton" and heard == ["sexton"], "select_specialization picks the class")
+	check(spec.can_pick("sx_core").ok and spec.can_pick("so_ram").code == "other_spec", "the new Specialization opens, the old one closes")
+	check(prog.rank("so_core") == 1 and spec.can_refund("so_core").ok, "old Specialization's ranks kept; undo session survives the switch")
+	check(spec.select_specialization("sexton").code == "selected", "already selected")
+	check(spec.select_q("headstone").ok and chars.ability_for("sexton") == "headstone", "select_q on the current Specialization")
+	check(spec.select_q("dash", "soldier").ok and chars.ability_for("soldier") == "breach_rush", "select_q maps old ids (dash -> Breach Rush)")
+	check(not spec.select_q("chalk_mark").ok, "select_q refuses another class's Q")
+	prog.respec_allowed = false
+	check(spec.select_specialization("soldier").code == "blocked", "Specialization locked during a match")
+	prog.respec_allowed = true
+	check(spec.select_specialization("soldier").ok, "back to Soldier")
+	spec.refund("so_core")
+	chars.abilities.erase("sexton")
+	chars.abilities.erase("soldier")
 
 
 # ---------------------------------------------------------------- in a match: abilities + class items
@@ -469,10 +519,11 @@ func _scene_checks() -> void:
 	check(by.health < 1000, "branded kill bursts on neighbours (%d)" % by.health)
 	# ability-gated meta nodes + skill tuning
 	await _use("soldier", "rally_banner", false, {"so_core": 1, "so_colors": 1, "so_ram": 1})
-	check(not runner.effects_from("so_colors").is_empty() and runner.effects_from("so_ram").is_empty(), "banner path runs, Dash path idle with Rally Banner")
+	check(not runner.effects_from("so_colors").is_empty() and runner.effects_from("so_ram").is_empty(), "banner path runs, Breach Rush path idle with Rally Banner")
 	check(near(player.mod_stat("ab_banner_radius", 6.0), 8.0), "Field Colors tunes banner radius 6 -> 8")
 	# class item effect + synergy
-	await _use("soldier", "dash", false)
+	await _use("soldier", "dash", false) # §24 alias: an old "dash" pick plays Breach Rush
+	check(player.ability is BreachRushAbility, "old dash pick -> Breach Rush")
 	var ci= gdb.roll_armor("class_item", 4)
 	ci.class_effect = "ci_tattered_standard"
 	ci.class_id = "soldier"
@@ -489,7 +540,8 @@ func _scene_checks() -> void:
 	prog.skill_ranks = {"sv_key": 1}
 	player.apply_stats()
 	check(runner.effects_from("ci_syn:ci_tattered_standard").size() == 1, "synergy active with Stoneblood")
-	await _use("scout", "adrenaline", false)
+	await _use("scout", "adrenaline", false) # §24 alias
+	check(player.ability is HaresBreakAbility, "old adrenaline pick -> Hare's Break")
 	check(runner.effects_from("ci:ci_tattered_standard").is_empty(), "Soldier item does nothing on a Scout")
 	player.inventory.equipped["class_item"] = null
 	player.inventory.armor_changed.emit()
