@@ -89,11 +89,11 @@ order of opening is valid; the verify script stages them D1..D14. Each new door 
 - **Spawns:** PlayerSpawn (-10, 0.1, 21), facing south. There are 23 SpawnPoints, each tagged with an area: 3 in start, 3
   in freight_office, 3 in roundhouse (one in the pit) and 2 in every other area. Each sits at a breach point (window,
   chute, fence gap) and has a red breach decal.
-- **Chests:** 5 Chests. There are 28 ChestSpots: empty Marker3Ds in the persistent group `chest_spot`, with meta `area`
-  (a StringName), `hidden` (15 hidden), `initial` (the 5 under Chests) and `weight` 1.
-  - The closest pair is 8.25 m apart (the minimum is 6).
+- **Chests:** 5 Chests. There are 11 ChestSpots (playtest #4 trimmed them from 28): empty Marker3Ds in the persistent group
+  `chest_spot`, with meta `area` (a StringName), `hidden` (6 hidden), `initial` (the 5 under Chests) and `weight` 1.
+  - The closest pair is 12.8 m apart (the minimum is 6).
   - -Z faces the walkway, and each has a 1.2 x 0.8 m footprint plus 1.2 m clear in front.
-  - All are on nav, and every room has at least 2. Some are on upper decks.
+  - All are on nav at ground or deck level. Start has 2 and every other room has 1 (the contract allows 1 per area on 6+ area maps).
 - **Hooks:**
   - PowerWeaponSpot is on the pump-house roof.
   - PerkMachineSpot is under the shed gallery.

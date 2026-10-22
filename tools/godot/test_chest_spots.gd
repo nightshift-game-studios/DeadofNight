@@ -5,7 +5,7 @@ extends SceneTree
 ## Checks per map: ChestSpots node; 8-12 children, each an EMPTY Marker3D in the persistent group chest_spot; meta area
 ## (StringName, or Array of StringName for boundary spots), hidden (bool), initial (bool), weight (int, optional);
 ## initial spots == the Chests/ markers (position within 0.05 m); >= 6 m apart and >= 6 m from PlayerSpawn; >= 2 spots
-## per area tag used by SpawnPoints; floor under the 1.2 x 0.8 m footprint (origin on the floor, no void); footprint
+## per area tag used by SpawnPoints (>= 1 on maps with 6+ area tags); floor under the 1.2 x 0.8 m footprint (origin on the floor, no void); footprint
 ## (0.05-1.05 m) and the 1.2 x 1.2 x 1.8 m zone in front (-Z) free of layer-1 collision; the front zone on the navmesh
 ## and reachable from PlayerSpawn with all doors open; nav carve compatibility: with a 1.2 x 0.8 m carve at EVERY spot
 ## at once, every spot front and every SpawnPoint still reaches PlayerSpawn.
@@ -94,8 +94,9 @@ func _test(path: String, L: Array) -> void:
 	var area_tags := {}
 	if map.has_node("SpawnPoints"):
 		for s in map.get_node("SpawnPoints").get_children(): if s.has_meta("area"): area_tags[s.get_meta("area")] = true
-	var thin := area_tags.keys().filter(func(t): return int(per.get(t, 0)) < 2)
-	_chk(thin.is_empty(), ">= 2 spots per area %s %s" % [per, ("missing " + str(thin)) if thin.size() else ""], L)
+	var need := 1 if area_tags.size() >= 6 else 2 # large maps (6+ areas): 8-12 spots cannot give every area 2
+	var thin := area_tags.keys().filter(func(t): return int(per.get(t, 0)) < need)
+	_chk(thin.is_empty(), ">= %d spots per area %s %s" % [need, per, ("missing " + str(thin)) if thin.size() else ""], L)
 	# geometry
 	if "rebake_on_door_open" in map: map.set("rebake_on_door_open", false)
 	if map.has_node("NavigationRegion3D/Doors"):

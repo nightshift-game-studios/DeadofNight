@@ -57,7 +57,7 @@ world collision on layer 1, navmesh baked from colliders.** Everything marked *o
 │     metadata/initial: bool  (true exactly for the spots at the Chests/ markers; Chests/ stays as the fallback)
 │     metadata/weight: int    optional, default 1 (all spots ship with 1)
 │     metadata/note: String   optional, human description
-│     Rules: ≥ 6 m apart, ≥ 6 m from PlayerSpawn, ≥ 2 per area, a 1.2 × 0.8 m footprint on floor plus 1.2 m (1.8 m tall) clear in
+│     Rules: ≥ 6 m apart, ≥ 6 m from PlayerSpawn, ≥ 2 per area (≥ 1 per area on maps with 6+ areas, so 8–12 still fits), a 1.2 × 0.8 m footprint on floor plus 1.2 m (1.8 m tall) clear in
 │     front, front on the navmesh and reachable from PlayerSpawn by players and zombies (no perches), never in the void or inside
 │     geometry, and still valid with a 1.2 × 0.8 m NavigationObstacle3D carve at every spot at once (all SpawnPoints still path).
 │     Checked by `tools/godot/test_chest_spots.gd -- <map.tscn…>` (exits 1 on any failure).

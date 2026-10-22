@@ -12272,15 +12272,7 @@ metadata/initial = true
 metadata/weight = 1
 metadata/note = "island platform (Chest1)"
 
-[node name="ChestSpot2" type="Marker3D" parent="ChestSpots" unique_id=373984757 groups=["chest_spot"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 2, 19.4)
-metadata/area = &"start"
-metadata/hidden = true
-metadata/initial = false
-metadata/weight = 1
-metadata/note = "Relay Hut roof (dead end, WJ1)"
-
-[node name="ChestSpot3" type="Marker3D" parent="ChestSpots" unique_id=971469839 groups=["chest_spot"]]
+[node name="ChestSpot2" type="Marker3D" parent="ChestSpots" unique_id=971469839 groups=["chest_spot"]]
 transform = Transform3D(6.12323e-17, 0, -1, 0, 1, 0, 1, 0, 6.12323e-17, -27.2, 0, 38.5)
 metadata/area = &"start"
 metadata/hidden = true
@@ -12288,7 +12280,7 @@ metadata/initial = false
 metadata/weight = 1
 metadata/note = "behind the coach, west fence"
 
-[node name="ChestSpot4" type="Marker3D" parent="ChestSpots" unique_id=751474356 groups=["chest_spot"]]
+[node name="ChestSpot3" type="Marker3D" parent="ChestSpots" unique_id=751474356 groups=["chest_spot"]]
 transform = Transform3D(6.12323e-17, 0, -1, 0, 1, 0, 1, 0, 6.12323e-17, -59.2, 3.6, 30)
 metadata/area = &"freight_office"
 metadata/hidden = true
@@ -12296,31 +12288,7 @@ metadata/initial = true
 metadata/weight = 1
 metadata/note = "office gallery (Chest5)"
 
-[node name="ChestSpot5" type="Marker3D" parent="ChestSpots" unique_id=32145414 groups=["chest_spot"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40.5, 0, 43.2)
-metadata/area = &"freight_office"
-metadata/hidden = false
-metadata/initial = false
-metadata/weight = 1
-metadata/note = "south wall, booking hall"
-
-[node name="ChestSpot6" type="Marker3D" parent="ChestSpots" unique_id=1507362177 groups=["chest_spot"]]
-transform = Transform3D(-1, 0, 1.22465e-16, 0, 1, 0, -1.22465e-16, 0, -1, -43, 0, 32.5)
-metadata/area = &"freight_office"
-metadata/hidden = true
-metadata/initial = false
-metadata/weight = 1
-metadata/note = "behind the baggage cage"
-
-[node name="ChestSpot7" type="Marker3D" parent="ChestSpots" unique_id=564477545 groups=["chest_spot"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 1, 43.2)
-metadata/area = &"loading_bay"
-metadata/hidden = false
-metadata/initial = false
-metadata/weight = 1
-metadata/note = "on the loading dock"
-
-[node name="ChestSpot8" type="Marker3D" parent="ChestSpots" unique_id=1203033568 groups=["chest_spot"]]
+[node name="ChestSpot4" type="Marker3D" parent="ChestSpots" unique_id=1203033568 groups=["chest_spot"]]
 transform = Transform3D(6.12323e-17, 0, 1, 0, 1, 0, -1, 0, 6.12323e-17, 31.2, 0, 26)
 metadata/area = &"loading_bay"
 metadata/hidden = true
@@ -12328,7 +12296,7 @@ metadata/initial = false
 metadata/weight = 1
 metadata/note = "behind trailer T2, east wall"
 
-[node name="ChestSpot9" type="Marker3D" parent="ChestSpots" unique_id=986620559 groups=["chest_spot"]]
+[node name="ChestSpot5" type="Marker3D" parent="ChestSpots" unique_id=986620559 groups=["chest_spot"]]
 transform = Transform3D(6.12323e-17, 0, 1, 0, 1, 0, -1, 0, 6.12323e-17, 59.2, 0, 38)
 metadata/area = &"cold_store"
 metadata/hidden = false
@@ -12336,31 +12304,7 @@ metadata/initial = true
 metadata/weight = 1
 metadata/note = "east wall (Chest2)"
 
-[node name="ChestSpot10" type="Marker3D" parent="ChestSpots" unique_id=420084281 groups=["chest_spot"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 46.1, 3.6, 33.4)
-metadata/area = &"cold_store"
-metadata/hidden = true
-metadata/initial = false
-metadata/weight = 1
-metadata/note = "on top of rack R2"
-
-[node name="ChestSpot11" type="Marker3D" parent="ChestSpots" unique_id=590253004 groups=["chest_spot"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 44, 0, 43.2)
-metadata/area = &"cold_store"
-metadata/hidden = false
-metadata/initial = false
-metadata/weight = 1
-metadata/note = "south wall past the rack bridge"
-
-[node name="ChestSpot12" type="Marker3D" parent="ChestSpots" unique_id=127180832 groups=["chest_spot"]]
-transform = Transform3D(-1, 0, 1.22465e-16, 0, 1, 0, -1.22465e-16, 0, -1, -12, 4, -13.2)
-metadata/area = &"sorting_shed"
-metadata/hidden = true
-metadata/initial = false
-metadata/weight = 1
-metadata/note = "shed gallery"
-
-[node name="ChestSpot13" type="Marker3D" parent="ChestSpots" unique_id=1755177679 groups=["chest_spot"]]
+[node name="ChestSpot6" type="Marker3D" parent="ChestSpots" unique_id=1755177679 groups=["chest_spot"]]
 transform = Transform3D(-1, 0, 1.22465e-16, 0, 1, 0, -1.22465e-16, 0, -1, -13, 0, -2.5)
 metadata/area = &"sorting_shed"
 metadata/hidden = true
@@ -12368,23 +12312,7 @@ metadata/initial = false
 metadata/weight = 1
 metadata/note = "behind the sort cage"
 
-[node name="ChestSpot14" type="Marker3D" parent="ChestSpots" unique_id=474629509 groups=["chest_spot"]]
-transform = Transform3D(6.12323e-17, 0, 1, 0, 1, 0, -1, 0, 6.12323e-17, 3.2, 0, 12)
-metadata/area = &"sorting_shed"
-metadata/hidden = false
-metadata/initial = false
-metadata/weight = 1
-metadata/note = "east wall, slide-lane end"
-
-[node name="ChestSpot15" type="Marker3D" parent="ChestSpots" unique_id=436150971 groups=["chest_spot"]]
-transform = Transform3D(-1, 0, 1.22465e-16, 0, 1, 0, -1.22465e-16, 0, -1, 10, 0, -13.2)
-metadata/area = &"rail_yard"
-metadata/hidden = false
-metadata/initial = false
-metadata/weight = 1
-metadata/note = "north fence by the boxcar ramp"
-
-[node name="ChestSpot16" type="Marker3D" parent="ChestSpots" unique_id=1855906127 groups=["chest_spot"]]
+[node name="ChestSpot7" type="Marker3D" parent="ChestSpots" unique_id=1855906127 groups=["chest_spot"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32, 0, 13.2)
 metadata/area = &"rail_yard"
 metadata/hidden = true
@@ -12392,15 +12320,7 @@ metadata/initial = false
 metadata/weight = 1
 metadata/note = "south fence behind the wagons"
 
-[node name="ChestSpot17" type="Marker3D" parent="ChestSpots" unique_id=294527317 groups=["chest_spot"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -50, 4, -0.75)
-metadata/area = &"coal_stage"
-metadata/hidden = true
-metadata/initial = false
-metadata/weight = 1
-metadata/note = "on the coal trestle"
-
-[node name="ChestSpot18" type="Marker3D" parent="ChestSpots" unique_id=1042566946 groups=["chest_spot"]]
+[node name="ChestSpot8" type="Marker3D" parent="ChestSpots" unique_id=1042566946 groups=["chest_spot"]]
 transform = Transform3D(6.12323e-17, 0, -1, 0, 1, 0, 1, 0, 6.12323e-17, -59.2, 0, 4)
 metadata/area = &"coal_stage"
 metadata/hidden = true
@@ -12408,15 +12328,7 @@ metadata/initial = false
 metadata/weight = 1
 metadata/note = "west fence behind the trestle ramp"
 
-[node name="ChestSpot19" type="Marker3D" parent="ChestSpots" unique_id=1369218164 groups=["chest_spot"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -42, 0, 13.2)
-metadata/area = &"coal_stage"
-metadata/hidden = false
-metadata/initial = false
-metadata/weight = 1
-metadata/note = "south fence"
-
-[node name="ChestSpot20" type="Marker3D" parent="ChestSpots" unique_id=592157285 groups=["chest_spot"]]
+[node name="ChestSpot9" type="Marker3D" parent="ChestSpots" unique_id=592157285 groups=["chest_spot"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -36, 0, -15)
 metadata/area = &"loco_shed"
 metadata/hidden = false
@@ -12424,23 +12336,7 @@ metadata/initial = true
 metadata/weight = 1
 metadata/note = "south wall (Chest4)"
 
-[node name="ChestSpot21" type="Marker3D" parent="ChestSpots" unique_id=1555854583 groups=["chest_spot"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -42, 0, -27.6)
-metadata/area = &"loco_shed"
-metadata/hidden = true
-metadata/initial = false
-metadata/weight = 1
-metadata/note = "behind the locomotive"
-
-[node name="ChestSpot22" type="Marker3D" parent="ChestSpots" unique_id=1834902010 groups=["chest_spot"]]
-transform = Transform3D(6.12323e-17, 0, 1, 0, 1, 0, -1, 0, 6.12323e-17, -28.8, 0, -22)
-metadata/area = &"loco_shed"
-metadata/hidden = false
-metadata/initial = false
-metadata/weight = 1
-metadata/note = "east wall"
-
-[node name="ChestSpot23" type="Marker3D" parent="ChestSpots" unique_id=2069190365 groups=["chest_spot"]]
+[node name="ChestSpot10" type="Marker3D" parent="ChestSpots" unique_id=2069190365 groups=["chest_spot"]]
 transform = Transform3D(-1, 0, 1.22465e-16, 0, 1, 0, -1.22465e-16, 0, -1, -6, -1, -36.5)
 metadata/area = &"roundhouse"
 metadata/hidden = false
@@ -12448,45 +12344,13 @@ metadata/initial = true
 metadata/weight = 1
 metadata/note = "turntable pit floor (Chest3)"
 
-[node name="ChestSpot24" type="Marker3D" parent="ChestSpots" unique_id=1340472430 groups=["chest_spot"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, -14.8)
-metadata/area = &"roundhouse"
-metadata/hidden = true
-metadata/initial = false
-metadata/weight = 1
-metadata/note = "roundhouse gallery"
-
-[node name="ChestSpot25" type="Marker3D" parent="ChestSpots" unique_id=403697335 groups=["chest_spot"]]
-transform = Transform3D(6.12323e-17, 0, 1, 0, 1, 0, -1, 0, 6.12323e-17, 15.2, 0, -30)
-metadata/area = &"roundhouse"
-metadata/hidden = false
-metadata/initial = false
-metadata/weight = 1
-metadata/note = "east wall between ramp and door"
-
-[node name="ChestSpot26" type="Marker3D" parent="ChestSpots" unique_id=836758608 groups=["chest_spot"]]
+[node name="ChestSpot11" type="Marker3D" parent="ChestSpots" unique_id=836758608 groups=["chest_spot"]]
 transform = Transform3D(6.12323e-17, 0, 1, 0, 1, 0, -1, 0, 6.12323e-17, 58.9, 0, -40)
 metadata/area = &"fuel_point"
 metadata/hidden = true
 metadata/initial = false
 metadata/weight = 1
 metadata/note = "inside the pump house"
-
-[node name="ChestSpot27" type="Marker3D" parent="ChestSpots" unique_id=384156862 groups=["chest_spot"]]
-transform = Transform3D(-1, 0, 1.22465e-16, 0, 1, 0, -1.22465e-16, 0, -1, 50, 4, -43.2)
-metadata/area = &"fuel_point"
-metadata/hidden = true
-metadata/initial = false
-metadata/weight = 1
-metadata/note = "pump house roof"
-
-[node name="ChestSpot28" type="Marker3D" parent="ChestSpots" unique_id=2065773980 groups=["chest_spot"]]
-transform = Transform3D(6.12323e-17, 0, -1, 0, 1, 0, 1, 0, 6.12323e-17, 17.2, 0, -22)
-metadata/area = &"fuel_point"
-metadata/hidden = false
-metadata/initial = false
-metadata/weight = 1
-metadata/note = "west wall"
 
 [node name="PickupSpots" type="Node3D" parent="." unique_id=149639472]
 
