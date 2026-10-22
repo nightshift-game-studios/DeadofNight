@@ -246,6 +246,8 @@ func _skill_tree() -> void:
 
 # ------------------------------------------------------------------ #34 stat formulas (no player)
 func _stat_formulas_static() -> void:
+	check(not FileAccess.get_file_as_string("res://scripts/ui/stat_preview.gd").contains("effects(st)") and FileAccess.get_file_as_string("res://scripts/ui/stat_preview.gd").contains("for_player(p"),
+		"v070 StatPreview reads StatEffects.for_player (player.get_stat_effects) instead of its own formula copy")
 	var d0: Dictionary = StatPreviewScr.derived(null, {})
 	var d1: Dictionary = StatPreviewScr.derived(null, {"agility": 100, "toughness": 100, "vitality": 100, "ordnance": 100, "focus": 100, "brawn": 100})
 	# Skillz Economy v2: data/stats.json maxima at 100 (ease-out curve; early points count most)
@@ -342,7 +344,7 @@ func _in_match() -> void:
 				["ability_cooldown", p.ability.cooldown if p.ability else -1.0]]:
 			if not is_equal_approx(float(d[pair[0]]), float(pair[1])):
 				mismatch.append("%s %.3f vs %.3f (+%d)" % [pair[0], d[pair[0]], pair[1], bump])
-	check(mismatch.is_empty(), "#34 StatPreview.derived == player.gd recalc_stats() (3 stat sets) %s" % str(mismatch.slice(0, 3)))
+	check(mismatch.is_empty(), "#34 StatPreview.derived (via StatEffects.for_player) == player.gd recalc_stats() (3 stat sets) %s" % str(mismatch.slice(0, 3)))
 	if piece: # undo the +85 / +42 bumps: at the 100 cap (Economy v2 caps totals) a stat point has no gain left to show
 		for s in STAT_ORDER:
 			piece.stats[s] = int(piece.stats.get(s, 0)) - (85 if s in ["agility", "toughness", "focus"] else 42)

@@ -1,53 +1,41 @@
 class_name StatPreview
 extends RefCounted
 ## Gooey (playtest #34): what the six armor stats actually do, as numbers, for the character screen.
-## derived() mirrors player.gd recalc_stats() (armor part: StatEffects.effects, Skillz §21b) (same constants, same skill mod_stat folds), so the UI
-## can show "current -> with these points" without touching the player. tests/stat_preview_test.gd re-runs the real
-## recalc_stats() and fails if these drift apart, so a formula change in player.gd shows up as a red test.
-## Formula owner: player.gd (Skillz / G4M3N). If Skillz moves stats to spendable points, only the input totals change.
+## v070: the numbers come from Skillz's StatEffects.for_player(p, preview) (= player.get_stat_effects(preview),
+## STATS_API.md); this file no longer carries its own copy of the formulas. derived() only turns that result into the
+## absolute values the tiles show (m/s, seconds, HP/s, dmg), and rows() lays them out per stat with "+1 point" or
+## "now -> previewed" deltas.
 
 const StatEffectsScr := preload("res://scripts/combat/stat_effects.gd")
 
 
-static func _mod(p: Object, stat: String, base: float) -> float:
-	return float(p.call("mod_stat", stat, base)) if p and p.has_method("mod_stat") else base
-
-
 static func _num(p: Object, prop: String, fallback: float) -> float:
-	if p == null:
+	if p == null or not (prop in p):
 		return fallback
 	var v = p.get(prop)
 	return float(v) if v != null else fallback
 
 
-## Derived gameplay values for armor-stat totals `st` (agility ... brawn), using `p`'s class bases and skills.
+## Gameplay values for armor-stat totals `st` (agility ... brawn) on player `p` (skills / Field Cards kept), from
+## StatEffects.for_player(p, {"totals": st}). p may be null (a bare character).
 static func derived(p: Object, st: Dictionary) -> Dictionary:
-	# Skillz Economy v2 (MAIN_HOOKS §21b): the armor-stat part comes from StatEffects (data/stats.json, ease-out curve),
-	# the same call player.gd recalc_stats() makes; the skill mod_stat folds stay here as before.
-	var fx: Dictionary = StatEffectsScr.effects(st)
-	var move := 1.0 + _mod(p, "move_speed", 0.0)
-	var base_walk := _num(p, "_base_walk", 5.0)
-	var base_sprint := _num(p, "_base_sprint", 8.0)
+	var fx: Dictionary = StatEffectsScr.for_player(p, {"totals": st})
+	var nx: Dictionary = fx.get("next", fx)
+	var live_mv := 1.0 + float(fx.move_speed_pct) / 100.0
+	var live_sp := 1.0 + float(fx.sprint_speed_pct) / 100.0
 	var out := {}
-	out["walk_speed"] = base_walk * move * float(fx.move_mult)
-	out["sprint_speed"] = base_sprint * move * float(fx.move_mult)
-	out["move_pct"] = (float(fx.move_mult) - 1.0) * 100.0 # vs the class base (skills apply on top)
-	out["damage_reduction"] = float(fx.damage_reduction)
-	out["damage_taken_pct"] = (1.0 - float(fx.damage_reduction)) * 100.0
-	out["regen_delay"] = maxf(4.0 - float(fx.regen_delay_cut) + _mod(p, "regen_delay_add", 0.0), 1.5)
-	out["regen_rate"] = 6.0 + float(fx.regen_rate_add) + _mod(p, "regen_rate_add", 0.0)
-	var gd = p.get("grenade_data") if p else null
-	var g_cd := float(gd.get("cooldown", 20.0)) if gd is Dictionary else 20.0
-	out["grenade_cooldown"] = g_cd * float(fx.grenade_cd_mult) * _mod(p, "grenade_cd_mult", 1.0)
-	var ab = p.get("ability") if p else null
-	if ab != null:
-		var base_cd := _num(p, "_ability_base_cd", 5.0)
-		var cd := (base_cd + _mod(p, "ability_cooldown_add", 0.0)) * maxf(1.0 - _mod(p, "ability_cooldown", 0.0), 0.2)
-		out["ability_cooldown"] = maxf(cd * float(fx.ability_cd_mult) * _mod(p, "ability_cd_mult", 1.0), 1.0)
-	else:
-		out["ability_cooldown"] = -1.0
-	out["melee_damage"] = 70.0 * float(fx.melee_damage_mult) * _mod(p, "melee_damage_mult", 1.0)
-	out["melee_cooldown"] = 1.6 * float(fx.melee_cd_mult)
+	out["walk_speed"] = _num(p, "walk_speed", 5.0) / live_mv * (1.0 + float(nx.move_speed_pct) / 100.0)
+	out["sprint_speed"] = _num(p, "sprint_speed", 8.0) / live_sp * (1.0 + float(nx.sprint_speed_pct) / 100.0)
+	out["move_pct"] = float(nx.move_speed_pct)
+	out["damage_reduction"] = float(nx.damage_reduction_pct) / 100.0
+	out["damage_taken_pct"] = 100.0 + float(nx.damage_taken_pct)
+	out["regen_delay"] = float(nx.regen_delay_s)
+	out["regen_rate"] = float(nx.regen_rate_hps)
+	out["grenade_cooldown"] = float(nx.grenade_cooldown_s)
+	var has_ab: bool = p != null and "ability" in p and p.get("ability") != null
+	out["ability_cooldown"] = float(nx.ability_cooldown_s) if has_ab else -1.0
+	out["melee_damage"] = float(nx.melee_damage)
+	out["melee_cooldown"] = float(nx.melee_cooldown_s)
 	return out
 
 
