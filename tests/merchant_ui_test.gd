@@ -239,6 +239,43 @@ func _run() -> void:
 	check(not m.ask_buy(tid) and m.last_toast.contains("Sold out") and reason_of(sc) == "", "re-buy refused: Sold out (toast)")
 	check(str(prog.stash.get("equipped", {})).length() > 0, "stash saved after the buy")
 
+	# ---------------------------------------------------------------- Skillz 41bd224: grenade offers (grenade_stock / buy_grenade)
+	if real and m.api.has_method("grenade_stock") and not m.api.grenade_stock().is_empty():
+		var gst: Array = m.api.grenade_stock()
+		check(m.grenade_card_count() == gst.size() and m.find_child("GrenadeHeader", true, false).visible, "grenades section: a card per grenade_stock() offer (%d) under GRENADES" % gst.size())
+		var gc: Control = m.find_child("GrenadeCard_0", true, false)
+		check(gc != null and gc.find_child("OfferGrenadeEffect", true, false) != null and gc.find_child("OfferStats", true, false).get_child_count() >= 6,
+			"grenade card: effect line + its card_stats rows")
+		prog.gravemarks = 1000
+		prog.currency_changed.emit(1000)
+		await frames(2)
+		var go: Dictionary = m._gstock[0]
+		var gid := str(go.offer_id)
+		var gp := int(go.price)
+		var ggot := []
+		m.api.grenade_purchased.connect(func(oid, it, p): ggot.append(oid))
+		check(m.ask_buy(gid) and m.confirm_visible() and (m.find_child("ConfirmTitle", true, false) as Label).text.contains(str(go.item.display_name).to_upper()), "grenade BUY opens the confirm")
+		m.confirm_yes()
+		await frames(2)
+		var gi = go.item
+		check(prog.gravemarks == 1000 - gp and ggot == [gid], "grenade buy: buy_grenade charges %d Gravemarks + grenade_purchased" % gp)
+		check(m.last_bought != null and str(m.last_bought.get("slot")) == "grenade" and m.last_toast.contains("sent to your stash"), "grenade buy toast: %s" % m.last_toast)
+		var gc2 = m.card_for(gid)
+		check(gc2 != null and buy_btn(gc2).disabled and buy_btn(gc2).text == "SOLD", "bought grenade offer shows SOLD")
+		prog.gravemarks = 0
+		prog.currency_changed.emit(0)
+		await frames(2)
+		var broke_ok := true
+		for o in m._gstock:
+			if not bool(o.sold):
+				broke_ok = broke_ok and buy_btn(m.card_for(str(o.offer_id))).disabled
+		check(broke_ok, "grenade BUY disabled when you can't afford it")
+		prog.gravemarks = 1000
+		prog.currency_changed.emit(1000)
+		await frames(2)
+	else:
+		print("SKIP  grenade offers (no grenade_stock on this Merchant)")
+
 	# ---------------------------------------------------------------- owned (not sold): still buyable
 	var other: Dictionary = {}
 	for o in m._stock:

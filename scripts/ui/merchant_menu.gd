@@ -29,6 +29,9 @@ var _countdown: Label
 var _reroll_btn: Button
 var _reroll_reason: Label
 var _grid: GridContainer
+var _ggrid: GridContainer ## Skillz 41bd224 grenade offers (Merchant.grenade_stock), under a GRENADES header
+var _ghead: Control
+var _gstock: Array = [] ## last grenade_stock()
 var _scroll: ScrollContainer
 var _away: Control ## empty state: "The Gravecrew merchant is away" (no stock / data not loaded)
 var _away_label: Label
@@ -86,6 +89,7 @@ func _wire_api() -> void:
 		MAPI.set_api_inventory(api, inventory)
 	MAPI.sig(api, "stock_changed", _on_stock_changed)
 	MAPI.sig(api, "purchased", _on_purchased)
+	MAPI.sig(api, "grenade_purchased", _on_purchased)
 	MAPI.sig(api, "refreshed", _on_refreshed)
 	MAPI.sig(api, "reroll_cost_changed", _on_reroll_cost)
 	var prog := get_node_or_null("/root/Progress")
@@ -100,6 +104,7 @@ func _unwire_api() -> void:
 		MAPI.set_api_inventory(api, null) # the autoload outlives this menu: don't leave it pointing at our kit
 	MAPI.unsig(api, "stock_changed", _on_stock_changed)
 	MAPI.unsig(api, "purchased", _on_purchased)
+	MAPI.unsig(api, "grenade_purchased", _on_purchased)
 	MAPI.unsig(api, "refreshed", _on_refreshed)
 	MAPI.unsig(api, "reroll_cost_changed", _on_reroll_cost)
 
@@ -226,12 +231,32 @@ func _build() -> void:
 	body.add_child(scroll)
 	_scroll = scroll
 	body.add_child(_build_away())
+	var list := VBoxContainer.new()
+	list.name = "OfferList"
+	list.add_theme_constant_override("separation", 10)
+	scroll.add_child(list)
 	_grid = GridContainer.new()
 	_grid.name = "OfferGrid"
 	_grid.columns = 3
 	_grid.add_theme_constant_override("h_separation", 10)
 	_grid.add_theme_constant_override("v_separation", 10)
-	scroll.add_child(_grid)
+	list.add_child(_grid)
+	var gh := HBoxContainer.new()
+	gh.name = "GrenadeHeader"
+	gh.add_theme_constant_override("separation", 10)
+	gh.add_child(UIStyle.label("GRENADES", 18, UIStyle.RUST.lightened(0.15), true))
+	var ghs := UIStyle.label("EQUIP IN THE LOADOUT GRENADE SLOT // THROWN INSTEAD OF YOUR CLASS GRENADE", 11, UIStyle.BONE_DIM, true)
+	ghs.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	gh.add_child(ghs)
+	gh.visible = false
+	list.add_child(gh)
+	_ghead = gh
+	_ggrid = GridContainer.new()
+	_ggrid.name = "GrenadeGrid"
+	_ggrid.columns = 3
+	_ggrid.add_theme_constant_override("h_separation", 10)
+	_ggrid.add_theme_constant_override("v_separation", 10)
+	list.add_child(_ggrid)
 
 	var foot := HBoxContainer.new()
 	foot.add_theme_constant_override("separation", 6)
@@ -506,9 +531,10 @@ func _rebuild_cards() -> void:
 	for i in _buy_btns.size():
 		if _buy_btns[i] == f:
 			focused_slot = i
-	for c in _grid.get_children():
-		_grid.remove_child(c)
-		c.queue_free()
+	for gg in [_grid, _ggrid]:
+		for c in gg.get_children():
+			gg.remove_child(c)
+			c.queue_free()
 	_cards.clear()
 	_buy_btns.clear()
 	var st = MAPI.call_api(api, "get_stock")
@@ -518,6 +544,16 @@ func _rebuild_cards() -> void:
 		_grid.add_child(card)
 		_cards.append(card)
 		_buy_btns.append(card.find_child("OfferBuy", true, false))
+	# Skillz 41bd224: grenade offers {item (GrenadeItem), price, currency, can_afford, reason}, bought with buy_grenade
+	var gs = MAPI.call_api(api, "grenade_stock")
+	_gstock = gs if gs is Array else []
+	for i in _gstock.size():
+		var gcard := _offer_card(_gstock[i])
+		gcard.name = "GrenadeCard_%d" % i
+		_ggrid.add_child(gcard)
+		_cards.append(gcard)
+		_buy_btns.append(gcard.find_child("OfferBuy", true, false))
+	_ghead.visible = not _gstock.is_empty()
 	_wire_nav()
 	_show_away(is_away())
 	if focused_slot >= 0 and visible:
@@ -583,8 +619,9 @@ func _show_away(on: bool) -> void:
 		_scroll.visible = not on
 
 
+## Gun offer cards (grenade offers are counted by grenade_card_count()).
 func card_count() -> int:
-	return _cards.size()
+	return _cards.size() - grenade_card_count()
 
 
 func card_for(offer_id: String) -> PanelContainer:
@@ -595,10 +632,22 @@ func card_for(offer_id: String) -> PanelContainer:
 
 
 func offer(offer_id: String) -> Dictionary:
-	for o in _stock:
+	for o in _stock + _gstock:
 		if str(o.get(MAPI.K_OFFER_ID, "")) == offer_id:
 			return o
 	return {}
+
+
+## True for a grenade_stock() offer (bought with buy_grenade).
+func is_grenade_offer(offer_id: String) -> bool:
+	for o in _gstock:
+		if str(o.get(MAPI.K_OFFER_ID, "")) == offer_id:
+			return true
+	return false
+
+
+func grenade_card_count() -> int:
+	return _ggrid.get_child_count() if _ggrid else 0
 
 
 func _offer_card(o: Dictionary) -> PanelContainer:
@@ -640,7 +689,10 @@ func _offer_card(o: Dictionary) -> PanelContainer:
 	bgt.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layers.add_child(bgt)
 	UIStyle.add_grit(layers, 0.22)
+	var gren: bool = w is GrenadeItem
 	var icon_path := ICON_DIR + str(o.get(MAPI.K_ARCHETYPE, w.archetype if w else "")) + ".png"
+	if gren:
+		icon_path = ICON_DIR + "grenade_%s.png" % str(o.get("grenade_id", w.grenade_id))
 	if ResourceLoader.exists(icon_path):
 		var tr := TextureRect.new()
 		tr.texture = load(icon_path)
@@ -723,7 +775,7 @@ func _offer_card(o: Dictionary) -> PanelContainer:
 		var cmp: Array = inv.compare(w) if inv and inv.has_method("compare") else []
 		var shown := 0
 		for i in rows.size():
-			if not (str(rows[i][0]) in KEY_STATS):
+			if not gren and not (str(rows[i][0]) in KEY_STATS):
 				continue
 			var lab := UIStyle.label(_short_stat(str(rows[i][0])), 11, UIStyle.BONE_DIM)
 			lab.custom_minimum_size.x = 34
@@ -735,6 +787,24 @@ func _offer_card(o: Dictionary) -> PanelContainer:
 			dw.name = "Delta_%s" % str(rows[i][0]).replace(" ", "")
 			grid.add_child(dw)
 			shown += 1
+	if gren: # what the grenade does + its rolled Fittings (GRENADE_ITEMS_API.md)
+		var el := UIStyle.label(w.effect_line(), 11, w.effect_color().lightened(0.25))
+		el.name = "OfferGrenadeEffect"
+		el.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		el.max_lines_visible = 2
+		el.custom_minimum_size.x = CARD_W - 24
+		v.add_child(el)
+		var fr: Array = o.get("fittings", w.fitting_rows()) if o.get("fittings") is Array else w.fitting_rows()
+		if not fr.is_empty():
+			var fb := VBoxContainer.new()
+			fb.name = "OfferFittings"
+			fb.add_theme_constant_override("separation", 0)
+			v.add_child(fb)
+			for r in fr:
+				var fl2 := UIStyle.label("%s  %s" % [str(r.get("name", r.get("id", ""))).to_upper(), str(r.get("text", ""))], 11, UIStyle.BONE)
+				fl2.clip_text = true
+				fl2.custom_minimum_size.x = CARD_W - 24
+				fb.add_child(fl2)
 	# Named attributes (WEAPON_ATTRS.md): compact rows (hex + name + SIGNATURE / playstyle marker), description on hover
 	var attrs := UIStyle.attribute_rows_of(o if o.has("attributes") else w)
 	if attrs.size() > 0:
@@ -934,16 +1004,17 @@ func _on_buy_pressed(offer_id: String) -> void:
 
 ## BUY: buy_check first (refusal -> inline + toast), else the confirm card.
 func ask_buy(offer_id: String) -> bool:
-	var chk := MAPI.as_check(MAPI.call_api(api, "buy_check", [offer_id]))
+	var o := offer(offer_id)
+	var chk := MAPI.as_check(MAPI.call_api(api, "buy_check", [offer_id])) if not is_grenade_offer(offer_id) \
+		else {"ok": disable_reason(o) == "", "reason": disable_reason(o)}
 	if not chk.ok:
 		refuse(offer_id, chk.reason)
 		return false
-	var o := offer(offer_id)
 	var w = o.get(MAPI.K_ITEM)
 	var price := int(o.get(MAPI.K_PRICE, 0))
 	var bal := balance()
 	_pending = {"kind": "buy", "offer_id": offer_id, "price": price}
-	_confirm_label.text = "Buy %s for %d Gravemarks?" % [(w.display_name if w else "this gun").to_upper(), price]
+	_confirm_label.text = "Buy %s for %d Gravemarks?" % [(w.display_name if w else ("this grenade" if is_grenade_offer(offer_id) else "this gun")).to_upper(), price]
 	_confirm_cost.text = "%d  →  %d" % [bal, maxi(bal - price, 0)]
 	show_confirm(true)
 	_ui_snd("ui_hover")
@@ -1008,7 +1079,7 @@ func confirm_no() -> void:
 
 func _do_buy(offer_id: String) -> void:
 	var o := offer(offer_id)
-	var r = MAPI.call_api(api, "buy", [offer_id])
+	var r = MAPI.call_api(api, "buy_grenade" if is_grenade_offer(offer_id) else "buy", [offer_id])
 	var chk := MAPI.as_check(r)
 	if not chk.ok:
 		var why: String = chk.reason
