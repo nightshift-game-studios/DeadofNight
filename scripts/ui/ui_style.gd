@@ -679,6 +679,22 @@ static func _attr_marker(kind: String, compact: bool) -> Control:
 	return h
 
 
+## Grenade item icon by grenades.json id (Desi grenade_<id>.png, 256/512 px). Null if missing.
+static func grenade_icon_tex(grenade_id: String) -> Texture2D:
+	return null if grenade_id == "" else _icon_tex("res://assets/icons/grenade_%s.png" % grenade_id)
+
+
+## Grenade Fitting glyph by fitting id (heavy_packing, quick_rearm, ...): 24 px WHITE on transparent, tint with modulate /
+## draw_texture modulate. Draw at 24 (or 48) px; TextureRect.texture_filter = TEXTURE_FILTER_LINEAR at 1:1 is crisp.
+static func fitting_glyph_tex(fitting_id: String) -> Texture2D:
+	return null if fitting_id == "" else _icon_tex("res://assets/icons/fit_%s.png" % fitting_id)
+
+
+## Empty equip-slot ghost (slot_<slot>.png; only "grenade" so far). Null if none.
+static func slot_ghost_tex(slot: String) -> Texture2D:
+	return null if slot == "" else _icon_tex("res://assets/icons/slot_%s.png" % slot)
+
+
 # ------------------------------------------------------------------ attachment icons
 
 ## res://assets/icons/att_<id>.png when it exists, else null.

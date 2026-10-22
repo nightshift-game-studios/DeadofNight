@@ -701,6 +701,8 @@ func _tile(item: GearItem, sz: Vector2, equipped: bool) -> Button:
 
 ## Pre-rendered armor icon (tests/render_armor_icons.gd) for the item's slot look ("" if none).
 func armor_icon_path(item: GearItem) -> String:
+	if item is GrenadeItem: # Desi grenade_<grenade_id>.png (playtest 2026-10-22 #5)
+		return ICON_DIR + "grenade_" + str(item.grenade_id) + ".png"
 	var piece := ArmorModels.piece_for_slot(str(item.get("slot")), _class_id())
 	return ICON_DIR + "armor_" + piece + ".png" if piece != "" else ""
 
