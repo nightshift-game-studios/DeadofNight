@@ -1383,10 +1383,11 @@ func take_damage(amount: float, attacker: Node = null) -> void:
 		var lc := _ev(&"lethal_damage", {"raw": amount, "dealt": dealt, "attacker": attacker, "prevent": false})
 		if lc.get("prevent", false):
 			dealt = maxi(health - 1, 0)
+	var hp_before := health
 	health = max(health - dealt, 0)
 	health_changed.emit(health, max_health)
 	add_shake(0.1)
-	_ev(&"damage_taken", {"raw": amount, "dealt": dealt, "absorbed": absorbed, "attacker": attacker,
+	_ev(&"damage_taken", {"raw": amount, "dealt": dealt, "absorbed": absorbed, "attacker": attacker, "hp_before": hp_before,
 		"health_frac": float(health) / float(max(max_health, 1))})
 	if health == 0:
 		dead = true

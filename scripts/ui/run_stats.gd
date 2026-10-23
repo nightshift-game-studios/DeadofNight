@@ -39,7 +39,8 @@ func on_event(name: StringName, ctx: Dictionary) -> void:
 				reset()
 		&"damage_taken":
 			var p = ctx.get("player")
-			if (player == null or p == null or p == player) and _last_hp >= 0:
+			# MatchStats caps a hit at ctx.hp_before itself; only older emitters without it need this local cap
+			if (player == null or p == null or p == player) and _last_hp >= 0 and not ctx.has("hp_before"):
 				_overkill += maxi(int(ctx.get("dealt", 0)) - _last_hp, 0)
 		&"match_ended":
 			if ended:
