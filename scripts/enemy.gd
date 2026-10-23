@@ -85,9 +85,12 @@ func set_variant(id: String, v: Dictionary, scene: PackedScene = null) -> void:
 
 
 ## True if a target this far away can be hit: horizontal reach plus a vertical limit, so a zombie
-## under a deck can't swipe the player standing on it.
+## under a deck can't swipe the player standing on it. Playtest #18: a player standing on this zombie's head is in reach too
+## (ZombieNav.head_reach: feet at the capsule top, data/ai.json head_stand).
 func in_attack_reach(dist_h: float, dy: float, extra: float = 0.0) -> bool:
-	return dist_h <= attack_range + extra and absf(dy) < attack_max_dy
+	if dist_h <= attack_range + extra and absf(dy) < attack_max_dy:
+		return true
+	return nav != null and nav.head_reach(dist_h, dy, extra, target)
 
 
 func _ready() -> void:
@@ -254,7 +257,10 @@ func _physics_process(delta: float) -> void:
 		to_player.y = 0.0
 		var dist := to_player.length()
 		var level := absf(dy) < attack_max_dy
-		if dist <= aggro_range and (dist > attack_range * 0.8 or not level): # keep pathing (stairs) if the player is above / below
+		var head_held: bool = nav != null and nav.head_stand_tick(delta, target, dist, dy) # #18: player on this zombie's head: hold still, keep swinging
+		if head_held:
+			_chasing = true # no chase: walking out from under the player would push them off for free
+		elif dist <= aggro_range and (dist > attack_range * 0.8 or not level): # keep pathing (stairs) if the player is above / below
 			move_dir = _chase_direction(to_player)
 			if not _chasing:
 				_chasing = true
