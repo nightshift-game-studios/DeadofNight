@@ -415,7 +415,7 @@ func current_specialization() -> String:
 
 ## Rows for the Specialization tab (ClassRoster order): [{id, name, role, description, accent, color, icon, selected,
 ## max_health, walk_speed, sprint_speed, jump_velocity, grenade_id, ability, abilities: [{id, name, kind, summary,
-## cooldown, duration, default, movement, icon, selected}], keystones, points_spent, nodes_owned, class_items,
+## cooldown, duration, default, movement, icon, selected, can_select, select_code, select_reason}], keystones, points_spent, nodes_owned, class_items,
 ## can_select, select_code, select_reason}].
 func specializations() -> Array:
 	var out: Array = []
@@ -432,6 +432,10 @@ func specializations() -> Array:
 		row["ability"] = q
 		for a in row.abilities:
 			a["selected"] = str(a.id) == q
+			var cq := can_select_q(str(a.id), cid) # per-Q gate (code "selected" = already the Q: can_select false)
+			a["can_select"] = cq.ok
+			a["select_code"] = cq.code
+			a["select_reason"] = cq.reason
 		row["class_items"] = _class_item_count(cid)
 		var cs := can_select_specialization(cid)
 		row["can_select"] = cs.ok
@@ -472,13 +476,33 @@ func select_specialization(class_id: String) -> Dictionary:
 	return {"ok": true, "code": "", "reason": ""}
 
 
-## The Q pick for a Specialization ("" class = the current one). Returns {ok, code, reason}. Codes: unknown, blocked.
-func select_q(ability_id: String, class_id: String = "") -> Dictionary:
+## Can this Q be picked right now? ("" class = the current Specialization.) Same {ok, code, reason} shape as can_pick /
+## can_select_specialization, so the Spec tab can grey a Q out with its reason BEFORE select_q fails. Codes: unknown (not a Q of
+## that Specialization), selected (already your Q there: ok false, select_q treats it as a no-op success), blocked (the loadout
+## is locked: only at home before round 1 / after game over, or whatever Characters.loadout_blocked_reason() says).
+func can_select_q(ability_id: String, class_id: String = "") -> Dictionary:
 	if class_id == "":
 		class_id = current_specialization()
 	ability_id = ClassRoster.canonical_ability(ability_id)
 	if not ClassRoster.has(class_id) or ClassRoster.find_ability(class_id, ability_id) == null:
 		return {"ok": false, "code": "unknown", "reason": "That Q isn't part of this Specialization."}
+	var why := _loadout_why()
+	if why != "":
+		return {"ok": false, "code": "blocked", "reason": why}
+	if _q_for(class_id) == ability_id:
+		return {"ok": false, "code": "selected", "reason": "Already your Q."}
+	return {"ok": true, "code": "", "reason": ""}
+
+
+## The Q pick for a Specialization ("" class = the current one). Returns {ok, code, reason}. Codes: unknown, blocked (see
+## can_select_q; re-picking the Q you already have is an ok no-op).
+func select_q(ability_id: String, class_id: String = "") -> Dictionary:
+	if class_id == "":
+		class_id = current_specialization()
+	ability_id = ClassRoster.canonical_ability(ability_id)
+	var cs := can_select_q(ability_id, class_id)
+	if not cs.ok and cs.code != "selected":
+		return cs
 	var ch := _chars()
 	if ch and ch.is_bound():
 		var r: Dictionary = ch.set_ability(class_id, ability_id)

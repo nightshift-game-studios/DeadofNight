@@ -121,12 +121,15 @@ func _tree_checks() -> void:
 	check(ab_ok, "every ability-gated node names one of its class's abilities")
 	# class keystones: one per class, independent of the general keystone
 	prog.xp = 250 * 300
+	var sel0: String = prog.selected_class
+	prog.selected_class = "sexton" # buy_rank enforces other_spec itself now
 	prog.skill_ranks = {"mk_root": 1, "mk_aim": 1, "mk_spotter": 1, "mk_legend": 1, "mk_key": 1,
 		"sx_core": 1, "sx_peal": 1, "sx_clapper": 1, "sx_oath_wake": 1, "sx_capstone": 1}
 	prog._recompute_spent()
 	check(prog.state("sx_oath_mourner") == "excluded" and prog.excluded_by("sx_oath_mourner") == "sx_oath_wake", "oath fork: picking Wake locks Mourner")
 	check(prog.state("sx_key_pallbearer") == "available" and prog.buy_rank("sx_key_pallbearer"), "class keystone available alongside a general keystone")
 	check(prog.state("sx_key_vesper") == "excluded", "second Sexton keystone excluded")
+	prog.selected_class = sel0
 	check(prog.state("mk_cadence") == "available", "doctrine fork open after the legend")
 	# §24: every main tree keeps its own keystone (no one-keystone-across-the-tree group any more)
 	prog.skill_ranks.merge({"sv_root": 1, "sv_skin": 1, "sv_breath": 1, "sv_legend": 1})
@@ -435,6 +438,23 @@ func _specialization_checks() -> void:
 	check(spec.select_q("headstone").ok and chars.ability_for("sexton") == "headstone", "select_q on the current Specialization")
 	check(spec.select_q("dash", "soldier").ok and chars.ability_for("soldier") == "breach_rush", "select_q maps old ids (dash -> Breach Rush)")
 	check(not spec.select_q("chalk_mark").ok, "select_q refuses another class's Q")
+	# v070 #1: can_select_q gates a Q pick with the same {ok, code, reason} select_q returns
+	var cq: Dictionary = spec.can_select_q("chalk_mark")
+	check(not cq.ok and cq.code == "unknown" and cq.reason != "" and spec.select_q("chalk_mark").code == "unknown", "can_select_q: another class's Q -> unknown (%s)" % cq.reason)
+	check(spec.can_select_q("nonsense", "sexton").code == "unknown" and spec.can_select_q("headstone", "nonsense").code == "unknown", "can_select_q: bad ability / class -> unknown")
+	check(spec.can_select_q("headstone").code == "selected" and not spec.can_select_q("headstone").ok and spec.select_q("headstone").ok, "can_select_q: your current Q -> selected (ok false), select_q stays an ok no-op")
+	var other_q: String = str(ClassRoster.ability_ids("sexton").filter(func(x): return x != "headstone")[0])
+	var cq2: Dictionary = spec.can_select_q(other_q)
+	check(cq2.ok and cq2.code == "" and cq2.reason == "" and spec.can_select_q("dash", "soldier").code == "selected", "can_select_q: a free Q -> ok (old ids map: dash -> Breach Rush, already the Soldier pick)")
+	var row_q: Array = spec.specializations().filter(func(r): return r.id == "sexton")[0].abilities
+	check(row_q.all(func(a): return a.has_all(["can_select", "select_code", "select_reason"])) and row_q.filter(func(a): return a.can_select).size() == 1
+		and row_q.filter(func(a): return a.select_code == "selected").size() == 1, "specializations(): each Q row carries can_select / select_code / select_reason")
+	prog.respec_allowed = false
+	var cq3: Dictionary = spec.can_select_q(other_q)
+	check(not cq3.ok and cq3.code == "blocked" and cq3.reason != "" and spec.select_q(other_q).code == "blocked" and chars.ability_for("sexton") == "headstone",
+		"can_select_q: loadout locked mid-match -> blocked, and select_q agrees (%s)" % cq3.reason)
+	check(spec.can_select_q(other_q, "nonsense").code == "unknown", "can_select_q: unknown beats blocked")
+	prog.respec_allowed = true
 	prog.respec_allowed = false
 	check(spec.select_specialization("soldier").code == "blocked", "Specialization locked during a match")
 	prog.respec_allowed = true

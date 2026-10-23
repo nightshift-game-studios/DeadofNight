@@ -287,6 +287,13 @@ func _progress_checks() -> void:
 	check(prog.buy_rank("lg_lucky") and prog.state("lg_gilded") == "available", "lg_gilded available with Lucky Find II")
 	# class gating
 	check(prog.class_active("so_ram") and not prog.class_active("sc_fed"), "class gating: Soldier nodes active, Scout inactive")
+	# v070 #2: Progress.buy_rank itself enforces other_spec (no Characters/spec layer involved), so the rule can't be bypassed
+	var pts_os: int = prog.skill_points_available()
+	check(pts_os > 0 and prog.state("sc_core") == "available" and prog.can_afford("sc_core") and not prog.buy_rank("sc_core")
+		and prog.rank("sc_core") == 0 and prog.skill_points_available() == pts_os, "buy_rank refuses a node of another Specialization (other_spec), points untouched")
+	check(prog.buy_rank("so_core") and prog.rank("so_core") == 1, "buy_rank still buys the selected Specialization's node")
+	prog.skill_ranks.erase("so_core")
+	prog._recompute_spent()
 	prog.skill_ranks["sc_ghost"] = 1
 	runner.rebuild()
 	check(runner.effects_from("sc_ghost").is_empty(), "inactive class node contributes no effects")

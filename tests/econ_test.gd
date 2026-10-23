@@ -435,13 +435,21 @@ func _match_stats_checks(main, pl, prog) -> void:
 	prog.add_gravemark(2, "test")
 	prog.add_scrap(5, "test")
 	bus.emit_event(&"damage_taken", {"player": pl, "dealt": 17, "attacker": zfake})
+	# v070 #3: a hit counts for at most the HP that was left (ctx.hp_before from Player.take_damage); no hp_before = whole `dealt`
+	bus.emit_event(&"damage_taken", {"player": pl, "dealt": 40, "hp_before": 10, "attacker": zfake}) # overkill: counts 10
+	bus.emit_event(&"damage_taken", {"player": pl, "dealt": 5, "hp_before": 100, "attacker": zfake}) # plain hit: counts 5
+	bus.emit_event(&"damage_taken", {"player": pl, "dealt": 3, "hp_before": 0, "attacker": zfake}) # already at 0 HP: counts 0
+	bus.emit_event(&"damage_taken", {"player": Node.new(), "dealt": 50, "hp_before": 50}) # another player: ignored
 	pl.died.emit()
 	bus.emit_event(&"match_ended", {"player": pl, "round": 4, "kills": 2})
 	MatchStats.on_match_recorded(321)
 	var sm: Dictionary = MatchStats.summary()
 	print("  match stats: ", sm)
-	check(sm.kills == 2 and sm.headshots == 1 and sm.headshot_kills == 1 and sm.hits == 2 and sm.damage_dealt == 42 and sm.damage_taken == 17,
-		"MatchStats: kills / headshots / hits / damage dealt + taken (foreign hits ignored)")
+	check(sm.kills == 2 and sm.headshots == 1 and sm.headshot_kills == 1 and sm.hits == 2 and sm.damage_dealt == 42 and sm.damage_taken == 32,
+		"MatchStats: kills / headshots / hits / damage dealt + taken (foreign hits ignored; taken = 17 + 10 of a 40 hit on 10 HP + 5 = %d)" % sm.damage_taken)
+	check(MatchStats.damage_counted({"dealt": 40, "hp_before": 10}) == 10 and MatchStats.damage_counted({"dealt": 40}) == 40
+		and MatchStats.damage_counted({"dealt": 4, "hp_before": 10}) == 4 and MatchStats.damage_counted({"dealt": -3, "hp_before": 10}) == 0,
+		"MatchStats.damage_counted: min(dealt, hp_before), whole dealt without hp_before, never negative")
 	check(sm.round_reached == 4 and sm.rounds == 3 and sm.points_earned == 100 and sm.points_spent == 40 and int(sm.points_by_reason.get("kill", 0)) == 100,
 		"MatchStats: rounds, points earned / spent (%d -> %d)" % [p0, pl.points])
 	check(sm.gravemarks == 2 and sm.scrap == 5 and sm.xp == 321 and not sm.active and sm.ended and str(sm.time_text).contains(":"),

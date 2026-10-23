@@ -98,10 +98,11 @@ func _go() -> void:
 	var next_id := str(menu.api.list_upgrades("smg")[0].id)
 	check(not menu.api.can_afford(next_id), "cannot afford next tier at 0 Scrap")
 	var reason := menu._disable_reason(next_id, true)
-	check("Gravemark" in reason or "Need" in reason, "disabled reason mentions Gravemarks (%s)" % reason)
+	check("Scrap" in reason or "Need" in reason, "disabled reason says what is missing (%s)" % reason)
 
 	# Seed enough for an attachment buy that has no purchase req, or buy cheap optic after tier
 	prog.gravemarks = 200
+	prog.scrap = 200 # attachments default to Scrap now (SCRAP_API.md); the Gravemark buy is covered below (_ask_buy ... "gravemark")
 	prog.save_data()
 	# Find a tier-1 attachment for smg
 	var buy_id := ""
@@ -116,10 +117,10 @@ func _go() -> void:
 				buy_id = str(a.id)
 				break
 	check(buy_id != "", "found a tier-1 attachment to buy (%s)" % buy_id)
-	var bal_b: int = prog.gravemarks
+	var bal_b: int = prog.scrap
 	var c_att: int = int(menu.api.cost(buy_id))
-	check(menu.api.purchase(buy_id) and prog.gravemarks == bal_b - c_att and menu.api.is_owned(buy_id),
-		"attachment purchase marks owned + deducts")
+	check(menu.api.purchase(buy_id) and prog.scrap == bal_b - c_att and prog.gravemarks == 200 and menu.api.is_owned(buy_id),
+		"attachment purchase (default currency Scrap) marks owned + deducts Scrap only")
 
 	# ---- Equip / unequip reflects
 	var slot := ""
@@ -143,12 +144,13 @@ func _go() -> void:
 	prog.save_data()
 	var path: String = prog.save_path
 	prog.gravemarks = 0
+	prog.scrap = 0
 	prog.armory = {"upgrades": {}, "owned": [], "equipped": {}}
 	prog.load_data()
 	check(int(ArmoryScr.upgrade_tier("smg")) == 1 and ArmoryScr.owned(buy_id)
 		and str(ArmoryScr.loadout("smg").get(slot, "")) == buy_id,
 		"armory state persists across save reload")
-	check(prog.gravemarks == bal_b - c_att, "gravemarks persisted (%d)" % prog.gravemarks)
+	check(prog.scrap == bal_b - c_att and prog.gravemarks == 200, "Scrap + Gravemarks persisted (%d / %d)" % [prog.scrap, prog.gravemarks])
 
 	# Confirm UI — compact centered overlay card (not stretched across panel)
 	prog.gravemarks = 100
@@ -561,7 +563,7 @@ func _go() -> void:
 	m2._ask_buy(buy2_id, "attachment")
 	m2._confirm_yes()
 	await process_frame
-	var need_txt := "Need %d Gravemarks (you have 0)" % int(ArmoryScr.cost_of(buy2_id))
+	var need_txt := "Need %d Scrap (you have 0)" % int(ArmoryScr.cost_of(buy2_id)) # default currency: Scrap
 	check(str(m2._refusal.get("text", "")) == need_txt and m2._toast.text.ends_with(need_txt),
 		"refused buy shows balance reason (%s)" % m2._toast.text)
 	check(m2.refusal_reason("upg_smg", "buy").begins_with("Need "), "upgrade refusal reason when broke")

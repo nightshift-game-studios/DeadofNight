@@ -250,12 +250,15 @@ func _run() -> void:
 		"requirements", "can_afford", "state", "tier", "icon"])), "list_attachments(auto_rifle): %d parts with Gooey's fields" % lst.size())
 	check(api.list_attachments("auto_rifle", "optic").all(func(a): return a.slot == "optic"), "slot filter")
 	check(api.list_slots("sidearm").size() == 3 and api.list_weapons().size() == 9, "list_slots / list_weapons")
-	check(not api.can_afford("hush_can") and not api.purchase("hush_can"), "broke: can't afford / purchase fails")
+	check(not api.can_afford("hush_can") and not api.purchase("hush_can") and not api.purchase_with("hush_can", "gravemark"), "broke: can't afford / purchase fails (either currency)")
 	prog.add_gravemark(40, "test")
 	check(api_sig.has(["cur", 40]), "instance forwards currency_changed")
-	check(api.can_afford("hush_can") and api.cost("hush_can") == 4 and api.purchase("hush_can") and api.currency_balance() == 36,
-		"buy Hush Can for 4")
-	check(api_sig.has(["purchase", "hush_can"]) and not api.can_afford("hush_can") and not api.purchase("hush_can"), "armory_changed(purchase); can't buy twice")
+	# the default currency is Scrap (playtest 2026-10-22 #2, SCRAP_API.md): Hush Can is uncommon = 14 Scrap; Gravemarks alone don't buy it by default
+	check(A.attachment_currency() == "scrap" and api.cost("hush_can") == 14 and api.cost_in("hush_can", "gravemark") == 4 and not api.can_afford("hush_can")
+		and not api.purchase("hush_can") and api.currency_balance() == 40, "default currency Scrap: Hush Can 14 Scrap (4 Gravemarks); 40 Gravemarks don't buy it by default")
+	prog.add_scrap(14, "test")
+	check(api.can_afford("hush_can") and api.purchase("hush_can") and prog.scrap == 0 and api.currency_balance() == 40, "buy Hush Can for 14 Scrap (Gravemarks untouched)")
+	check(api_sig.has(["purchase", "hush_can"]) and not api.can_afford("hush_can") and not api.purchase("hush_can") and not api.purchase_with("hush_can", "gravemark"), "armory_changed(purchase); can't buy twice")
 	check(not api.equip_attachment("auto_rifle", "optic", "hush_can"), "wrong slot rejected")
 	check(not api.equip_attachment("sidearm", "", "hush_can"), "incompatible weapon rejected")
 	check(api.equip_attachment("auto_rifle", "muzzle", "hush_can") and api.equipped("auto_rifle") == {"muzzle": "hush_can"}
@@ -266,11 +269,12 @@ func _run() -> void:
 	check(not api.purchase("upg_auto_rifle") and A.last_refusal_reason().contains("Scrap"), "Rework needs Scrap, not Gravemarks (\"%s\")" % A.last_refusal_reason())
 	prog.add_scrap(35, "test")
 	check(api.purchase("upg_auto_rifle") and api.purchase("upg_auto_rifle") and A.upgrade_tier("auto_rifle") == 2
-		and api.currency_balance() == 36 and prog.scrap == 0, "buy Auto Rifle Rework I + II (10 + 25 Scrap; Gravemarks untouched)")
+		and api.currency_balance() == 40 and prog.scrap == 0, "buy Auto Rifle Rework I + II (10 + 25 Scrap; Gravemarks untouched)")
 	check(api_sig.has(["upgrade", "upg_auto_rifle"]) and api.list_upgrades("auto_rifle")[0].level == 2
 		and api.list_upgrades("auto_rifle")[0].cost == 50 and api.list_upgrades("auto_rifle")[0].get("currency") == "scrap", "upgrade entry: level 2, next cost 50 Scrap")
-	check(api.purchase("crows_eye_3x") and api.equip_attachment("auto_rifle", "optic", "crows_eye_3x"), "Crow's Eye buyable + equippable at tier II")
-	check(api.purchase("fat_drum") and api.equip_attachment("auto_rifle", "", "fat_drum") and api.purchase("lean_grip")
+	check(api.purchase_with("crows_eye_3x", "gravemark") and api.equip_attachment("auto_rifle", "optic", "crows_eye_3x") and prog.gravemarks == 40 - api.cost_in("crows_eye_3x", "gravemark"),
+		"Crow's Eye: paid in Gravemarks via purchase_with, equippable at tier II")
+	check(api.purchase_with("fat_drum", "gravemark") and api.equip_attachment("auto_rifle", "", "fat_drum") and api.purchase_with("lean_grip", "gravemark")
 		and api.equip_attachment("auto_rifle", "grip", "lean_grip"), "Fat Drum + Lean Grip on the Auto Rifle")
 	check(api.unequip("auto_rifle", "grip") and not api.equipped("auto_rifle").has("grip") and api.equip_attachment("auto_rifle", "grip", "lean_grip"),
 		"unequip + re-equip")
@@ -313,7 +317,7 @@ func _run() -> void:
 	prog.add_gravemark(60, "test")
 	prog.add_scrap(175, "test")
 	for id in ["tightjaw_choke", "splitjaw_brake"]:
-		api.purchase(id)
+		api.purchase_with(id, "gravemark")
 	api.equip_attachment("shotgun", "muzzle", "tightjaw_choke")
 	var sg = gdb.roll_weapon("shotgun", 1, 3)
 	check(sg.pellets() == int(sg.arch.pellets) - 2 and is_equal_approx(sg.spread_deg(), float(sg.arch.spread) * (1.4 - sg.stat("stability") * 0.008) * 0.6),
@@ -323,7 +327,7 @@ func _run() -> void:
 		"Splitjaw: recoil x0.6, flash x1.8")
 	for i in 4:
 		api.purchase("upg_scout_rifle")
-	check(api.purchase("longwatch_6x") and api.equip_attachment("scout_rifle", "optic", "longwatch_6x") and Ads.wants_scope_overlay("scout_rifle")
+	check(api.purchase_with("longwatch_6x", "gravemark") and api.equip_attachment("scout_rifle", "optic", "longwatch_6x") and Ads.wants_scope_overlay("scout_rifle")
 		and is_equal_approx(Ads.ads_fov("scout_rifle"), 14.6), "Longwatch 6x (tier 3, Rework IV): Scout ADS 14.6 FOV (true 6x) + scope overlay")
 	var sc = gdb.roll_weapon("scout_rifle", 1, 3)
 	check(is_equal_approx(sc.headshot_mult(), float(sc.arch.get("headshot_multiplier", 2.0)) + 0.4), "Longwatch precision +0.4")
@@ -356,7 +360,7 @@ func _run() -> void:
 	prog.add_scrap(140, "test")
 	for i in 2:
 		api.purchase("upg_auto_rifle")
-	check(A.upgrade_tier("auto_rifle") == 4 and api.purchase("echo_drum") and api.equip_attachment("auto_rifle", "mag", "echo_drum"), "Echo Drum on a Rework IV Auto Rifle")
+	check(A.upgrade_tier("auto_rifle") == 4 and api.purchase_with("echo_drum", "gravemark") and api.equip_attachment("auto_rifle", "mag", "echo_drum"), "Echo Drum on a Rework IV Auto Rifle")
 	runner.rebuild()
 	ar.ammo = 5
 	var bus = root.get_node("GameEvents")
@@ -386,7 +390,7 @@ func _run() -> void:
 	mine_locked = api.list_attachments("auto_rifle", "grip").filter(func(a): return a.id == "mine_lamp")[0]
 	check(mine_locked.state == "locked" and not mine_locked.requirements.is_empty(), "Mine Lamp locked at Rework 0")
 	check(api.purchase("upg_auto_rifle") and api.purchase("upg_auto_rifle") and A.upgrade_tier("auto_rifle") == 2, "Rework II for Mine Lamp")
-	check(api.purchase("mine_lamp") and api.currency_balance() >= 0 and A.owned("mine_lamp"), "buy Mine Lamp for 5")
+	check(api.purchase_with("mine_lamp", "gravemark") and api.currency_balance() >= 0 and A.owned("mine_lamp"), "buy Mine Lamp for 5")
 	check(api.equip_attachment("auto_rifle", "grip", "mine_lamp") and A.has_mine_lamp("auto_rifle")
 		and bool(A.flag("auto_rifle", "flashlight", false)), "equip Mine Lamp -> has_mine_lamp + flashlight flag")
 	check(api.unequip("auto_rifle", "grip") and not A.has_mine_lamp("auto_rifle"), "unequip clears has_mine_lamp")
@@ -507,19 +511,28 @@ func _art_pass3(prog: Node, A) -> void:
 	check(c.ok == false and c.reason == "Unknown attachment" and c.keys().size() == 2, "purchase_check: unknown id -> {ok false, reason}")
 	check(A.purchase_check("upg_not_a_gun").reason == "Unknown weapon", "purchase_check: unknown upgrade weapon")
 	c = A.purchase_check("pinhole")
-	check(not c.ok and c.reason == "Need %d Gravemarks (you have 0)" % A.cost_of("pinhole"), "purchase_check: short on Gravemarks -> \"%s\"" % c.reason)
+	check(not c.ok and c.reason == "Need %d Scrap (you have 0)" % A.cost_of("pinhole") and A.cost_of("pinhole") == A.attachment_price("pinhole", "scrap"),
+		"purchase_check (default = Scrap): short -> \"%s\"" % c.reason)
 	check(not A.buy_attachment("pinhole") and A.last_refusal_reason() == c.reason, "buy_attachment refuses with the same reason")
+	c = A.purchase_check("pinhole", "gravemark")
+	check(not c.ok and c.reason == "Need %d Gravemarks (you have 0)" % A.cost_of("pinhole", "gravemark"), "purchase_check(id, \"gravemark\"): short on Gravemarks -> \"%s\"" % c.reason)
+	check(not A.buy_attachment("pinhole", "gravemark") and A.last_refusal_reason() == c.reason, "buy_attachment(id, \"gravemark\") refuses with the same reason")
 	prog.gravemarks = 1
-	check(A.purchase_check("flare_cage").reason == "Need 2 Gravemarks (you have 1)", "...wording has the balance")
+	check(A.purchase_check("flare_cage", "gravemark").reason == "Need 2 Gravemarks (you have 1)", "...wording has the balance")
+	prog.scrap = 3
+	check(A.purchase_check("flare_cage").reason == "Need %d Scrap (you have 3)" % A.cost_of("flare_cage"), "...and the Scrap wording has the Scrap balance")
+	prog.scrap = 0
 	c = A.purchase_check("crows_eye_3x")
 	prog.gravemarks = 50
+	prog.scrap = 500
 	c = A.purchase_check("crows_eye_3x")
 	check(not c.ok and c.reason.begins_with("Needs ") and c.reason.contains(str(A.purchase_requirements("crows_eye_3x")[0])),
 		"purchase_check: Rework-tier gate -> \"%s\"" % c.reason)
 	c = A.purchase_check("pinhole")
-	check(c.ok and c.reason == "", "purchase_check: affordable + buyable -> {ok true, reason \"\"}")
-	check(A.buy_attachment("pinhole") and A.last_refusal_reason() == "" and A.owned("pinhole"), "buy_attachment goes through; last_refusal_reason() \"\"")
-	check(A.purchase_check("pinhole").reason == "Already owned" and not api.purchase("pinhole")
+	check(c.ok and c.reason == "" and A.purchase_check("pinhole", "gravemark").ok, "purchase_check: affordable + buyable -> {ok true, reason \"\"} (either currency)")
+	check(A.buy_attachment("pinhole") and A.last_refusal_reason() == "" and A.owned("pinhole") and prog.scrap == 500 - A.cost_of("pinhole") and prog.gravemarks == 50,
+		"buy_attachment goes through (Scrap by default); last_refusal_reason() \"\"")
+	check(A.purchase_check("pinhole").reason == "Already owned" and not api.purchase_with("pinhole", "gravemark")
 		and api.last_refusal_reason() == "Already owned", "owned -> \"Already owned\" (instance purchase() too)")
 	prog.scrap = 10
 	check(A.purchase_check("upg_smg").ok and api.purchase("upg_smg") and A.upgrade_tier("smg") == 1, "upgrade purchase_check ok -> purchase() buys it")
@@ -534,9 +547,10 @@ func _art_pass3(prog: Node, A) -> void:
 		prog.scrap = bal * 3
 		for a in A.data().get("attachments", []):
 			agree = agree and A.purchase_check(str(a.id)).ok == A.can_afford_id(str(a.id))
+			agree = agree and A.purchase_check(str(a.id), "gravemark").ok == A.can_afford_id(str(a.id), "gravemark")
 		for arch in ["smg", "shotgun", "sidearm"]:
 			agree = agree and A.purchase_check("upg_" + arch).ok == A.can_afford_id("upg_" + arch)
-	check(agree, "purchase_check().ok == can_afford_id() for all 38 parts + upgrades at 0 / 3 / 9 Gravemarks")
+	check(agree, "purchase_check().ok == can_afford_id() for all 38 parts + upgrades at 0 / 3 / 9 Gravemarks (default Scrap and \"gravemark\")")
 	# ---- equip_check
 	_reset(prog)
 	for arch in ["shotgun", "smg", "hand_cannon", "sniper_rifle"]:

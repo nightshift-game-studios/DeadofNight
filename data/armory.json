@@ -157,12 +157,12 @@
 		}
 	},
 	"attachment_shop": {
-		"_help": "Attachments buyable with Scrap (playtest 2026-10-22 #2, SCRAP_API.md). currencies = what an attachment can be paid with; default_currency = what cost(id) / purchase(id) / list_attachments().cost use (Gooey flips this to \"scrap\" once the Armory card shows entry.currency; until then the old Gravemark price stays the default and purchase_with(id, \"scrap\") already works). Scrap price = scrap_price[attachment rarity]. Attachment rarity (Armory.attachment_rarity): an explicit attachments.json \"rarity\", else an optic's optic.rarity, else rarity_by_cost[Gravemark cost] raised to at least tier_floor[tier], then unique parts (they change how you play) go up unique_step tiers. Gravemark price = attachments.json cost (unchanged).",
+		"_help": "Attachments buyable with Scrap (playtest 2026-10-22 #2, SCRAP_API.md). currencies = what an attachment can be paid with; default_currency = what cost(id) / purchase(id) / list_attachments().currency use: \"scrap\" since 2026-10-22 (Gooey's Armory card shows both prices with a BUY per currency; Gravemarks stay payable with purchase_with(id, \"gravemark\") / cost_in(id, \"gravemark\")). Scrap price = scrap_price[attachment rarity]. Attachment rarity (Armory.attachment_rarity): an explicit attachments.json \"rarity\", else an optic's optic.rarity, else rarity_by_cost[Gravemark cost] raised to at least tier_floor[tier], then unique parts (they change how you play) go up unique_step tiers. Gravemark price = attachments.json cost (unchanged).",
 		"currencies": [
 			"scrap",
 			"gravemark"
 		],
-		"default_currency": "gravemark",
+		"default_currency": "scrap",
 		"scrap_price": {
 			"common": 8,
 			"uncommon": 14,

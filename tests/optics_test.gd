@@ -118,24 +118,24 @@ func _run() -> void:
 		var c := core.filter(func(id): return str(A.attachment(id).optic.type) in ts)
 		var s := 0.0
 		for id in c:
-			s += float(A.cost_of(id))
+			s += float(A.cost_of(id, "gravemark"))
 		return s / maxf(1.0, c.size())
 	var bands: Dictionary = oc.price_bands
 	var in_band := true
 	for id in lineup:
 		var b: Array = bands[str(A.attachment(id).optic.type)]
-		in_band = in_band and A.cost_of(id) >= int(b[0]) and A.cost_of(id) <= int(b[1])
+		in_band = in_band and A.cost_of(id, "gravemark") >= int(b[0]) and A.cost_of(id, "gravemark") <= int(b[1])
 	check(in_band, "every optic priced inside its type's band %s" % bands)
-	check(core.filter(func(id): return A.attachment(id).optic.type == "irons").all(func(id): return A.cost_of(id) >= 2 and A.cost_of(id) <= 4),
+	check(core.filter(func(id): return A.attachment(id).optic.type == "irons").all(func(id): return A.cost_of(id, "gravemark") >= 2 and A.cost_of(id, "gravemark") <= 4),
 		"cheap irons cost 2-4")
 	check(mean.call(["irons"]) <= mean.call(["dot", "holo"]) and mean.call(["dot", "holo"]) <= mean.call(["prism"])
 		and mean.call(["prism"]) <= mean.call(["scope"]),
 		"price rises irons %.1f <= dots/holo %.1f <= prisms %.1f <= scopes %.1f" % [mean.call(["irons"]), mean.call(["dot", "holo"]), mean.call(["prism"]), mean.call(["scope"])])
-	check(A.cost_of("belfry_8x") == 8 and A.tier_requirement("belfry_8x") == 4 and A.tier_requirement("longwatch_6x") == 4,
+	check(A.cost_of("belfry_8x", "gravemark") == 8 and A.tier_requirement("belfry_8x") == 4 and A.tier_requirement("longwatch_6x") == 4,
 		"Belfry 8x: 8 Gravemarks behind Rework IV, like Longwatch")
 	var med = A.expected_match_income("medium", 13)
 	var per: float = float(med.get("total", med.get("expected", 7.0))) if med is Dictionary else 7.0
-	check(A.cost_of("belfry_8x") <= ceili(per * 1.5) and A.cost_of("wicket_ring") <= ceili(per * 0.5),
+	check(A.cost_of("belfry_8x", "gravemark") <= ceili(per * 1.5) and A.cost_of("wicket_ring", "gravemark") <= ceili(per * 0.5),
 		"8x costs about one Medium match (%.1f / match), an iron set about half of one" % per)
 	check(core.filter(func(id): return A.attachment(id).optic.type == "scope").all(func(id): return int(A.attachment(id).tier) == 3)
 		and core.filter(func(id): return A.attachment(id).optic.type in ["irons", "dot", "holo"]).all(func(id): return int(A.attachment(id).tier) == 1),
@@ -168,11 +168,11 @@ func _run() -> void:
 	prog.armory.upgrades = {"sniper_rifle": 4, "scout_rifle": 4, "auto_rifle": 4}
 	prog.notify_armory("upgrade", "", false)
 	for id in lineup:
-		A.buy_attachment(id)
+		A.buy_attachment(id, "gravemark")
 	check(lineup.all(func(id): return A.owned(id)), "every optic buyable with Rework IV on the long guns (%d owned)" % prog.armory.owned.size())
 	check(A.equip("auto_rifle", "crows_eye_3x") and _near(Ads.ads_fov("auto_rifle"), 28.7) and not Ads.wants_scope_overlay("auto_rifle")
 		and _near(Ads.ads_time("auto_rifle"), 0.3125) and _near(Ads.sway_mult("auto_rifle"), 1.3), "AR + Crow's Eye 3x: FOV 28.7, ADS 0.31 s, sway x1.3, 3D sight picture")
-	check(A.buy_attachment("lean_grip") or A.owned("lean_grip"), "Lean Grip owned")
+	check(A.buy_attachment("lean_grip", "gravemark") or A.owned("lean_grip"), "Lean Grip owned")
 	A.equip("auto_rifle", "lean_grip")
 	check(_near(Ads.spread_mult(true, "auto_rifle"), 0.45 * 0.9) and _near(Ads.aim_spread_mult(1.0, "auto_rifle", 0.0), 0.45 * 0.9)
 		and _near(Ads.aim_spread_mult(1.0, "auto_rifle", 1.0), 0.45 * 0.9 * (1.0 + 0.6 * 0.3))
@@ -276,7 +276,7 @@ func _run() -> void:
 	check(la.all(func(e): return e.optic is Dictionary and str(e.optic.get("reticle_id", "")) != "") and api.list_optics("auto_rifle").size() == A.optic_choices("auto_rifle").size(),
 		"list_attachments(optic rows) carry an optic preview; instance list_optics() works")
 	prog.gravemarks = 10
-	check(api.purchase("wicket_ring") and api.equip_attachment("auto_rifle", "optic", "wicket_ring")
+	check(api.purchase_with("wicket_ring", "gravemark") and api.equip_attachment("auto_rifle", "optic", "wicket_ring")
 		and A.optic_profile("auto_rifle").optic_id == "wicket_ring" and A.optic_profile("auto_rifle").equipped and A.optic_id("auto_rifle") == "wicket_ring",
 		"buy + equip Wicket Ring: optic_profile follows the loadout")
 

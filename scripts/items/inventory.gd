@@ -438,7 +438,8 @@ func average_item_power() -> int:
 
 
 ## Stat-by-stat comparison of `item` against what's equipped in its slot.
-## Returns [{label, delta, better (bool), text}] - empty if nothing to compare.
+## Returns [{label, delta, better, worse, text, numeric}] - empty if nothing to compare. Rows whose text isn't a number
+## (grenade FUSE "impact") come back with numeric false, delta 0, text "" and neither better nor worse.
 func compare(item: GearItem) -> Array:
 	var cur: GearItem = equipped.get(item.slot)
 	if cur == null or cur == item:
@@ -447,6 +448,10 @@ func compare(item: GearItem) -> Array:
 	var b: Array = cur.call("card_stats")
 	var out := []
 	for i in min(a.size(), b.size()):
+		if not (_numeric_stat(a[i]) and _numeric_stat(b[i])):
+			# Non-numeric row (FUSE "impact"): the numbers behind it are placeholders, so no delta, not better, not worse.
+			out.append({"label": a[i][0], "delta": 0.0, "better": false, "worse": false, "text": "", "numeric": false})
+			continue
 		var d: float = float(a[i][3]) - float(b[i][3])
 		var higher_better: bool = a[i][4]
 		var better := (d > 0.0) == higher_better
@@ -454,8 +459,14 @@ func compare(item: GearItem) -> Array:
 		if absf(d) >= 0.05:
 			txt = ("%+.1f" % d) if absf(d) < 10.0 and absf(d - roundf(d)) > 0.05 else ("%+d" % roundi(d))
 		out.append({"label": a[i][0], "delta": d, "better": better and absf(d) >= 0.05,
-			"worse": (not better) and absf(d) >= 0.05, "text": txt})
+			"worse": (not better) and absf(d) >= 0.05, "text": txt, "numeric": true})
 	return out
+
+
+## card_stats() row whose displayed text is a number ("12", "1.5s", "50%", "8 x3"); "impact" and the like are not.
+static func _numeric_stat(row: Array) -> bool:
+	var t := str(row[1]).strip_edges()
+	return t != "" and t[0] in "0123456789-+."
 
 
 func use_bag_item(index: int, player: Node) -> bool:

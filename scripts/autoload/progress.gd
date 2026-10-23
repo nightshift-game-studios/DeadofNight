@@ -839,9 +839,11 @@ func can_afford(id: String) -> bool:
 	return c > 0 and c <= skill_points_available()
 
 
-## Buys the next rank: state must be available/owned and can_afford. Emits rank_changed(id, rank).
+## Buys the next rank: state must be available/owned and can_afford, and a class node must belong to the selected class
+## (SkillSpec.can_pick's "other_spec", enforced here too so it holds with no Characters/spec bound; ranks already owned in
+## another Specialization are kept). Emits rank_changed(id, rank).
 func buy_rank(id: String) -> bool:
-	if not (state(id) in ["available", "owned"]) or not can_afford(id):
+	if not (state(id) in ["available", "owned"]) or not class_active(id) or not can_afford(id):
 		return false
 	skill_ranks[id] = rank(id) + 1
 	_recompute_spent()

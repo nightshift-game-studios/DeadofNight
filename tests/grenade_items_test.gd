@@ -6,7 +6,7 @@ extends SceneTree
 ## inventory  "grenade" slot: equip / unequip changes the player's thrown grenade (charges kept), save v2, v1 stash migration
 ## loot       loot tables drop GrenadeItems; legacy grenade consumable becomes an item; pickup shows the grenade model
 ## salvage    yield 1/3/6/12/25 + IP, salvage_preview / salvage_table, always under every buy price
-## shop       attachment rarity, Scrap prices, purchase_with(scrap / gravemark), default currency
+## shop       attachment rarity, Scrap prices, purchase_with(scrap / gravemark), default currency (Scrap since 2026-10-22; Gravemarks via purchase_with)
 ## merchant   grenade offers: deterministic, priced, buy_grenade grants a GrenadeItem
 ## Exit code = number of failures. Temp save only (user://grenade_items_test.cfg).
 
@@ -114,6 +114,29 @@ func _run() -> void:
 	check(inv.backpack.grenade.has(sg2) and prog.salvage_preview(sg2, inv).ok and prog.scrap_item(sg2, inv) == 1 and prog.scrap == 1
 		and not inv.backpack.grenade.has(sg2), "spare grenade: salvage_preview ok, scrap_item pays 1 Scrap and removes it")
 
+	# ------------------------------------------------------------ compare(): non-numeric rows (v070 #6)
+	var cj = gdb.roll_grenade("cinderjar", 1, 100)
+	var fz_row: Array = cj.card_stats().filter(func(r): return r[0] == "Fuse")[0]
+	check(fz_row[1] == "impact", "cinderjar's Fuse row reads \"impact\"")
+	var cmp_cj: Array = inv.compare(cj) # vs the equipped gravewell (fuse 1.2 s)
+	var cmp_fz: Dictionary = cmp_cj.filter(func(r): return r.label == "Fuse")[0] if cmp_cj.any(func(r): return r.label == "Fuse") else {}
+	check(cmp_cj.size() == 4 and not cmp_fz.is_empty() and cmp_fz.text == "" and cmp_fz.delta == 0.0 and not cmp_fz.better and not cmp_fz.worse and cmp_fz.numeric == false,
+		"compare(grenade): the FUSE \"impact\" row has an empty delta (text \"\", not better, not worse, numeric false)")
+	var cmp_dmg: Dictionary = cmp_cj.filter(func(r): return r.label == "Damage")[0]
+	check(cmp_dmg.numeric == true and cmp_cj.filter(func(r): return r.numeric).size() == 3, "compare(grenade): the Damage / Radius / Cooldown rows keep their numeric deltas")
+	var fr = gdb.roll_grenade("frag", 1, 100)
+	var cmp_fr: Array = inv.compare(fr)
+	check(cmp_fr.size() == 4 and cmp_fr.all(func(r): return r.numeric) and cmp_fr.filter(func(r): return r.label == "Fuse")[0].text != "",
+		"compare(grenade): two timed grenades still get a numeric FUSE delta")
+	# an equipped impact grenade as the baseline blanks the row too
+	var ibase = INV.new()
+	root.add_child(ibase)
+	ibase.add_item(cj)
+	var cmp_back: Array = ibase.compare(fr)
+	check(cmp_back.filter(func(r): return r.label == "Fuse")[0].text == "" and cmp_back.filter(func(r): return r.label == "Damage")[0].numeric,
+		"compare(grenade) against an equipped impact grenade: FUSE blank too")
+	ibase.free()
+
 	# ------------------------------------------------------------ inventory slot + save
 	check(INV.ALL_SLOTS.has("grenade") and INV.SAVE_VERSION == 2 and inv.equipped_grenade() == sg, "Inventory: grenade slot, save v2, equipped_grenade()")
 	var sv: Dictionary = inv.to_save_dict()
@@ -146,8 +169,9 @@ func _run() -> void:
 	check(A.attachment_rarity("witchlight_dabs") == "common" and A.attachment_rarity("hush_can") == "uncommon" and A.attachment_rarity("mourners_sleeve") == "rare"
 		and A.attachment_rarity("mine_lamp") == "legendary" and A.attachment_rarity("echo_drum") == "mythic" and A.attachment_rarity("gravesight") == "legendary",
 		"attachment rarity: cost / tier floor / unique step / optic rarity")
-	check(A.attachment_prices("hush_can") == {"scrap": 14, "gravemark": 4} and A.attachment_currency() == "gravemark" and A.cost_of("hush_can") == 4,
-		"hush_can: 14 Scrap or 4 Gravemarks; default currency gravemark (cost_of unchanged until Gooey flips it)")
+	check(A.attachment_prices("hush_can") == {"scrap": 14, "gravemark": 4} and A.attachment_currency() == "scrap" and A.cost_of("hush_can") == 14
+		and A.cost_of("hush_can", "gravemark") == 4 and A.attachment_currency("gravemark") == "gravemark" and A.attachment_currency("bogus") == "",
+		"hush_can: 14 Scrap or 4 Gravemarks; default currency scrap (cost_of 14; cost_of(id, \"gravemark\") 4; an unknown currency is refused)")
 	prog.scrap = 13
 	check(not A.purchase_check("hush_can", "scrap").ok and A.purchase_check("hush_can", "scrap").reason == "Need 14 Scrap (you have 13)", "short on Scrap -> \"Need 14 Scrap (you have 13)\"")
 	prog.scrap = 20
@@ -156,10 +180,17 @@ func _run() -> void:
 	check(not api.purchase_with("pocket_hush", "points") and A.last_refusal_reason() != "", "unknown currency refused")
 	var la: Array = api.list_attachments("auto_rifle")
 	var e: Dictionary = la.filter(func(x): return x.id == "hush_can")[0] if la.any(func(x): return x.id == "hush_can") else {}
-	check(e.has_all(["currency", "rarity", "prices", "scrap_cost", "gravemark_cost", "can_afford_scrap", "can_afford_gravemark"]) and int(e.scrap_cost) == 14 and e.owned and e.currency == "gravemark",
+	check(e.has_all(["currency", "rarity", "prices", "scrap_cost", "gravemark_cost", "can_afford_scrap", "can_afford_gravemark"]) and int(e.scrap_cost) == 14 and e.owned and e.currency == "scrap",
 		"list_attachments entries: currency / rarity / prices / scrap_cost / can_afford_scrap")
+	var ph_s: int = A.attachment_price("pocket_hush", "scrap")
+	prog.scrap = ph_s
 	prog.gravemarks = 3
-	check(api.purchase("pocket_hush") and prog.gravemarks == 0, "purchase(id) still pays Gravemarks by default")
+	check(api.purchase("pocket_hush") and prog.scrap == 0 and prog.gravemarks == 3, "purchase(id) pays Scrap by default (%d), Gravemarks untouched" % ph_s)
+	var ph2: String = "witchlight_dabs"
+	prog.scrap = 0
+	prog.gravemarks = A.cost_of(ph2, "gravemark")
+	check(not api.purchase(ph2) and api.purchase_with(ph2, "gravemark") and A.owned(ph2) and prog.gravemarks == 0 and prog.scrap == 0,
+		"Gravemark payment still works: purchase_with(id, \"gravemark\") when the default (Scrap) can't pay")
 	var mt: Dictionary = A.matches_to_max("medium")
 	print("      scrap/match medium %.1f; all attachments %d Scrap = %d matches; one weapon to V %d matches" % [mt.scrap_per_match, mt.attachments_scrap_cost, mt.attachments_in_scrap, mt.one_weapon_max])
 	check(mt.attachments_scrap_cost > 600 and mt.one_weapon_max >= 6 and mt.one_weapon_max <= 12, "pacing: every attachment in Scrap > 600, one weapon to V in 6-12 Medium matches")

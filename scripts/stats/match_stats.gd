@@ -144,7 +144,8 @@ static func _on_event(name: StringName, ctx: Dictionary) -> void:
 		&"damage_taken":
 			if not _mine(ctx):
 				return
-			_s.damage_taken += int(ctx.get("dealt", 0))
+			var dealt := damage_counted(ctx)
+			_s.damage_taken += dealt
 			if int(ctx.get("dealt", 0)) > 0:
 				_last_hit = describe_attacker(ctx.get("attacker"), ctx.get("player"))
 				_last_hit["at_ms"] = Time.get_ticks_msec()
@@ -212,6 +213,15 @@ static func _on_gm(n: int, _source: String) -> void:
 static func _on_scrap(n: int, _source: String) -> void:
 	if not _s.is_empty() and bool(_s.active):
 		_s.scrap += n
+
+
+## HP a damage_taken hit counts for: `dealt`, capped at the HP the player had (ctx.hp_before, added by Player.take_damage), so a
+## 40-damage hit on 10 HP is 10 (no overkill). A ctx without hp_before (older emitters) counts the whole `dealt`.
+static func damage_counted(ctx: Dictionary) -> int:
+	var dealt := maxi(int(ctx.get("dealt", 0)), 0)
+	if ctx.has("hp_before"):
+		dealt = mini(dealt, maxi(int(ctx.hp_before), 0))
+	return dealt
 
 
 ## {kind: "boss" | "zombie" | "self" | "hazard" | "unknown", id, name} for a damage_taken attacker.
