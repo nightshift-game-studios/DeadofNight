@@ -536,7 +536,7 @@ func _robustness_checks(main: Node) -> void:
 
 
 ## "jitter 0.903230" -> "0.903230" (the rolled value only).
-func _roll_values(log: Array) -> PackedStringArray:
+func _roll_values(log: PackedStringArray) -> PackedStringArray:
 	var out := PackedStringArray()
 	for e in log:
 		out.append(str(e).get_slice(" ", 1))
