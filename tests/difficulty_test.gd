@@ -37,8 +37,8 @@ func _run() -> void:
 	for m in MR.list():
 		maps_ok = maps_ok and D.is_valid(str(m.get("difficulty", "")))
 	check(maps_ok, "every map in maps.json has a valid 'difficulty' field")
-	check(D.for_map("arena") == "easy" and D.for_map("rustwell_foundry") == "medium" and D.for_map("lockout_substation") == "hard",
-		"Arena = easy, Rustwell Foundry = medium, Lockout Substation = hard")
+	check(D.for_map("arena") == "easy" and D.for_map("rustwell_foundry") == "medium" and D.for_map("drowned_cannery") == "hard",
+		"Arena = easy, Rustwell Foundry = medium, Drowned Cannery = hard")
 	check(D.for_map("no_such_map") == "easy", "unknown map / missing field -> default (easy)")
 	var e: Dictionary = D.profile("easy")
 	var neutral := true

@@ -2,7 +2,7 @@ extends SceneTree
 ## Zombie navigation course test (Skillz, DESIGN §18 / MAIN_HOOKS §17).
 ##   godot --headless --path . -s res://tests/ai_nav_test.gd [-- --skip-ranged] [-- --baseline] [-- --maps=arena,rustwell_foundry] [-- --realtime]
 ## Runs zombies of every variant (walker / worker / soldier / crawler / bloated / riot / echo add) and a boss through ramp,
-## stair and obstacle courses on Arena, Rustwell Foundry, Lockout Substation and the synthetic course
+## stair and obstacle courses on Arena, Rustwell Foundry, Drowned Cannery and the synthetic course
 ## (tests/ai_nav_course.tscn). The player stands at each course's goal (invulnerable); zombies start at the course's starts.
 ## A zombie fails if it doesn't get within REACH_FLAT m (flat, |dy| < REACH_DY; ranged bosses: their stop distance) of the player inside the time budget, or if it
 ## ever stands still (< STILL_EPS m of movement) for more than STILL_MAX s while it wants to move (boss telegraphs, crawler
@@ -67,17 +67,15 @@ const COURSES := {
 		{"name": "cp_hoppercar_nw", "spot": "HopperCar NW corner (-32, 0, 24)", "vias": [Vector3(-32.4, 0, 24.4)], "via_tol": 1.5,
 			"goal": Vector3(-27.0, 0.1, 27.5), "starts": [Vector3(-34.5, 0.1, 16.0), Vector3(-34.5, 0.1, 18.0)]},
 	],
-	"lockout_substation": [
-		# starts use the spawn markers: Spawn7 (4.5, 0.1, -3.5) and Spawn10 (16, 0.1, 5) since Mapz's 2026-10-20 move
-		# (were (0, 0.1, 16) / (-2.5, 0.1, 17.2)); the others are plain ground spots.
-		{"name": "deck_stairs", "goal": Vector3(-2.0, 3.1, 6.5), "starts": [Vector3(4.5, 0.1, -3.5), Vector3(-13, 0.1, 18), Vector3(12.5, 0.1, 11.2), Vector3(-16.5, 0.1, 3.5)], "boss": "bellwether"},
-		{"name": "control_ledge_stairs", "goal": Vector3(12.5, 4.1, 18.0), "starts": [Vector3(16.0, 0.1, 5.0), Vector3(4.5, 0.1, -3.5)]},
-		{"name": "gantry_stairs", "goal": Vector3(-9.25, 5.1, -7.75), "starts": [Vector3(-9.5, 0.1, 3.0), Vector3(-16.5, 0.1, 3.5)]},
-		{"name": "vault_ducts", "goal": Vector3(0.0, 0.1, -15.0), "starts": [Vector3(12.5, 0.1, 11.2), Vector3(-16.5, 0.1, 3.5)], "boss": "lantern_stalker"},
-		{"name": "cp_hatch_cableductn", "spot": "hatch D1 corridor by CableDuctN (0, 0, -8)", "vias": [Vector3(0.0, 0, -8.1)], "via_tol": 2.0,
-			"goal": Vector3(0.0, 0.1, -14.0), "starts": [Vector3(0.0, 0.1, -2.0), Vector3(-1.5, 0.1, -2.5), Vector3(1.5, 0.1, -2.5)]},
-		{"name": "cp_covercratee_corner", "spot": "CoverCrateE corner (11, 0, 7)", "vias": [Vector3(11.4, 0, 6.6)], "via_tol": 1.5,
-			"goal": Vector3(10.5, 0.1, 4.5), "starts": [Vector3(12.5, 0.1, 11.2), Vector3(12.0, 0.1, 12.5)]},
+	"drowned_cannery": [
+		# Mapz (playtest #17, replaces the old hard map's course): ramp and deck goals taken from the map's layout_data
+		# (RAMPS / DECKS); starts are spawn markers or plain ground in the same area. All doors are open in this test.
+		{"name": "crane_deck", "goal": Vector3(0.0, 4.1, 0.0), "starts": [Vector3(28.5, 0.1, 12.5), Vector3(-28.5, 0.1, 12.5), Vector3(12.0, 0.1, -10.5)], "boss": "bellwether"},
+		{"name": "net_gantry", "goal": Vector3(-38.0, 3.7, 26.5), "starts": [Vector3(-20.5, 0.1, 16.0), Vector3(-20.0, 0.1, 30.0)]},
+		{"name": "ice_mezzanine", "goal": Vector3(51.0, 3.7, 28.0), "starts": [Vector3(20.5, 0.1, 16.0), Vector3(30.0, 0.1, 30.0)]},
+		{"name": "launch_gantry", "goal": Vector3(52.5, 3.7, 2.0), "starts": [Vector3(32.0, 0.1, 12.5), Vector3(36.0, 0.1, 2.0)], "boss": "lantern_stalker"},
+		{"name": "slip_hut_ramp", "goal": Vector3(36.0, 2.1, -7.25), "starts": [Vector3(32.0, 0.1, 12.5), Vector3(46.0, 0.1, -1.0)]},
+		{"name": "pit_floor", "goal": Vector3(-4.0, -0.9, -26.0), "starts": [Vector3(-20.5, 0.1, -38.5), Vector3(12.0, 0.1, -10.5)], "boss": "lantern_stalker"},
 	],
 	"ai_course": [
 		{"name": "u_trap", "goal": Vector3(0.0, 0.1, -9.0), "starts": [Vector3(0.0, 0.1, -3.0), Vector3(-1.5, 0.1, -3.5), Vector3(1.5, 0.1, -3.5)], "boss": "bellwether"},
@@ -688,7 +686,7 @@ func _carve_checks(main: Node, map_id: String, strips: int) -> void:
 
 func _run() -> void:
 	baseline = _arg("baseline") != ""
-	var maps_arg := _arg("maps", "ai_course,arena,rustwell_foundry,lockout_substation")
+	var maps_arg := _arg("maps", "ai_course,arena,rustwell_foundry,drowned_cannery")
 	if _arg("no-carve") != "" and ResourceLoader.exists(NAV_SCRIPT):
 		var d: Dictionary = load(NAV_SCRIPT).data().duplicate(true)
 		d["ramp_carve"] = {"enabled": false}

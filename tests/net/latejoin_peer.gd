@@ -118,7 +118,7 @@ func _protect(on: bool) -> void:
 		main.player.set("invulnerable_t", 99999.0 if on else 0.0)
 
 
-## Every peer, right after load: the door this test buys. The map's own door_ids (rustwell D1..D6, lockout D1);
+## Every peer, right after load: the door this test buys. The map's own door_ids (rustwell D1..D6, cannery D1);
 ## a map without MapDoors (the arena in main.tscn) gets the same test door "LJ1" on every peer, and the late-map-piece
 ## path (apply_doors) opens it if the host's door state is already in.
 func _setup_door() -> Node:

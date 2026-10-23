@@ -186,7 +186,7 @@ func _run() -> void:
 	check(W._pending_spends.is_empty() and W.doors_open.is_empty(), "world.clear drops pending spends + door state")
 
 	# --- real maps: every MapDoor has its own explicit door_id (replication key; never the node path)
-	for mp in ["res://maps/rustwell_foundry/rustwell_foundry.tscn", "res://maps/lockout_substation/lockout_substation.tscn"]:
+	for mp in ["res://maps/rustwell_foundry/rustwell_foundry.tscn", "res://maps/drowned_cannery/drowned_cannery.tscn"]:
 		var inst = (load(mp) as PackedScene).instantiate()
 		var ids: Array = []
 		for n in inst.find_children("*", "", true, false):

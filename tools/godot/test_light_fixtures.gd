@@ -32,7 +32,7 @@ func _main() -> void:
 		elif a == "--verbose": verbose = true
 		elif a.ends_with(".tscn"): maps.append(a)
 	if maps.is_empty():
-		maps = ["res://scenes/main.tscn", "res://maps/rustwell_foundry/rustwell_foundry.tscn", "res://maps/lockout_substation/lockout_substation.tscn", "res://maps/ironside_depot/ironside_depot.tscn"]
+		maps = ["res://scenes/main.tscn", "res://maps/rustwell_foundry/rustwell_foundry.tscn", "res://maps/drowned_cannery/drowned_cannery.tscn", "res://maps/ironside_depot/ironside_depot.tscn"]
 	var bad_total := 0
 	for path in maps:
 		var ps := load(path) as PackedScene

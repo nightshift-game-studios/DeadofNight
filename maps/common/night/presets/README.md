@@ -4,7 +4,7 @@
 |--------|------------|-------------|---------|-------------|----------|-----|
 | easy   | 0.22       | 0.55        | 0.28    | 0.008       | 1.05     | Arena |
 | medium | 0.15       | 0.40        | 0.22    | 0.012       | 0.98     | Rustwell |
-| hard   | 0.10       | 0.28        | 0.16    | 0.018       | 0.92     | Lockout |
+| hard   | 0.10       | 0.28        | 0.16    | 0.018       | 0.92     | Drowned Cannery |
 
 HDRI: `hdri/dikhololo_night_2k.hdr` (Poly Haven, CC0).
 Apply: `godot -s res://mapz_tools/apply_night.gd -- <map.tscn> <easy|medium|hard>`

@@ -1,12 +1,12 @@
 # Map contract v0.5 (Mapz → G4M3N)
 
-Implemented by Rustwell Foundry (v0.2), Lockout Substation (v0.3 optional hooks) and both maps' v0.6.1 playtest pass (v0.4); light fixtures (v0.5, playtest #16).
+Implemented by Rustwell Foundry (v0.2), the former hard map's v0.3 optional hooks (that map was replaced by Drowned Cannery in playtest #17) and the Rustwell / Ironside v0.6.1 playtest pass (v0.4); light fixtures (v0.5, playtest #16). Drowned Cannery (hard, playtest #17) implements v0.5 end to end.
 
 Changes since v0.3 (v0.6.1 playtest, #15 #16 #27): large maps may have 2–3 spawns per area instead of 6–10 in total; optional `ChestSpots/` relocation markers (Skillz format, below); no void holes,
 checked by `tools/godot/test_void_gaps.gd` (the meta `intended_pit` marks deliberate pits); stair railings with collision
 (`RailCol_*`, Rustwell); the `fix_playtest_v061.gd` pipeline step.
 
-Changes since v0.2 (Lockout Substation): optional `PerkMachineSpot`, `MysteryBoxSpot`, and `BossArenaHook` markers for Skillz perk / mystery-box / boss-arena wiring. Vault-scale boss floors should be ≥ 10×10 m clear nav.
+Changes since v0.2 (hard map): optional `PerkMachineSpot`, `MysteryBoxSpot`, and `BossArenaHook` markers for Skillz perk / mystery-box / boss-arena wiring. Vault-scale boss floors should be ≥ 10×10 m clear nav.
 Changes since v0.3 night: optional `AmbienceEmitters/` (Marker3D children at ~1.6 m with meta `ambience_key`) for Audi-0 3D ambience loops. Night maps place 6–12 emitters, ≥8 m apart; G4M3N attaches loops (max_distance 12–18 m). Keys: `ambience_emitter_sodium_buzz_loop`, `ambience_emitter_sparking_box_loop`, `ambience_emitter_drip_pipe_loop`.
 Changes since v0.1: doors have exports `door_id` and `connects`, and they live at `NavigationRegion3D/Doors/<Dn>`. Every spawn is area-tagged.
 MapRoot uses the `map_doors` group, not a class_name lookup, and queues rebakes. A `NavCarves/` node was added.
@@ -88,11 +88,11 @@ Root metadata (mirrors the exports for engines that don't use the script): `map_
 - Low cover a zombie must walk over (≤ 0.45 m) uses a hipped-ridge collider, not a box. The navmesh climbs 0.5 m, but zombies have no step-up.
 - Ramp and stair sides are carved into the baked navmesh (NavCarves `Carve_<ramp>_Side{A,B}` and `…Front`), so zombies can't get onto
   the low end of a ramp from the side.
-  - Each strip covers the side from 0.5 m outside the edge to 0.45 m inside it (0.35 m on Lockout stairs), up to a side-face height of 0.7 m.
+  - Each strip covers the side from 0.5 m outside the edge to 0.45 m inside it (0.35 m on stairs), up to a side-face height of 0.7 m.
   - On wedge ramps the strip also runs 0.8 m in front of the foot.
   - Each ramp body has the metadata `nav_side_carves` (PackedStringArray of its carve node names). A runtime fallback should skip any
     ramp that has it.
-- No walkable vertical step on a nav route is 0.35 m or taller. Scanned 2026-10-19: Rustwell max 0.15 m, Lockout max 0.14 m.
+- No walkable vertical step on a nav route is 0.35 m or taller. Scanned 2026-10-19: Rustwell max 0.15 m.
 - Every spawn marker sits on the navmesh and is reachable from PlayerSpawn once its `area` is unlocked, and not before (verified).
 - **No zombie-proof perches:** every surface a player can reach has a zombie route (stairs, ramp, or a ≥ 2 m connection).
   At most one dead end per map (map 1: the ContainerC2 roof).
@@ -100,7 +100,7 @@ Root metadata (mirrors the exports for engines that don't use the script): `map_
   surface at that floor, with no gaps or slits at collider / mesh seams. Deliberate pits are bodies with meta `intended_pit = true`
   (optional `pit_size: Vector3`, else the body's AABB). Run
   `godot --headless --path <project> -s res://tools/godot/test_void_gaps.gd -- <map.tscn…> [--step=0.25] [--margin=1.0] [--depth=3.0]
-  [--json=path] [--no-visual] [--skip=Chests,Pickups]` (no maps = Rustwell + Lockout). It prints VOID_HOLE lines (kinds VOID,
+  [--json=path] [--no-visual] [--skip=Chests,Pickups]` (no maps = Rustwell + Drowned Cannery). It prints VOID_HOLE lines (kinds VOID,
   NAV_NO_FLOOR, VISUAL_HOLE, SEAM), VOID_RESULT JSON and VOID_SUITE PASS/FAIL, and exits 1 on any hole. Clip/ is ignored; a
   non-MapRoot root script is stripped, so `scenes/main.tscn` can be checked read-only.
 - Stairs and raised walkways with a rise ≥ 1.5 m and an open side get railings (two bars + posts ≤ 2 m apart, rising with the stair)
@@ -115,7 +115,7 @@ Root metadata (mirrors the exports for engines that don't use the script): `map_
   Dark areas: walkable points without open sky get at least ~0.04 estimated lux (several lights summed) so zombies stay readable at 15–20 m.
   Shadowed lights are nudged 0.3 m out of their lamp housing (a shadowed omni inside a housing blacks the scene out). Run
   `godot --headless --path <project> -s res://tools/godot/test_light_fixtures.gd -- [<map.tscn…>] [--tol=0.3] [--max-shadowed=4] [--max-overlap=14] [--verbose]`
-  (no maps = arena `scenes/main.tscn` + Rustwell + Lockout + Ironside). It prints one `FAIL  FLOATING <path>` line per floating light, per map `MAP … lights= shadowed=
+  (no maps = arena `scenes/main.tscn` + Rustwell + Drowned Cannery + Ironside). It prints one `FAIL  FLOATING <path>` line per floating light, per map `MAP … lights= shadowed=
   on_surface= on_fixture= floating=`, and `LIGHT_FIXTURES_SUITE … PASS|FAIL`; exit 1 on any failure. `tools/godot/mount_lights.gd` (with
   `tools/godot/light_plans/<map>.json`) is the reproducible tool that mounted the lights and filled the dark areas; `light_lib.gd` is the shared helper.
 - The map does **not** contain Player, HUD, Zombies or Pickups containers (Main keeps those).
@@ -222,10 +222,9 @@ listing `res://maps/*/<id>.tscn`.
   It then saves door costs explicitly.
 - **v0.6.1 playtest step (after fix_nav_ramps.gd, both maps):** `godot --headless --path <project> -s res://mapz_tools/fix_playtest_v061.gd --
   res://maps/<m>/<m>.tscn=res://maps/<m>/build/nav_layout.json`. Idempotent. It adds the `FLOOR_FILL` slabs from layout_data (collider +
-  visual; Lockout's start-yard corners beside the vault), overlaps the Lockout stair treads by 5 cm (no see-through slits), rebuilds
+  visual), overlaps stair treads by 5 cm (no see-through slits), rebuilds
   the Rustwell stair rails with RailCol_* colliders (once; root meta `stair_rails_v061`), and rebuilds `ChestSpots/` from layout_data
   `CHEST_SPOTS`. Then run test_void_gaps.gd and test_chest_spots.gd.
-  Note: `gen_lockout.py` writes `maps/lockout_substation/lockout_substation.tscn` directly, so rerun the whole pipeline after it.
 - Clip/ colliders are on layer 1, so bullets / thrown items hit them too. They sit ≥ 8 m up (above wall tops) or outside the bounds, so
   normal play never touches them. A dedicated player-only clip layer would be cleaner if the engine adds one.
 - `enemy.gd` attack range uses horizontal distance only (`to_player.y = 0`), so a zombie standing **under** a deck (3–4 m below) still

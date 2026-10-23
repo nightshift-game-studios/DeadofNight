@@ -1,6 +1,6 @@
 extends SceneTree
 ## In-game smoke + perf (Skillz AI nav, MAIN_HOOKS §17). Debug tool, not a suite.
-##   default: load main.tscn on Arena / Rustwell / Lockout, run 900 physics frames, report zombies + nav components.
+##   default: load main.tscn on Arena / Rustwell / Drowned Cannery, run 900 physics frames, report zombies + nav components.
 ##   -- --perf [--n=28] [--modes=new,old,...]: Rustwell, spawn N zombies, physics time with ZombieNav ("new"),
 ##      the old chase path ("old": z.nav = null) or ZombieNav without RVO ("noavoid").
 func _initialize() -> void:
@@ -28,7 +28,7 @@ func _run() -> void:
 	if _arg("perf") != "":
 		await _perf()
 	else:
-		for id in ["arena", "rustwell_foundry", "lockout_substation"]:
+		for id in ["arena", "rustwell_foundry", "drowned_cannery"]:
 			var main := await _load(id)
 			var max_z := 0
 			for i in 900:

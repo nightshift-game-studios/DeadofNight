@@ -23,12 +23,12 @@ func _go() -> void:
 	prog.load_data()
 
 	# --- difficulty helpers (missing field → medium; sort Easy→Hard)
-	# Use a synthetic info by temporarily relying on maps without difficulty — lockout/arena have fields.
+	# Use a synthetic info by temporarily relying on maps without difficulty — cannery/arena have fields.
 	# Missing-field path: empty string in a fake call through the helper with unknown id → medium
 	check(MapPickerScript.map_difficulty("no_such_map") == "medium", "missing difficulty field defaults to medium")
 	check(MapPickerScript.map_difficulty("arena") == "easy", "arena difficulty easy")
 	check(MapPickerScript.map_difficulty("rustwell_foundry") == "medium", "rustwell medium")
-	check(MapPickerScript.map_difficulty("lockout_substation") == "hard", "lockout hard")
+	check(MapPickerScript.map_difficulty("drowned_cannery") == "hard", "cannery hard")
 	var sorted: Array = MapPickerScript.sorted_map_ids()
 	var diffs: Array = sorted.map(func(id): return MapPickerScript.map_difficulty(str(id)))
 	var order_ok := true
@@ -74,7 +74,7 @@ func _go() -> void:
 	mp.select_row("arena")
 	await process_frame
 	check(not mp._diff_note.visible, "Hard note hidden on Easy")
-	mp.select_row("lockout_substation")
+	mp.select_row("drowned_cannery")
 	await process_frame
 	check(mp._diff_note.visible, "Hard note shown on Hard map")
 	# Play selects map + requests scene change (stubbed)

@@ -1,6 +1,6 @@
 extends SceneTree
 ## Zombie route directness test (Skillz, playtest 2026-10-22 #13; DESIGN §18 / MAIN_HOOKS §17g).
-##   godot --headless --path . -s res://tests/direct_route_test.gd [-- --maps=arena,rustwell_foundry,lockout_substation] [-- --baseline] [-- --verbose]
+##   godot --headless --path . -s res://tests/direct_route_test.gd [-- --maps=arena,rustwell_foundry,drowned_cannery] [-- --baseline] [-- --verbose]
 ## Jason: zombies must take the fastest, most direct route to the player and only detour when stuck or a wall is in the way.
 ## On each map, random navmesh start/goal pairs (seeded) are split into
 ##   CLEAR   - nothing between them: the navmesh path is the straight line (L_nav <= 1.03 S + 0.2 m), same level (|dy| < 0.5),
@@ -389,7 +389,7 @@ func _run() -> void:
 	Engine.max_physics_steps_per_frame = 16
 	Engine.time_scale = 4.0
 	var wall0 := Time.get_ticks_msec()
-	for map_id in _arg("maps", "arena,rustwell_foundry,lockout_substation").split(","):
+	for map_id in _arg("maps", "arena,rustwell_foundry,drowned_cannery").split(","):
 		if not MapRegistry.is_valid(map_id):
 			print("SKIP  map %s not present" % map_id)
 			continue

@@ -77,7 +77,7 @@ func _run() -> void:
 	# ---------------------------------------------------------------- per-map layer
 	var layer: AudioStreamPlayer = sfx._ambience_map
 	var files := {"arena": "ambience_map_arena_loop.ogg", "rustwell_foundry": "ambience_map_rustwell_loop.ogg",
-		"lockout_substation": "ambience_map_lockout_loop.ogg", "ironside_depot": "ambience_map_ironside_loop.ogg"}
+		"drowned_cannery": "ambience_map_lockout_loop.ogg", "ironside_depot": "ambience_map_ironside_loop.ogg"}
 	var maps_ok := true
 	for m in MapRegistry.list():
 		maps_ok = maps_ok and sfx.MAP_AMBIENCE.has(str(m.get("id", "")))

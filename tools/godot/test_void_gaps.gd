@@ -2,10 +2,10 @@ extends SceneTree
 ## Void-gap / floor-coverage test (Mapz). Headless, read-only: loads a map, never saves it.
 ##
 ## Usage (from the project root):
-##   godot --headless --path . -s res://tools/godot/test_void_gaps.gd -- res://maps/lockout_substation/lockout_substation.tscn [more.tscn ...]
+##   godot --headless --path . -s res://tools/godot/test_void_gaps.gd -- res://maps/drowned_cannery/drowned_cannery.tscn [more.tscn ...]
 ##         [--step=0.25] [--margin=1.0] [--depth=3.0] [--json=user://void_gaps.json] [--no-visual] [--verbose]
 ##         [--skip=Chests,Pickups]   (node paths relative to the map root whose bodies + meshes are ignored; default none)
-## With no map arguments it tests res://maps/rustwell_foundry/rustwell_foundry.tscn and res://maps/lockout_substation/lockout_substation.tscn.
+## With no map arguments it tests res://maps/rustwell_foundry/rustwell_foundry.tscn and res://maps/drowned_cannery/drowned_cannery.tscn.
 ## Exit code: 0 = no holes on any map, 1 = at least one hole (or a map failed to load). Last line: "VOID_SUITE ... PASS|FAIL".
 ##
 ## Checks, on a grid (default every 0.25 m) over the play area of each map:
@@ -54,7 +54,7 @@ func _main() -> void:
 		elif a == "--verbose": verbose = true
 		elif a.ends_with(".tscn"): maps.append(a)
 	if maps.is_empty():
-		maps = ["res://maps/rustwell_foundry/rustwell_foundry.tscn", "res://maps/lockout_substation/lockout_substation.tscn"]
+		maps = ["res://maps/rustwell_foundry/rustwell_foundry.tscn", "res://maps/drowned_cannery/drowned_cannery.tscn"]
 	var total := 0
 	var all := {}
 	for m in maps:

@@ -17,10 +17,10 @@
 			"difficulty": "medium"
 		},
 		{
-			"id": "lockout_substation",
-			"display_name": "Lockout Substation",
-			"scene": "res://maps/lockout_substation/lockout_substation.tscn",
-			"description": "Quarantined municipal substation. Open switchyard, a grated deck, and a sealed battery vault where the boss waits.",
+			"id": "drowned_cannery",
+			"display_name": "Drowned Cannery",
+			"scene": "res://maps/drowned_cannery/drowned_cannery.tscn",
+			"description": "Flooded harbour cannery at night: nine rooms from the pier to the brine tanks, wrecked trawlers, gantries, cranes, a sunken brine pit for the boss, and thirteen doors to buy.",
 			"difficulty": "hard"
 		},
 		{

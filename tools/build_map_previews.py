@@ -88,7 +88,7 @@ def build(raw):
 
 if __name__ == "__main__":
     raw_dir, out_dir = sys.argv[1], sys.argv[2]
-    ids = sys.argv[3:] or ["arena", "rustwell_foundry", "lockout_substation", "ironside_depot"]
+    ids = sys.argv[3:] or ["arena", "rustwell_foundry", "drowned_cannery", "ironside_depot"]
     os.makedirs(out_dir, exist_ok=True)
     for i in ids:
         out = build(json.load(open(os.path.join(raw_dir, i + "_raw.json"))))

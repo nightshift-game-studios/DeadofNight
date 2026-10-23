@@ -666,11 +666,11 @@ func _go() -> void:
 	mp.select_row("arena")
 	await process_frame
 	check(mp._diff_note != null and not mp._diff_note.visible, "Hard note hidden for Easy arena")
-	if MapRegistry.is_valid("lockout_substation") or true:
-		# lockout may be missing scene but still in list with difficulty hard
-		mp.select_row("lockout_substation")
+	if MapRegistry.is_valid("drowned_cannery") or true:
+		# cannery may be missing scene but still in list with difficulty hard
+		mp.select_row("drowned_cannery")
 		await process_frame
-		check(mp._diff_note.visible == (MapPickerScr.map_difficulty("lockout_substation") == "hard"),
+		check(mp._diff_note.visible == (MapPickerScr.map_difficulty("drowned_cannery") == "hard"),
 			"Hard note visible only for Hard maps")
 	mp.close()
 
