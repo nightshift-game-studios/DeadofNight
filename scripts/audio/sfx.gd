@@ -26,7 +26,7 @@ const FALLBACK_BED := "ambience_wind_industrial_loop"
 const MAP_AMBIENCE := {
 	"arena": "ambience_map_arena_loop",
 	"rustwell_foundry": "ambience_map_rustwell_loop",
-	"lockout_substation": "ambience_map_lockout_loop",
+	"drowned_cannery": "ambience_map_lockout_loop",  # placeholder: reuses the old hard-map loop until Audi-0 makes a harbour bed
 	"ironside_depot": "ambience_map_ironside_loop",
 }
 ## 3D ambience emitters placed in maps (node meta ambience_key): [unit_size, max_distance].
