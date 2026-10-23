@@ -120,7 +120,7 @@ static func show_shape(parent: Node3D, sh: Dictionary, dur: float, col: Color) -
 static func adds_alive(tree: SceneTree) -> int:
 	var n := 0
 	for e in tree.get_nodes_in_group("enemies"):
-		if e.has_meta("boss_echo") and not bool(e.get("_dead")):
+		if e.has_meta("boss_echo") and e.get("_dead") != true:
 			n += 1
 	return n
 
