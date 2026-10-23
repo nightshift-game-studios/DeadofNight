@@ -110,7 +110,11 @@ func _main() -> void:
 			var res: Dictionary = await _fight(bid, diff, rnd, players, bt, seed0 + r, limit)
 			print(_line(bid, diff, rnd, players, bt, res))
 			var bud := Cat.budgets(diff)
-			var ok_comp: bool = res.result == "win" and res.ttk >= float(bud.ttk_min) and res.ttk <= float(bud.ttk_max) \
+			# multi-boss rounds (hard 11 / 21): the sim fights ONE boss (HP x multi_boss_hp); the full round kills them one after
+			# another (total = count x this), so this boss's TTK window scales by multi_boss_hp (damage budget is per boss: concurrent bosses are not simulated)
+			var nb := Cat.count_for(rnd, diff)
+			var tm := Cat.multi_hp_mult(nb)
+			var ok_comp: bool = res.result == "win" and res.ttk >= float(bud.ttk_min) * tm and res.ttk <= float(bud.ttk_max) * tm \
 				and res.dmg <= float(bud.damage_max) and int(res.deaths) == 0
 			if check:
 				if bt == "competent" and not ok_comp:
@@ -299,9 +303,12 @@ func _bot(b: Bot, tshapes: Array) -> void:
 	var worst_eta := 1.0e9
 	var worst: Dictionary = {}
 	var live_keys: Dictionary = {}
+	var alerted: bool = b.sp.since < 0.1 ## just got hit: a human notices everything that is still coming (no more lapses)
 	for sh in tshapes:
 		var k := _key(sh)
 		live_keys[k] = true
+		if alerted and b.seen.has(k) and float(b.seen[k]) > now:
+			b.seen[k] = now
 		if not b.seen.has(k):
 			var slip := rng.randf() < float(cfg.slip)
 			b.seen[k] = now + (999.0 if slip else rng.randf_range(-1.0, 1.0) * float(cfg.jitter))

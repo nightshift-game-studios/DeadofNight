@@ -8,7 +8,7 @@
 		"ref_dps_per_round": 4.5,
 		"dps_eff": 0.8,
 		"player_ref_hp": 100,
-		"hp_per_extra": 0.85,
+		"hp_per_extra": 1.1,
 		"adds_per_extra": 0.5,
 		"cooldown_cut_per_extra": 0.05,
 		"cooldown_floor": 0.75,
@@ -101,7 +101,7 @@
 				"aftershock_width": 3.5,
 				"aftershock_windup": 0.9,
 				"double_slam_from_stage": 2,
-				"double_slam_windup": 0.85,
+				"double_slam_windup": 1.1,
 				"toll_from_stage": 1,
 				"toll_windup": 1.3,
 				"toll_radius": 5.0,
@@ -156,12 +156,12 @@
 			"enrage_timer": 170,
 			"damage": {
 				"melee": 0.3,
-				"slam": 0.65,
+				"slam": 0.55,
 				"aftershock": 0.45,
 				"charge": 0.55,
 				"toll": 0.25,
 				"knell_burst": 0.3,
-				"knell_tick": 0.07
+				"knell_tick": 0.06
 			},
 			"colors": {
 				"main": [
@@ -360,7 +360,7 @@
 				"summon_socket": "SummonMouth"
 			},
 			"legacy_hp_mult": 5.0,
-			"ttk": 70,
+			"ttk": 74,
 			"stages": [
 				0.66,
 				0.33
@@ -552,11 +552,11 @@
 			],
 			"enrage_timer": 140,
 			"damage": {
-				"melee": 0.25,
-				"spit": 0.38,
-				"spit_fan": 0.3,
-				"gloam_tick": 0.05,
-				"lantern_blast": 0.45
+				"melee": 0.32,
+				"spit": 0.5,
+				"spit_fan": 0.4,
+				"gloam_tick": 0.07,
+				"lantern_blast": 0.6
 			},
 			"echo": {
 				"hp_mult": 0.4,

@@ -64,10 +64,10 @@ func _run() -> void:
 		check(B.hit_damage(id, "melee", 10, "easy") < B.hit_damage(id, "melee", 10, "hard"), "%s melee damage rises with difficulty" % id)
 		check(B.enrage_time(id, "easy") > B.enrage_time(id, "medium") and B.enrage_time(id, "medium") > B.enrage_time(id, "hard"),
 			"%s enrage timer shortens with difficulty" % id)
-		# co-op: HP x (1 + 0.85 per extra player), exactly
+		# co-op: HP x (1 + 1.1 per extra player), exactly
 		var p1: int = B.boss_hp(id, 10, 90, 35, "easy", 1)
 		var p4: int = B.boss_hp(id, 10, 90, 35, "easy", 4)
-		check(abs(p4 - int(round(p1 * 3.55))) <= 2, "%s 4 players = %d HP (x3.55 of %d)" % [id, p4, p1])
+		check(abs(p4 - int(round(p1 * 4.3))) <= 2, "%s 4 players = %d HP (x4.3 of %d)" % [id, p4, p1])
 		check(B.boss_hp(id, 10, 90, 35, "easy", 2) > p1 and B.boss_hp(id, 10, 90, 35, "easy", 2) < p4, "%s HP monotonic in players" % id)
 		# multi-boss rounds: each boss has less HP than a lone boss on the same difficulty, total HP still higher
 		var one: int = B.boss_hp(id, 11, 90, 35, "hard", 1, 1)
@@ -85,7 +85,7 @@ func _run() -> void:
 		for k in B.get_boss(id).damage:
 			worst = maxi(worst, B.hit_damage(id, str(k), 10, "hard"))
 		check(worst < 100, "%s no single hit one-shots a 100 HP player on hard (max %d)" % [id, worst])
-	check(B.hit_damage("bellwether", "slam", 10, "easy") >= 60, "Bellwether slam is a real threat (>= 60 on easy r10: %d)" % B.hit_damage("bellwether", "slam", 10, "easy"))
+	check(B.hit_damage("bellwether", "slam", 10, "easy") >= 50, "Bellwether slam is a real threat (>= 50 on easy r10: %d)" % B.hit_damage("bellwether", "slam", 10, "easy"))
 	check(B.hit_damage("bellwether", "slam", 10, "hard") > B.hit_damage("bellwether", "slam", 10, "medium")
 		and B.hit_damage("bellwether", "slam", 10, "medium") > B.hit_damage("bellwether", "slam", 10, "easy"), "Bellwether slam rises with difficulty")
 	# round slope: later rounds hit harder, never below the floor
