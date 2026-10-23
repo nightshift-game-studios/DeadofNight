@@ -15,7 +15,9 @@ extends RefCounted
 const DATA_PATH := "res://data/ai.json"
 const DEFAULTS := {
 	"nav": {"repath_interval": 0.35, "repath_jitter": 0.1, "repath_min_interval": 0.12, "target_moved_repath": 1.0,
-		"waypoint_radius": 0.6, "pass_corridor": 0.9, "waypoint_dy": 1.0, "corridor_dy": 0.35, "climb_rise": 0.2, "direct_chase_dist": 2.5, "direct_chase_dy": 0.8},
+		"waypoint_radius": 0.6, "pass_corridor": 0.9, "waypoint_dy": 1.0, "corridor_dy": 0.35, "climb_rise": 0.2, "direct_chase_dist": 2.5, "direct_chase_dy": 0.8,
+		"direct_enabled": true, "direct_check_interval": 0.12, "direct_radius": 0.4, "direct_lift": 0.5, "direct_dy": 0.8,
+		"direct_ground_len": 5.0, "direct_ground_dy": 0.3, "direct_path_ratio": 1.04, "direct_path_slack": 0.3, "direct_wall_time": 0.4, "direct_ban_time": 3.0},
 	"avoidance": {"enabled": true, "suspend_off_nav": true, "radius": 0.45, "neighbor_distance": 4.0, "max_neighbors": 8, "time_horizon_agents": 0.6,
 		"max_speed_mult": 1.5, "priority": 0.5},
 	"body": {"floor_max_angle_deg": 46.0, "floor_snap_length": 0.45, "floor_constant_speed": true, "step_up_max": 0.45,
@@ -90,6 +92,15 @@ var sweep_blocks: int = 0 ## corridor passes refused because the capsule sweep t
 var _hop_cd: float = 0.0
 var _map_dirty: float = -1.0 ## >= 0: the nav map changed (door rebake); repath once this many s have passed
 var _air_t: float = 0.0
+# direct chase (playtest 2026-10-22 #13): with a clear line to the player the zombie walks straight at him, no path
+var direct: bool = false ## true while the zombie steers straight at the target (clear line); false = follow the navmesh path
+var direct_flips: int = 0 ## times it went from direct to path-following (tests)
+var direct_bans: int = 0 ## times direct chase was suspended because the line turned out to be blocked / the zombie got stuck (tests)
+var _path_straight: bool = false ## the last path query came back as (nearly) the straight line start -> goal
+var _direct_t: float = 0.0 ## seconds since the last line check
+var _direct_ban_t: float = 0.0
+var _direct_wall_t: float = 0.0 ## seconds spent pressed against static geometry while walking direct
+static var _direct_shape: CapsuleShape3D = null
 var debug_freeze: bool = false ## test hook: zero the zombie's walking velocity (forces the stuck escalation)
 
 
@@ -424,7 +435,14 @@ func direction(to_target: Vector3) -> Vector3:
 			repath(t.global_position) # back from an off-nav phase (telegraph / charge): the old path is stale too
 		var close := t != null and to_target.length() <= float(nav_cfg.direct_chase_dist) \
 			and absf(t.global_position.y - pos.y) < float(nav_cfg.direct_chase_dy)
-		if not close and not path.is_empty():
+		if not close and direct and t != null:
+			# Clear line to the player (checked in tick): straight at where he is NOW, not at a waypoint of a path asked
+			# up to repath_interval ago. Keep the cursor current so the progress watch and a fallback repath stay sane.
+			_advance(pos)
+			var to_t := _flat(t.global_position - pos)
+			if to_t.length() > 0.05:
+				d = to_t.normalized()
+		elif not close and not path.is_empty():
 			_advance(pos)
 			_back_off_ledge(pos)
 			if cursor < path.size():
@@ -441,6 +459,108 @@ func direction(to_target: Vector3) -> Vector3:
 							break
 	_desired_dir = d
 	return d
+
+
+## Direct chase (playtest #13: "take the fastest / most direct route to the player, detour only when stuck or a wall blocks
+## the way"). Every direct_check_interval s (staggered by spawn order, no RNG) decides whether the zombie may walk straight at
+## the player: same level (|dy| < direct_dy), a capsule sweep over the whole line vs world + props (layer 1, raised by
+## direct_lift so a step the body climbs doesn't count) is free, the floor ahead is level (direct_ground_len / _dy), and the zombie's own navmesh path (last query) is that line
+## within direct_path_ratio + direct_path_slack (no chasm, trench, ramp / stair or door hole in between; costs no extra query).
+## Anything else = the navmesh path, exactly as before. Turning direct -> path repaths at once so the path is fresh.
+func _update_direct(delta: float, wants: bool) -> void:
+	_direct_ban_t = maxf(_direct_ban_t - delta, 0.0)
+	_direct_t += delta
+	var t := _target()
+	if not bool(nav_cfg.direct_enabled) or t == null or not wants or _direct_ban_t > 0.0 or _side_t > 0.0 or _detour != Vector3.INF:
+		_set_direct(false, t)
+		return
+	var step := float(nav_cfg.direct_check_interval)
+	if _direct_t < step:
+		return
+	_direct_t = fposmod(float(maxi(rng_order, 0) % 8) * step * 0.125, step) # staggered, deterministic
+	_set_direct(_line_clear(enemy.global_position, t.global_position), t)
+
+
+func _set_direct(on: bool, t: Node3D) -> void:
+	if on == direct:
+		return
+	direct = on
+	if not on:
+		direct_flips += 1
+		if t != null and _since_query >= float(nav_cfg.repath_min_interval):
+			repath(t.global_position)
+
+
+func _ban_direct() -> void:
+	if direct or _direct_ban_t <= 0.0:
+		direct_bans += 1
+	_direct_ban_t = float(nav_cfg.direct_ban_time)
+	_direct_wall_t = 0.0
+	if direct:
+		_set_direct(false, _target())
+
+
+## Pressed into static geometry (not another zombie) for direct_wall_time s while walking direct: the sweep missed
+## something (a thin edge, a prop the capsule slid past), so fall back to the navmesh path for direct_ban_time s.
+func _watch_direct_wall(delta: float) -> void:
+	if not direct:
+		_direct_wall_t = 0.0
+		return
+	var pressed := false
+	if enemy.is_on_wall():
+		for i in enemy.get_slide_collision_count():
+			var c = enemy.get_slide_collision(i).get_collider()
+			if not (c is CharacterBody3D) and absf(enemy.get_slide_collision(i).get_normal().y) < 0.7:
+				pressed = true
+				break
+	_direct_wall_t = _direct_wall_t + delta if pressed else maxf(_direct_wall_t - delta, 0.0)
+	if _direct_wall_t >= float(nav_cfg.direct_wall_time):
+		_ban_direct()
+
+
+## True when the straight line from `from` to `to` is walkable end to end (see _update_direct).
+func _line_clear(from: Vector3, to: Vector3) -> bool:
+	if not _nav_ready() or not enemy.is_on_floor():
+		return false
+	var fl := _flat(to - from)
+	var dist := fl.length()
+	if dist <= float(nav_cfg.direct_chase_dist) or absf(to.y - from.y) >= float(nav_cfg.direct_dy):
+		return false
+	# 1) capsule sweep vs world + props only (zombies and players are not obstacles here; the RVO deals with those)
+	if _direct_shape == null:
+		_direct_shape = CapsuleShape3D.new()
+	var cs := enemy.get_node_or_null("CollisionShape3D") as CollisionShape3D
+	var h := 1.8
+	if cs and cs.shape is CapsuleShape3D:
+		h = (cs.shape as CapsuleShape3D).height
+	_direct_shape.radius = float(nav_cfg.direct_radius)
+	_direct_shape.height = maxf(h - float(nav_cfg.direct_lift), _direct_shape.radius * 2.0 + 0.05)
+	var q := PhysicsShapeQueryParameters3D.new()
+	q.shape = _direct_shape
+	q.collision_mask = WORLD_MASK
+	var lift := float(nav_cfg.direct_lift)
+	# capsule centre: lift above the feet + half of the shortened capsule, so its bottom sits `lift` above the floor
+	q.transform = Transform3D(Basis.IDENTITY, from + Vector3(0.0, lift + _direct_shape.height * 0.5, 0.0))
+	q.motion = fl.normalized() * maxf(dist - 0.3, 0.0)
+	q.exclude = [enemy.get_rid()]
+	var res := enemy.get_world_3d().direct_space_state.cast_motion(q)
+	if res.size() < 2 or float(res[0]) < 1.0:
+		return false
+	# 2) level ground ahead: floor rays every 0.8 m over the first direct_ground_len m stay within direct_ground_dy of our feet
+	#    (a ledge, ramp, stair or drop right in front of us is the navmesh path's business)
+	var space := enemy.get_world_3d().direct_space_state
+	var dir := fl / dist
+	var reach := minf(dist, float(nav_cfg.direct_ground_len))
+	var k := 1
+	while float(k) * 0.8 <= reach + 0.01:
+		var pt := from + dir * (float(k) * 0.8)
+		var rq := PhysicsRayQueryParameters3D.create(pt + Vector3(0.0, 1.2, 0.0), pt + Vector3(0.0, -1.2, 0.0), WORLD_MASK)
+		var hit := space.intersect_ray(rq)
+		if hit.is_empty() or absf((hit.position as Vector3).y - from.y) > float(nav_cfg.direct_ground_dy):
+			return false
+		k += 1
+	# 3) the navmesh must agree: its own path to the player is (nearly) that line (no chasm / trench / ramp / stair / carved hole)
+	return _path_straight
 
 
 ## Moves the cursor past waypoints we are on top of (flat distance) or have walked past (inside the corridor).
@@ -528,7 +648,25 @@ func repath(goal: Vector3) -> void:
 	cursor = 0
 	if not path.is_empty():
 		_nav_off = clampf(path[0].y - enemy.global_position.y, -0.2, 0.8) if enemy.is_on_floor() else _nav_off
+	_path_straight = _is_straight(path)
 	_advance(enemy.global_position)
+
+
+## True when a navmesh path is (nearly) the straight line from its first to its last point at one ground height: the navmesh
+## itself says nothing but open floor lies between them. Feeds the direct-chase decision (nav.direct_path_ratio / _slack).
+func _is_straight(pts: PackedVector3Array) -> bool:
+	if pts.size() < 2:
+		return false
+	var span := _flat(pts[pts.size() - 1] - pts[0]).length()
+	var l := 0.0
+	var y0 := pts[0].y
+	var y1 := pts[pts.size() - 1].y
+	for i in range(1, pts.size()):
+		l += pts[i - 1].distance_to(pts[i])
+		var s := _flat(pts[i] - pts[0]).length() / maxf(span, 0.01)
+		if absf(pts[i].y - lerpf(y0, y1, clampf(s, 0.0, 1.0))) > 0.45:
+			return false
+	return l <= span * float(nav_cfg.direct_path_ratio) + float(nav_cfg.direct_path_slack)
 
 
 ## Distance left along the path from the zombie (for tests / debug).
@@ -564,6 +702,7 @@ func tick(delta: float, desired: Vector3) -> void:
 	_last_tick_frame = frame
 	var wants := _want_frame >= frame - 1 and desired.length() > 0.05
 	_update_path(delta, wants)
+	_update_direct(delta, wants)
 	_air_t = 0.0 if enemy.is_on_floor() else _air_t + delta
 	_hop_cd = maxf(_hop_cd - delta, 0.0)
 	_side_t = maxf(_side_t - delta, 0.0)
@@ -599,6 +738,7 @@ func tick(delta: float, desired: Vector3) -> void:
 		_try_step_up(delta)
 	enemy.move_and_slide()
 	_ease_model(delta)
+	_watch_direct_wall(delta)
 	_update_stuck(delta, wants, desired)
 
 
@@ -781,6 +921,7 @@ func _progress_watch(delta: float, t: Node3D) -> void:
 func _unstick() -> void:
 	var t := _target()
 	unstick_count += 1
+	_ban_direct() # whatever stopped it, the recovery below works on the navmesh path, not on the straight line
 	match stuck_level:
 		1:
 			last_action = "repath"
