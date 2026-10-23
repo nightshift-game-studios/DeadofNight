@@ -64,8 +64,9 @@ func _run() -> void:
 	check(prog.points_per_hit == 3 and prog.points_per_kill == 25, "economy.json v2: 3 per hit, 25 per kill (was 5 / 50, before that 10 / 100)")
 	var econ: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/economy.json"))
 	check(int(econ._previous.points_per_hit) == 5 and int(econ._previous.points_per_kill) == 50, "economy.json keeps the previous values for reference")
-	var maps: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/maps.json"))
-	check(JSON.stringify(maps).contains("750 / 1000 / 1250"), "door prices untouched (750 / 1000 / 1250)")
+	# Door prices live in the map scenes (map descriptions no longer quote them).
+	var rustwell: String = FileAccess.get_file_as_string("res://maps/rustwell_foundry/rustwell_foundry.tscn")
+	check(rustwell.contains("cost = 750") and rustwell.contains("cost = 1000") and rustwell.contains("cost = 1250"), "door prices untouched (750 / 1000 / 1250 in the Rustwell scene)")
 
 	# ------------------------------------------------------------ seen flags
 	var inv = _new_inv()
