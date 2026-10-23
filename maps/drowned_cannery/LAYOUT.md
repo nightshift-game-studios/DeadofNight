@@ -63,8 +63,8 @@ It replaces Lockout Substation as the hard map (`data/maps.json` difficulty `har
 | RampCraneW | -24,-16,-1.5,1.5 | 4.0 / 0.0 | -x |
 | RampCraneE | 16,24,-1.5,1.5 | 4.0 / 0.0 | +x |
 | RampSlipHut | 39.5,44.5,-8.75,-5.75 | 2.0 / 0.0 | +x |
-| RampLaunchN | 43,51,-2.5,0.5 | 3.6 / 0.0 | -x |
-| RampLaunchS | 43,51,6,9 | 3.6 / 0.0 | -x |
+| RampLaunchN | 43,51,-2.5,2.5 | 3.6 / 0.0 | -x |
+| RampLaunchS | 43,51,6,10 | 3.6 / 0.0 | -x |
 | RampBoilerW | -54,-51,-25,-17 | 4.2 / 0.0 | +z |
 | RampBoilerE | -29.7,-26.7,-37,-29 | 4.2 / 0.0 | +z |
 | RampRetortW | -25.7,-22.7,-37,-29 | 4.0 / 0.0 | +z |
