@@ -520,8 +520,11 @@ func _robustness_checks(main: Node) -> void:
 		if not b.has(k):
 			same = false
 			continue
-		var ra: PackedStringArray = a[k]
-		var rb: PackedStringArray = b[k]
+		# Compare the rolled VALUES in order: the per-zombie stream is what the seed fixes. Which decision (repath jitter vs
+		# a stuck sidestep) takes the next value depends on when physics lets the stuck window expire, which can move by a
+		# repath between runs once zombies crowd each other; the value sequence is identical either way.
+		var ra: PackedStringArray = _roll_values(a[k])
+		var rb: PackedStringArray = _roll_values(b[k])
 		var n := mini(ra.size(), rb.size())
 		if n < 3 or ra.slice(0, n) != rb.slice(0, n):
 			same = false
@@ -530,6 +533,14 @@ func _robustness_checks(main: Node) -> void:
 		print("  rng run A %s\n  rng run B %s" % [a, b])
 	check(same and n_rolls > 0, "two solo runs with seed 777: identical nav decisions (%d shared rolls over %d zombies)" % [n_rolls, a.size()])
 	check(a != c, "seed 778 gives different nav decisions than 777")
+
+
+## "jitter 0.903230" -> "0.903230" (the rolled value only).
+func _roll_values(log: Array) -> PackedStringArray:
+	var out := PackedStringArray()
+	for e in log:
+		out.append(str(e).get_slice(" ", 1))
+	return out
 
 
 ## One seeded solo run: 4 zombies (2 pinned so they sidestep / detour), 5 s; returns {attach order: rng_log}.
