@@ -7,7 +7,7 @@ config_version=5
 
 config/name="Gravecrew"
 config/description="Wave based zombie survival game"
-config/version="0.8.0"
+config/version="0.9.0"
 run/main_scene="res://scenes/ui/home.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
