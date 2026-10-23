@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bi00mps6efxi6"
-path="res://.godot/imported/layout_sketch.png-6a8fc9924466ad3a727576860934bbde.ctex"
+uid="uid://c4jbkbphrw6qd"
+path="res://.godot/imported/hazard_stripe.png-5851e011283095bb23d55e83ef92e0ff.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://maps/lockout_substation/layout_sketch.png"
-dest_files=["res://.godot/imported/layout_sketch.png-6a8fc9924466ad3a727576860934bbde.ctex"]
+source_file="res://maps/drowned_cannery/assets/decals/hazard_stripe.png"
+dest_files=["res://.godot/imported/hazard_stripe.png-5851e011283095bb23d55e83ef92e0ff.ctex"]
 
 [params]
 

@@ -1,0 +1,12 @@
+{
+ "snap": [
+  "NightKit/Spark_Amb_SmokeSpark/Flash",
+  "NightKit/Spark_Amb_CraneSpark/Flash",
+  "NightKit/Spark_Amb_BoilerSpark/Flash"
+ ],
+ "shadow_keep": [
+  "Lights/PierFlood",
+  "Lights/QuayFlood",
+  "Lights/PitLamp"
+ ]
+}
