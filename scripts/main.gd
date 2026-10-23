@@ -525,7 +525,6 @@ func _show_game_over(earned: int) -> void:
 		current_round, "" if current_round == 1 else "s", kills, earned]
 	text += "Best round: %d   Total kills: %d   Level %d (%d XP)\n\n" % [
 		Progress.best_round, Progress.total_kills, Progress.get_level(), Progress.xp]
-	text += "Class for next game: %s   (%s)\n" % [Progress.load_selected_class().display_name, _class_keys_hint()]
 	text += "K = Skill Tree (%d points)   |   M = map: %s   |   Enter = restart" % [Progress.skill_points_available(),
 		str(MapRegistry.get_info(map_id).get("display_name", map_id))]
 	hud.show_message(text, Color(1.0, 0.4, 0.35))
@@ -556,40 +555,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			Net.return_to_lobby()
 		else:
 			get_tree().reload_current_scene()
-	else: # §23: 1-4 pick the class for the next game (ClassRoster order)
-		var n := _class_key(event)
-		if n >= 1 and n <= ClassRoster.IDS.size():
-			_pick_class(ClassRoster.IDS[n - 1])
-
-
-## 1-based class key for the game-over picker: weapon_1..3 actions, then the number row (4+), else 0.
-func _class_key(event: InputEvent) -> int:
-	for i in 3:
-		if event.is_action_pressed("weapon_%d" % (i + 1)):
-			return i + 1
-	if event is InputEventKey and event.pressed and not event.echo:
-		var k: int = event.physical_keycode
-		if k >= KEY_4 and k <= KEY_9:
-			return k - KEY_0
-	return 0
-
-
-func _class_keys_hint() -> String:
-	var parts: Array = []
-	for i in ClassRoster.IDS.size():
-		parts.append("%d = %s" % [i + 1, ClassRoster.template(ClassRoster.IDS[i]).display_name])
-	return ", ".join(parts)
-
-
-## Game-over class switch: persisted on the active character (Characters.set_class), plain Progress otherwise.
-func _pick_class(class_id: String) -> void:
-	var chars := get_node_or_null("/root/Characters")
-	if chars and chars.is_bound():
-		chars.set_class(class_id)
-	else:
-		Progress.selected_class = class_id
-		Progress.save_data()
-	_show_game_over(_last_earned)
+	# playtest 2026-10-22 #7/#8: no game-over class keys; the class is chosen in Skills > Specialization
 
 
 # ------------------------------------------------------------------ maps

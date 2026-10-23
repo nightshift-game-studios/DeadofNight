@@ -238,6 +238,7 @@ func _build() -> void:
 	_skills.toggle_action = "skill_tree"
 	_skills.layer = 12
 	_skills.closed.connect(_on_sub_closed.bind("skills"))
+	_skills.closed.connect(_refresh_char_chip) # v070 #8: the class is picked on SKILLS > SPECIALIZATION now
 	add_child(_skills)
 
 	_characters = CharacterSelectScript.new()
