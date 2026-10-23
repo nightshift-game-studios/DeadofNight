@@ -315,7 +315,7 @@ func make_zombie(spec: Dictionary) -> Node:
 			# Base wave stats first; configure_boss replaces HP with catalog formula (x Difficulty.boss_cfg.hp_mult).
 			z.setup(spec.health, spec.speed, spec.damage)
 			if z.has_method("configure_boss"):
-				z.configure_boss(str(spec.boss_id), int(spec.round), str(spec.difficulty))
+				z.configure_boss(str(spec.boss_id), int(spec.round), str(spec.difficulty), int(spec.get("players", -1)))
 		"echo":
 			z.setup(spec.health, spec.speed, spec.damage)
 			z.set_meta("boss_echo", true)
@@ -364,7 +364,7 @@ func _spawn_boss(boss_id: String) -> void:
 	var spawn: Node3D = candidates.pick_random()
 	var stats := _zombie_stats(current_round)
 	_add_zombie({"kind": "boss", "boss_id": boss_id, "round": current_round, "difficulty": Difficulty.active_id(),
-		"health": stats.health, "speed": stats.speed, "damage": stats.damage}, spawn.global_position, 1.0) # NET M3
+		"health": stats.health, "speed": stats.speed, "damage": stats.damage, "players": Net.party_size()}, spawn.global_position, 1.0) # NET M3 (+ players: host party size so every peer derives the same boss HP)
 	_alive += 1
 
 
