@@ -7,6 +7,8 @@ extends Node3D
 
 const PlayerStatusScr := preload("res://scripts/combat/player_status.gd")
 
+const REACH_H := 0.5 ## ray height above the puddle floor / the player's feet for the wall check
+
 static var _last_tick: Dictionary = {} ## player instance id -> game clock (s) of their last gall tick
 static var _clock: float = 0.0 ## game seconds (physics deltas, so time_scale and tick rate don't matter)
 static var _clock_frame: int = -1
@@ -115,6 +117,16 @@ func contains(p: Vector3) -> bool:
 	return Vector2(p.x - global_position.x, p.z - global_position.z).length() <= radius and absf(p.y - global_position.y) < 1.5
 
 
+## Playtest 2026-10-22 #11: the disc doesn't reach through geometry. False when a wall / prop (layer 1) stands between the puddle
+## and a point `REACH_H` m above where the player stands, so a puddle beside a wall never hurts or slows someone on the far side.
+func reaches(p: Vector3) -> bool:
+	if not is_inside_tree():
+		return true
+	var q := PhysicsRayQueryParameters3D.create(global_position + Vector3(0, REACH_H, 0), p + Vector3(0, REACH_H, 0), 1)
+	q.collide_with_areas = false
+	return get_world_3d().direct_space_state.intersect_ray(q).is_empty()
+
+
 func _physics_process(delta: float) -> void:
 	if Engine.get_physics_frames() != _clock_frame:
 		_clock_frame = Engine.get_physics_frames()
@@ -133,7 +145,7 @@ func _physics_process(delta: float) -> void:
 	for pl in _targets():
 		if not (pl is Node3D) or not is_instance_valid(pl) or pl.get("dead"):
 			continue
-		if not contains((pl as Node3D).global_position):
+		if not contains((pl as Node3D).global_position) or not reaches((pl as Node3D).global_position):
 			continue
 		players_inside.append(pl)
 		if is_visual_only:

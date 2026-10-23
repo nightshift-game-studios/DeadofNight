@@ -258,13 +258,18 @@ func step(delta: float) -> void:
 	var vel0 := velocity
 	velocity.y -= gravity * delta
 	var to := from + (vel0 + velocity) * 0.5 * delta
-	# players first (a glob that clips a player's head and then a wall hits the player)
-	if bool(def.get("hits_players", true)):
-		var pl := _player_on_segment(from, to)
-		if pl:
-			_impact(_closest_on_segment(from, to, (pl as Node3D).global_position + Vector3(0, 0.9, 0)), pl, Vector3.UP)
-			return
+	# World first (playtest 2026-10-22 #11): a wall / prop / floor between the glob and a player always wins, so a player
+	# hugging the far side of a wall is never hit through it. A player is hit only when the glob reaches them before the
+	# first world surface on this step.
 	var hit := _world_hit(from, to) if bool(def.get("hits_world", true)) else {}
+	var wall_d := from.distance_to(hit.position) if not hit.is_empty() else INF
+	if bool(def.get("hits_players", true)):
+		for pl in _players_on_segment(from, to):
+			var body_c: Vector3 = (pl as Node3D).global_position + Vector3(0, 0.9, 0)
+			var at := _closest_on_segment(from, to, body_c)
+			if from.distance_to(at) <= wall_d and _los_clear(at, body_c): # nothing solid between the glob and the player
+				_impact(at, pl, Vector3.UP)
+				return
 	if not hit.is_empty():
 		if fuse > 0.0: # bomblet: lands and waits for its fuse
 			global_position = hit.position
@@ -335,6 +340,13 @@ func _world_hit(a: Vector3, b: Vector3) -> Dictionary:
 	return r
 
 
+## True if no world surface (layer 1: walls, props, doors, floors) lies on the straight line a -> b.
+func _los_clear(a: Vector3, b: Vector3) -> bool:
+	var q := PhysicsRayQueryParameters3D.create(a, b, WORLD_MASK)
+	q.collide_with_areas = false
+	return get_world_3d().direct_space_state.intersect_ray(q).is_empty()
+
+
 static func _closest_on_segment(a: Vector3, b: Vector3, p: Vector3) -> Vector3:
 	var ab := b - a
 	var t := clampf((p - a).dot(ab) / maxf(ab.length_squared(), 1e-8), 0.0, 1.0)
@@ -361,6 +373,13 @@ func targets() -> Array:
 
 
 func _player_on_segment(a: Vector3, b: Vector3) -> Node:
+	var l := _players_on_segment(a, b)
+	return l[0] if not l.is_empty() else null
+
+
+## Every player whose capsule the segment a-b touches (the world check in step() decides which one it really reaches).
+func _players_on_segment(a: Vector3, b: Vector3) -> Array:
+	var out: Array = []
 	for pl in targets():
 		if not (pl is Node3D) or not is_instance_valid(pl) or pl.get("dead"):
 			continue
@@ -377,8 +396,8 @@ func _player_on_segment(a: Vector3, b: Vector3) -> Node:
 		var c0 := mid - Vector3(0, half, 0)
 		var c1 := mid + Vector3(0, half, 0)
 		if seg_seg_dist(a, b, c0, c1) <= r + collision_radius:
-			return pl
-	return null
+			out.append(pl)
+	return out
 
 
 func _impact(where: Vector3, hit_player: Node, normal: Vector3) -> void:
@@ -414,10 +433,16 @@ func _impact(where: Vector3, hit_player: Node, normal: Vector3) -> void:
 	queue_free()
 
 
-## Where the hazard lies: straight down from the impact (a wall / ceiling splash drips to the floor below).
+## Where the hazard lies: straight down from the impact (a wall / ceiling splash drips to the floor below). Playtest
+## 2026-10-22 #11: the drip starts on the open side of the surface that was hit (never inside / behind it), must have a clear
+## path down, and no floor within max_drop -> no puddle (Vector3.INF).
 func _ground_below(where: Vector3, normal: Vector3, max_drop: float) -> Vector3:
+	var n := normal.normalized() if normal.length() > 0.001 else Vector3.UP
+	var start := where + n * 0.08 + Vector3.UP * (0.3 if n.y > -0.5 else 0.0) # a ceiling hit starts below it, not above
+	if not _los_clear(where + n * 0.02, start): # the nudge would poke through a second surface (a corner / thin prop)
+		start = where + n * 0.08
 	var space := get_world_3d().direct_space_state
-	var start := where + normal * 0.05 + Vector3(0, 0.3, 0)
 	var q := PhysicsRayQueryParameters3D.create(start, start - Vector3(0, max_drop + 0.3, 0), WORLD_MASK)
+	q.collide_with_areas = false
 	var r := space.intersect_ray(q)
 	return r.position if not r.is_empty() else Vector3.INF

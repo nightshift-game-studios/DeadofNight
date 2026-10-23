@@ -17,6 +17,7 @@ const PlaceholderScr := preload("res://scripts/enemies/variants/gallspitter_plac
 const ProjScr := preload("res://scripts/projectiles/thrown_projectile.gd") ## = class ThrownProjectile
 const VARIANT := "gallspitter"
 const WORLD_MASK := 1
+const ARC_END_FRAC := 0.75
 
 enum Mode {APPROACH, HOLD, MOVE, RETREAT, SPIT}
 const MODE_NAMES := ["approach", "hold", "move", "retreat", "spit"]
@@ -38,6 +39,8 @@ var spits_here: int = 0
 var last_shot: Dictionary = {} ## {target, from, aim, vel, flight_t, range}
 var last_pick: Dictionary = {} ## why the current target was chosen {id, camping, unreachable, dist}
 var cancelled_spits: int = 0
+var blocked_releases: int = 0 ## spits whose line of sight / arc was gone at the release moment (aborted, nothing fired; tests)
+var blocked_starts: int = 0 ## wind-ups refused because the fresh line-of-sight check failed (it repositions instead; tests)
 var searches: int = 0
 var retreats: int = 0
 var placeholder: bool = false
@@ -331,9 +334,16 @@ func can_shoot_from(feet: Vector3, t: Node3D) -> bool:
 	var proj_id := StringName(str(b.get("projectile", "bile_glob")))
 	var v := ProjScr.lob_velocity(mouth, aim, proj_id)
 	var ft := VC.flat_dist(mouth, aim) / maxf(float(ProjScr.type_def(proj_id).get("launch_speed", 9.0)), 0.1)
-	var pts := ProjScr.lob_points(mouth, v, ft, proj_id, 8)
-	for i in range(1, pts.size() - 1): # the last segment ends at the target (its floor may graze it)
-		if not _ray_clear(pts[i - 1], pts[i]):
+	return _arc_clear(mouth, v, ft, proj_id)
+
+
+## The lob arc from `from` clears the world (walls, props, floors: layer 1). The last stretch is checked to
+## ARC_END_FRAC of the final segment (the glob lands on the floor at the target, so the very end may graze it).
+func _arc_clear(from: Vector3, vel: Vector3, flight_t: float, proj_id: StringName) -> bool:
+	var pts := ProjScr.lob_points(from, vel, flight_t, proj_id, 8)
+	for i in range(1, pts.size()):
+		var e := pts[i] if i < pts.size() - 1 else pts[i - 1].lerp(pts[i], ARC_END_FRAC)
+		if not _ray_clear(pts[i - 1], e):
 			return false
 	return true
 
@@ -572,8 +582,14 @@ func _decide(delta: float) -> void:
 	if _good and not relocate:
 		mode = Mode.HOLD
 		if _cd <= 0.0 and is_on_floor():
-			_start_spit()
-		return
+			if can_shoot_from(global_position, target): # fresh check: the cached _good can be 0.25 s old (playtest #11)
+				_start_spit()
+				return
+			_good = false # the target slipped behind cover: no spit, find a standpoint with a clear shot instead
+			_good_t = 0.25
+			blocked_starts += 1
+		else:
+			return
 	if _search_t <= 0.0:
 		_search_t = VC.num(b, "search_interval", 0.6)
 		var p := find_spot(false)
@@ -666,6 +682,20 @@ func _cancel_spit() -> void:
 	_cd = VC.num(b, "spit_cooldown", 2.6) * 0.5
 
 
+## The release found no clear shot: nothing is fired, short cooldown, and the next _decide() looks for a new standpoint now.
+func _abort_blocked() -> void:
+	blocked_releases += 1
+	_spit_t = -1.0
+	_released = false
+	mode = Mode.HOLD
+	_attack_anim_t = 0.0
+	_good = false
+	_good_t = 0.0
+	_search_t = 0.0
+	_cd = VC.num(b, "spit_cooldown", 2.6) * 0.25
+	_apply_telegraph(0.0)
+
+
 func projectile_damage(_type_id: StringName = &"") -> int:
 	return maxi(int(round(float(contact_damage) * VC.num(b, "glob_damage_mult", 3.0))), 1)
 
@@ -681,6 +711,13 @@ func _release() -> void:
 	aim += Vector3(rng.randf_range(-1.0, 1.0), 0.0, rng.randf_range(-1.0, 1.0)) * spread
 	var proj_id := StringName(str(b.get("projectile", "bile_glob")))
 	var vel := ProjScr.lob_velocity(from, aim, proj_id)
+	# Playtest #11: re-check at the moment of release, with the same test the wind-up start used (line of sight + lob arc,
+	# fresh), and the mouth must be outside geometry (a spitter pressed against a wall would spawn the glob inside it).
+	# If either fails nothing fires and it repositions. (The jittered aim isn't re-tested: a glob that clips a corner stops there.)
+	if not _ray_clear(global_position + Vector3(0, VC.num(b, "mouth_height", 1.45), 0), from) \
+			or not can_shoot_from(global_position, target):
+		_abort_blocked()
+		return
 	var p = ProjScr.spawn({"type_id": proj_id, "variant": &"", "rarity": 0, "pos": from, "vel": vel,
 		"owner_id": get_instance_id(), "seed": rng.randi()})
 	spits += 1
