@@ -22,7 +22,7 @@ const BOTS := {
 	# react (+-jitter) = s before a telegraph is "seen", slip = chance a given telegraph is missed altogether (human
 	# lapse), duty = shooting uptime factor, dodge_fire = dps factor while dodging, kite = bot starts retreating inside
 	# this distance, margin = safety margin around shapes, speed = dodge sprint m/s
-	"competent": {"react": 0.30, "jitter": 0.08, "slip": 0.12, "duty": 0.92, "dodge_fire": 0.45, "kite": 8.0, "margin": 0.9, "speed": 7.5},
+	"competent": {"react": 0.30, "jitter": 0.08, "slip": 0.10, "duty": 0.92, "dodge_fire": 0.45, "kite": 8.0, "margin": 0.9, "speed": 7.5},
 	"sloppy": {"react": 0.62, "jitter": 0.2, "slip": 0.40, "duty": 0.62, "dodge_fire": 0.2, "kite": 3.5, "margin": 0.2, "speed": 6.5},
 	"idle": {"react": 99.0, "jitter": 0.0, "slip": 1.0, "duty": 1.0, "dodge_fire": 1.0, "kite": 0.0, "margin": 0.0, "speed": 0.0},
 }
@@ -35,6 +35,7 @@ class SimPlayer extends Node3D:
 	var since := 99.0
 	var min_hp := 100.0
 	var trace := false
+	var info := Callable()
 	var velocity := Vector3.ZERO
 	var health: int:
 		get: return int(hp)
@@ -45,7 +46,7 @@ class SimPlayer extends Node3D:
 		hp -= amount
 		taken += amount
 		if trace:
-			print("HIT %.0f from %s hp=%.0f" % [amount, str(_attacker.name if _attacker != null else "?") + ":" + str(_attacker.get_script().resource_path.get_file() if _attacker != null and _attacker.get_script() != null else ""), hp])
+			print("HIT %.0f from %s hp=%.0f" % [amount, str(_attacker.name if _attacker != null else "?") + ":" + str(_attacker.get_script().resource_path.get_file() if _attacker != null and _attacker.get_script() != null else ""), hp] + (" " + str(info.call()) if info.is_valid() else ""))
 		since = 0.0
 		min_hp = minf(min_hp, hp)
 		if hp <= 0.0:
@@ -214,6 +215,12 @@ func _fight(bid: String, diff: String, rnd: int, players: int, bot_kind: String,
 	for i in players:
 		var sp := SimPlayer.new()
 		sp.add_to_group("player")
+		sp.info = func() -> String:
+			var ids: Array = []
+			if is_instance_valid(boss) and boss.has_method("threat_shapes"):
+				for t in boss.threat_shapes():
+					ids.append("%s@%.2f" % [str(t.get("id", "")), float(t.get("eta", 0.0))])
+			return "t=%.1f live=%s" % [now, str(ids)]
 		sp.trace = OS.get_cmdline_user_args().has("--trace") or OS.get_cmdline_user_args().has("--hits")
 		arena.add_child(sp)
 		sp.global_position = Vector3(-6.0 + 4.0 * float(i) - 2.0 * float(players - 1), 0.0, 14.0)
