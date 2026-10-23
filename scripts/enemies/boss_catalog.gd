@@ -4,7 +4,8 @@ extends RefCounted
 ## Cadence lives in Difficulty (is_boss_round / boss_count / boss_rounds / boss_cfg).
 ##   BossCatalog.ids() / get(id) / telegraph(id)
 ##   BossCatalog.normal_hp(round, base_health=90, health_per_round=35)
-##   BossCatalog.boss_hp(id, round, base_health, health_per_round, difficulty_id="")
+##   BossCatalog.boss_hp(id, round, _, _, difficulty_id="", players=1, boss_count=-1)   (TTK-driven, see data/bosses.json -> tuning)
+##   BossCatalog.hit_damage(id, attack, round, difficulty_id, frenzy) / cooldown_mult / adds_count / adds_cap / enrage_time / stage_for / ttk_target / budgets
 ##   BossCatalog.kill_points(id, points_per_kill=50) / gravemark_reward(id)
 ##   BossCatalog.pick_roster(round, difficulty_id="") -> Array[String]
 ##   BossCatalog.script_path(id) / is_boss_id(id)
@@ -106,15 +107,117 @@ static func normal_hp(n: int, base_health: int = DEFAULT_BASE_HEALTH, health_per
 	return maxi(base_health + health_per_round * (maxi(n, 1) - 1), 1)
 
 
-## Boss max HP at spawn round. Applies Difficulty.boss_cfg().hp_mult on top of the boss's own hp_mult.
-static func boss_hp(id: String, n: int, base_health: int = DEFAULT_BASE_HEALTH, health_per_round: int = DEFAULT_HEALTH_PER_ROUND, difficulty_id: String = "") -> int:
+## Boss rework (playtest #15): HP is TTK-driven. tuning() = data/bosses.json -> tuning.
+static func tuning() -> Dictionary:
+	return data().get("tuning", {})
+
+
+## Sustained boss DPS of one competent player at round n (the reference the HP and the sim budgets are built on).
+static func ref_dps(n: int) -> float:
+	var t := tuning()
+	return float(t.get("ref_dps_base", 70.0)) + float(t.get("ref_dps_per_round", 4.5)) * float(maxi(n, 1))
+
+
+## Boss HP factor for `players` (co-op): 1 + hp_per_extra x (players - 1).
+static func party_hp_mult(players: int) -> float:
+	return 1.0 + float(tuning().get("hp_per_extra", 0.85)) * float(maxi(players, 1) - 1)
+
+
+## Per-boss HP factor when a round spawns `count` bosses (Hard 11 / 21).
+static func multi_hp_mult(count: int) -> float:
+	var m: Dictionary = tuning().get("multi_boss_hp", {})
+	return float(m.get(str(clampi(count, 1, 3)), 1.0))
+
+
+## How many bosses `n` spawns on `difficulty_id` (>= 1 so a test can configure a boss on any round).
+static func count_for(n: int, difficulty_id: String = "") -> int:
+	var D = load("res://scripts/world/difficulty.gd")
+	return maxi(int(D.boss_count(n, difficulty_id)), 1)
+
+
+## Boss max HP at spawn round = ref_dps(n) x ttk x dps_eff x Difficulty hp_mult x multi-boss x party. base_health /
+## health_per_round are kept for call compatibility and ignored (bosses no longer track zombie HP).
+static func boss_hp(id: String, n: int, _base_health: int = DEFAULT_BASE_HEALTH, _health_per_round: int = DEFAULT_HEALTH_PER_ROUND, difficulty_id: String = "", players: int = 1, boss_count: int = -1) -> int:
 	var b := get_boss(id)
 	if b.is_empty():
 		return 0
 	var D = load("res://scripts/world/difficulty.gd")
 	var diff_m := float(D.boss_cfg(difficulty_id).get("hp_mult", 1.0))
-	var raw := float(normal_hp(n, base_health, health_per_round)) * float(b.get("hp_mult", 1.0)) * diff_m
+	if boss_count < 0:
+		boss_count = count_for(n, difficulty_id)
+	var raw := ref_dps(n) * float(b.get("ttk", 60.0)) * dps_eff(id) * diff_m * multi_hp_mult(boss_count) * party_hp_mult(players)
 	return maxi(int(round(raw)), 1)
+
+
+## Seconds a reference player needs for this boss (solo, boss_count 1): HP / (ref_dps x dps_eff). The sim checks it.
+static func ttk_target(id: String, n: int, difficulty_id: String = "", players: int = 1, boss_count: int = 1) -> float:
+	var hp := float(boss_hp(id, n, 0, 0, difficulty_id, players, boss_count))
+	return hp / (ref_dps(n) * dps_eff(id) * float(maxi(players, 1)))
+
+
+## Fraction of the reference DPS that lands on the boss (dodging, reloads, add-killing, shield phases). Per-boss override.
+static func dps_eff(id: String) -> float:
+	return float(get_boss(id).get("dps_eff", tuning().get("dps_eff", 0.8)))
+
+
+static func budgets(difficulty_id: String) -> Dictionary:
+	return tuning().get("budgets", {}).get(difficulty_id, {})
+
+
+## HP-fraction thresholds crossed -> stage (0-based). hp_frac 1.0 = stage 0.
+static func stage_for(id: String, hp_frac: float) -> int:
+	var st := 0
+	for t in get_boss(id).get("stages", []):
+		if hp_frac <= float(t):
+			st += 1
+	return st
+
+
+## Per-hit damage for attack `key` (bosses[id].damage, a fraction of tuning.player_ref_hp) at round n.
+static func hit_damage(id: String, key: String, n: int, difficulty_id: String = "", frenzy: bool = false) -> int:
+	var b := get_boss(id)
+	if b.is_empty():
+		return 1
+	var D = load("res://scripts/world/difficulty.gd")
+	var t := tuning()
+	var frac := float(b.get("damage", {}).get(key, 0.2))
+	var slope := maxf(float(t.get("damage_round_floor", 0.7)), 1.0 + float(t.get("damage_round_slope", 0.015)) * float(n - 10))
+	var raw := frac * float(t.get("player_ref_hp", 100)) * slope * float(D.boss_cfg(difficulty_id).get("damage_mult", 1.0))
+	if frenzy:
+		raw *= float(b.get("frenzy", {}).get("damage_mult", 1.3))
+	raw = minf(raw, float(t.get("hit_cap_frac", 0.85)) * float(t.get("player_ref_hp", 100))) # no single hit one-shots a full-health player
+	return maxi(int(round(raw)), 1)
+
+
+## Attack cooldown multiplier: Difficulty boss cooldown_mult x co-op cut (floored).
+static func cooldown_mult(difficulty_id: String = "", players: int = 1, frenzy: bool = false, id: String = "") -> float:
+	var D = load("res://scripts/world/difficulty.gd")
+	var t := tuning()
+	var party := maxf(float(t.get("cooldown_floor", 0.75)), 1.0 - float(t.get("cooldown_cut_per_extra", 0.05)) * float(maxi(players, 1) - 1))
+	var m := float(D.boss_cfg(difficulty_id).get("cooldown_mult", 1.0)) * party
+	if frenzy:
+		m *= float(get_boss(id).get("frenzy", {}).get("cooldown_mult", 0.7))
+	return m
+
+
+## Summoned-add count: base x Difficulty adds_mult x (1 + adds_per_extra x (players - 1)), min 1 when base > 0.
+static func adds_count(base: float, difficulty_id: String = "", players: int = 1) -> int:
+	if base <= 0.0:
+		return 0
+	var D = load("res://scripts/world/difficulty.gd")
+	var raw := base * float(D.boss_cfg(difficulty_id).get("adds_mult", 1.0)) * (1.0 + float(tuning().get("adds_per_extra", 0.5)) * float(maxi(players, 1) - 1))
+	return maxi(int(round(raw)), 1)
+
+
+static func adds_cap(players: int = 1) -> int:
+	var t := tuning()
+	return mini(int(t.get("adds_cap_base", 6)) + int(t.get("adds_cap_per_extra", 2)) * (maxi(players, 1) - 1), int(t.get("adds_cap_max", 12)))
+
+
+## Seconds of fight before Frenzy (soft enrage).
+static func enrage_time(id: String, difficulty_id: String = "") -> float:
+	var D = load("res://scripts/world/difficulty.gd")
+	return float(get_boss(id).get("enrage_timer", 150.0)) * float(D.boss_cfg(difficulty_id).get("enrage_mult", 1.0))
 
 
 ## Echo add HP = normal_hp * echo.hp_mult (no boss/Difficulty boss hp_mult).

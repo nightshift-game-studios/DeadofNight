@@ -112,7 +112,7 @@ func _run() -> void:
 		bw2._physics_process(1.0 / 60.0)
 	check(bw2.phase == bw2.Phase.STUNNED, "smash resolves ~0.17 s into SlamImpact, then stun")
 	var stun_total: float = bw2._phase_t
-	check(stun_total > 1.0 and stun_total < 1.6, "stun = SlamImpact follow-through + slam_stun (%.2f s)" % stun_total)
+	check(stun_total > 1.0 and stun_total < 2.2, "stun = SlamImpact follow-through + slam_stun_stage[0] 1.5 (rework: longest punish window at stage 0) (%.2f s)" % stun_total)
 	for i in 40:
 		bw2._physics_process(1.0 / 60.0)
 	check(Art.anim_player(bw2).current_animation == "Stun", "Stun clip follows SlamImpact")

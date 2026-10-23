@@ -1,7 +1,54 @@
 {
 	"version": 1,
-	"_help": "Boss zombies (Skillz). Cadence comes from Difficulty.boss_* (data/difficulty.json). HP = round(normal_round_hp * hp_mult * Difficulty.boss_cfg().hp_mult), where normal_round_hp = main.base_health + main.health_per_round*(round-1). Kill points = points_per_kill * kill_points_mult (Economy v2: 25 base). gravemark_reward is an int for the future Gravemark currency (multiply by Difficulty.rare_currency_drop_mult when wired). Echo adds use echo_* and pay no Gravemark. Spawn roster: BossCatalog.pick_roster(round, difficulty_id).",
+	"_help": "Boss zombies (Skillz). Cadence comes from Difficulty.boss_* (data/difficulty.json). Boss rework (playtest #15, 2026-10-22): HP is TTK-driven, not a multiple of zombie HP: HP = ref_dps(round) x ttk x tuning.dps_eff x Difficulty.boss.hp_mult (= TTK mult) x multi_boss_hp[count] x party hp factor, ref_dps(n) = tuning.ref_dps_base + ref_dps_per_round*n (what a competent player sustains on a boss; see /workspace/skillz/BOSS_REWORK.md). Attack damage = bosses[id].damage[attack] (fraction of tuning.player_ref_hp=100) x round slope x Difficulty.boss.damage_mult x Frenzy. stages = HP-fraction thresholds (stage = thresholds crossed). Frenzy (soft enrage) starts enrage_timer s x Difficulty.boss.enrage_mult after the fight starts. Kill points = points_per_kill * kill_points_mult (Economy v2: 25 base). gravemark_reward is an int for the Gravemark currency. Echo adds use echo_* and pay no Gravemark. Spawn roster: BossCatalog.pick_roster(round, difficulty_id).",
 	"default_points_per_kill": 25,
+	"tuning": {
+		"_help": "ref_dps = sustained boss DPS of one competent player at round n (rifle/SMG class weapons at the round's item power incl. headshots, reloads/ammo swaps NOT included: dps_eff covers dodging, reloads, add-killing). player_ref_hp = Player.max_health used to turn damage fractions into numbers. Co-op: hp_per_extra = boss HP +x per extra player; adds_per_extra = add count +x per extra player; cooldown_cut_per_extra = attack cooldowns -x per extra player (floor cooldown_floor). multi_boss_hp = per-boss HP factor when a round spawns 2/3 bosses (Hard). adds_cap_base/adds_cap_per_extra/adds_cap_max = max living boss adds. damage_round_slope = +x damage per round beyond 10 (min damage_round_floor).",
+		"ref_dps_base": 70.0,
+		"ref_dps_per_round": 4.5,
+		"dps_eff": 0.8,
+		"player_ref_hp": 100,
+		"hp_per_extra": 0.85,
+		"adds_per_extra": 0.5,
+		"cooldown_cut_per_extra": 0.05,
+		"cooldown_floor": 0.75,
+		"multi_boss_hp": {
+			"1": 1.0,
+			"2": 0.7,
+			"3": 0.55
+		},
+		"adds_cap_base": 6,
+		"adds_cap_per_extra": 2,
+		"adds_cap_max": 12,
+		"damage_round_slope": 0.015,
+		"damage_round_floor": 0.7,
+		"frenzy_warning": 12.0,
+		"budgets": {
+			"_help": "Targets for a competent player (sim bot: 0.30 s reaction, ~80% duty): ttk = fight length in s, damage = raw damage taken before regen (player 100 HP, regen 6/s after 4 s). Verified by tests/boss_sim.gd.",
+			"easy": {
+				"ttk_min": 50,
+				"ttk_max": 85,
+				"damage_max": 170
+			},
+			"medium": {
+				"ttk_min": 65,
+				"ttk_max": 110,
+				"damage_max": 230
+			},
+			"hard": {
+				"ttk_min": 80,
+				"ttk_max": 135,
+				"damage_max": 300
+			}
+		},
+		"supply_drop": {
+			"item": "ammo_box",
+			"count_per_player": 1,
+			"scatter": 3.0,
+			"_help": "Host drops this many ammo boxes per player near a random player on every HP stage change (boss HP > a loadout's reserve; main.spawn_pickup, Net-aware). Event kind 'supply'."
+		},
+		"hit_cap_frac": 0.85
+	},
 	"bosses": {
 		"bellwether": {
 			"id": "bellwether",
@@ -10,7 +57,6 @@
 			"script": "res://scripts/enemies/bellwether.gd",
 			"model": "res://assets/models/bosses/bellwether.glb",
 			"icon": "res://assets/icons/boss_bellwether.png",
-			"hp_mult": 8.0,
 			"speed_mult": 0.85,
 			"damage_mult": 1.6,
 			"kill_points_mult": 8.0,
@@ -26,12 +72,60 @@
 				"slam_stun": 1.0,
 				"slam_cooldown": 5.0,
 				"enrage_hp_frac": 0.5,
-				"enrage_slam_cooldown": 3.2,
-				"charge_windup": 0.7,
+				"enrage_slam_cooldown": 2.6,
+				"charge_windup": 0.75,
 				"charge_damage_mult": 1.4,
 				"charge_speed_mult": 2.4,
 				"charge_duration": 0.85,
-				"charge_cooldown": 4.5
+				"charge_cooldown": 4.5,
+				"slam_windup_stage": [
+					1.2,
+					1.05,
+					0.9
+				],
+				"slam_cooldown_stage": [
+					4.2,
+					3.4,
+					2.6
+				],
+				"slam_stun_stage": [
+					1.5,
+					1.2,
+					1.0
+				],
+				"stun_damage_mult": 1.25,
+				"charge_windup_enraged": 0.6,
+				"charge_width": 1.8,
+				"charge_chain_stage2": 1,
+				"aftershock_from_stage": 1,
+				"aftershock_width": 3.5,
+				"aftershock_windup": 0.9,
+				"double_slam_from_stage": 2,
+				"double_slam_windup": 0.85,
+				"toll_from_stage": 1,
+				"toll_windup": 1.3,
+				"toll_radius": 5.0,
+				"toll_adds_stage": [
+					0,
+					2,
+					3
+				],
+				"toll_gate_mult": 0.4,
+				"toll_gate_max": 14.0,
+				"toll_break_stun": 1.8,
+				"toll_break_dmg_mult": 1.35,
+				"knell_from_stage": 1,
+				"knell_windup": 0.9,
+				"knell_zones_stage": [
+					0,
+					3,
+					4
+				],
+				"knell_zone_radius": 2.4,
+				"knell_zone_arm": 1.1,
+				"knell_zone_life": 5.5,
+				"knell_zone_tick": 0.5,
+				"max_zones": 6
 			},
 			"anims": {
 				"_help": "Desi clip names (CLIP_REMAP.txt). loop = clips the boss script sets LOOP_LINEAR on (glTF has no loop flag). slam_hit_time = seconds into SlamImpact when the damage/VFX lands (hands bottom out, frame 4).",
@@ -52,6 +146,118 @@
 				"enrage_emission_mult": 4.0,
 				"enrage_speed_scale": 1.25,
 				"slam_socket": "SlamFx"
+			},
+			"legacy_hp_mult": 8.0,
+			"ttk": 62,
+			"stages": [
+				0.75,
+				0.5
+			],
+			"enrage_timer": 170,
+			"damage": {
+				"melee": 0.3,
+				"slam": 0.65,
+				"aftershock": 0.45,
+				"charge": 0.55,
+				"toll": 0.25,
+				"knell_burst": 0.3,
+				"knell_tick": 0.07
+			},
+			"colors": {
+				"main": [
+					1.0,
+					0.35,
+					0.1,
+					0.5
+				],
+				"danger": [
+					1.0,
+					0.12,
+					0.08,
+					0.55
+				],
+				"zone": [
+					0.95,
+					0.5,
+					0.1,
+					0.5
+				],
+				"toll": [
+					0.95,
+					0.8,
+					0.3,
+					0.5
+				]
+			},
+			"frenzy": {
+				"damage_mult": 1.3,
+				"cooldown_mult": 0.7
+			},
+			"sfx": {
+				"stage": [
+					"boss_bellwether_stage",
+					"zombie_aggro_scream"
+				],
+				"frenzy_warn": [
+					"boss_frenzy_warn",
+					"zombie_aggro_scream"
+				],
+				"frenzy": [
+					"boss_frenzy",
+					"zombie_aggro_scream"
+				],
+				"summon": [
+					"boss_summon",
+					"zombie_idle_groan"
+				],
+				"slam_windup": [
+					"boss_bellwether_slam_windup",
+					"zombie_aggro_scream"
+				],
+				"slam_hit": [
+					"boss_bellwether_slam_hit",
+					"frag_explode"
+				],
+				"aftershock_windup": [
+					"boss_bellwether_aftershock_windup",
+					"grenade_requiem_bell_mark"
+				],
+				"aftershock_hit": [
+					"boss_bellwether_aftershock_hit",
+					"grenade_requiem_bell_detonate"
+				],
+				"charge_windup": [
+					"boss_bellwether_charge_windup",
+					"zombie_aggro_scream"
+				],
+				"charge_hit": [
+					"boss_bellwether_charge_hit",
+					"zombie_attack_swipe"
+				],
+				"toll_windup": [
+					"boss_bellwether_toll_windup",
+					"grenade_requiem_bell_toll"
+				],
+				"toll_hit": [
+					"boss_bellwether_toll_hit",
+					"grenade_requiem_bell_detonate"
+				],
+				"knell_windup": [
+					"boss_bellwether_knell_windup",
+					"grenade_requiem_bell_toll"
+				],
+				"knell_arm": [
+					"boss_bellwether_knell_arm",
+					"grenade_requiem_bell_mark"
+				],
+				"gate_on": [
+					"boss_bellwether_gate_on",
+					"grenade_requiem_bell_bounce"
+				],
+				"gate_break": [
+					"boss_bellwether_gate_break",
+					"frag_explode"
+				]
 			}
 		},
 		"choir_host": {
@@ -61,7 +267,6 @@
 			"script": "res://scripts/enemies/choir_host.gd",
 			"model": "res://assets/models/bosses/choir_host.glb",
 			"icon": "res://assets/icons/boss_choir_host.png",
-			"hp_mult": 5.0,
 			"speed_mult": 0.7,
 			"damage_mult": 0.9,
 			"kill_points_mult": 6.0,
@@ -71,18 +276,64 @@
 			"model_height": 2.1,
 			"size_variety": 0.0,
 			"telegraph": {
-				"channel_duration": 4.0,
+				"channel_duration": 5.5,
 				"channel_cooldown": 6.0,
-				"shield_hp_frac": 0.3,
 				"echo_interval": 2.0,
 				"echo_count_min": 2,
 				"echo_count_max": 3,
-				"walk_between_channels": true
+				"walk_between_channels": true,
+				"channel_cooldown_stage": [
+					6.5,
+					5.2,
+					4.0
+				],
+				"shield_secs": 3.4,
+				"shield_stage_mult": [
+					1.0,
+					1.0,
+					1.15
+				],
+				"stagger_duration": 2.4,
+				"stagger_damage_mult": 1.4,
+				"crescendo_radius": 8.0,
+				"crescendo_radius_stage": [
+					0,
+					1,
+					2
+				],
+				"echo_interval_stage": [
+					3.0,
+					2.6,
+					2.2
+				],
+				"echo_count_stage": [
+					1,
+					2,
+					2
+				],
+				"pulse_from_stage": 1,
+				"pulse_windup": 0.95,
+				"pulse_length": 12.0,
+				"pulse_half_angle": 28.0,
+				"pulse_cooldown": 4.0,
+				"discord_from_stage": 1,
+				"discord_radius": 2.1,
+				"discord_arm": 1.4,
+				"discord_life": 5.0,
+				"discord_tick": 0.5,
+				"discord_per_burst_stage": [
+					0,
+					1,
+					2
+				],
+				"discord_burst_interval": 3.0,
+				"max_zones": 6,
+				"shield_hp_frac": 0.3
 			},
 			"echo": {
-				"hp_mult": 0.4,
-				"speed_mult": 1.1,
-				"damage_mult": 0.7,
+				"hp_mult": 0.15,
+				"speed_mult": 0.95,
+				"damage_mult": 0.38,
 				"kill_points_mult": 1.0,
 				"gravemark_reward": 0,
 				"lifetime": 18.0,
@@ -107,7 +358,82 @@
 				"broken_dim_time": 2.5,
 				"shield_socket": "ShieldProxy",
 				"summon_socket": "SummonMouth"
-			}
+			},
+			"legacy_hp_mult": 5.0,
+			"ttk": 70,
+			"stages": [
+				0.66,
+				0.33
+			],
+			"enrage_timer": 150,
+			"damage": {
+				"melee": 0.22,
+				"pulse": 0.28,
+				"crescendo": 0.34,
+				"discord_tick": 0.045,
+				"discord_burst": 0.0
+			},
+			"colors": {
+				"main": [
+					0.45,
+					0.6,
+					1.0,
+					0.5
+				],
+				"zone": [
+					0.6,
+					0.4,
+					1.0,
+					0.5
+				]
+			},
+			"frenzy": {
+				"damage_mult": 1.3,
+				"cooldown_mult": 0.7
+			},
+			"sfx": {
+				"stage": [
+					"boss_choir_stage",
+					"zombie_aggro_scream"
+				],
+				"frenzy_warn": [
+					"boss_frenzy_warn",
+					"zombie_aggro_scream"
+				],
+				"frenzy": [
+					"boss_frenzy",
+					"zombie_aggro_scream"
+				],
+				"summon": [
+					"boss_summon",
+					"zombie_idle_groan"
+				],
+				"crescendo_windup": [
+					"boss_choir_crescendo_windup",
+					"grenade_requiem_bell_toll"
+				],
+				"crescendo_hit": [
+					"boss_choir_crescendo_hit",
+					"frag_explode"
+				],
+				"crescendo_cancel": [
+					"boss_choir_shield_break",
+					"grenade_requiem_bell_detonate"
+				],
+				"dirge_windup": [
+					"boss_choir_dirge_windup",
+					"gallspitter_windup"
+				],
+				"dirge_hit": [
+					"boss_choir_dirge_hit",
+					"grenade_requiem_bell_detonate"
+				],
+				"discord_arm": [
+					"boss_choir_discord_arm",
+					"grenade_requiem_bell_mark"
+				]
+			},
+			"dps_eff": 0.34
 		},
 		"lantern_stalker": {
 			"id": "lantern_stalker",
@@ -116,7 +442,6 @@
 			"script": "res://scripts/enemies/lantern_stalker.gd",
 			"model": "res://assets/models/bosses/lantern_stalker.glb",
 			"icon": "res://assets/icons/boss_lantern_stalker.png",
-			"hp_mult": 4.5,
 			"speed_mult": 1.15,
 			"damage_mult": 1.1,
 			"kill_points_mult": 5.0,
@@ -134,7 +459,61 @@
 				"spit_damage_mult": 1.8,
 				"spit_speed": 14.0,
 				"sidestep_distance": 2.4,
-				"cycle_cooldown": 3.5
+				"cycle_cooldown": 3.5,
+				"beam_windup_stage": [
+					0.8,
+					0.7,
+					0.55
+				],
+				"beam_width": 0.9,
+				"cycle_cooldown_stage": [
+					3.2,
+					2.6,
+					2.0
+				],
+				"dark_duration_stage": [
+					1.6,
+					1.5,
+					1.3
+				],
+				"volley_from_stage": 2,
+				"gloam_radius": 1.8,
+				"gloam_life": 5.0,
+				"gloam_tick": 0.5,
+				"blink_from_stage": 1,
+				"blink_mark": 0.7,
+				"blink_min": 7.0,
+				"blink_max": 10.0,
+				"pack_adds_stage": [
+					0,
+					2,
+					3
+				],
+				"max_zones": 6,
+				"fan_from_stage": 1,
+				"fan_half_angle_stage": [
+					0,
+					16,
+					20
+				],
+				"volley_windup": 0.5,
+				"gloam_from_stage": 1,
+				"bomb_from_stage": 1,
+				"bomb_windup": 0.7,
+				"bomb_radius": 3.0,
+				"bomb_arm": 1.5,
+				"bomb_count_stage": [
+					0,
+					3,
+					4
+				],
+				"bomb_cooldown": 9.0,
+				"flare_from_stage": 1,
+				"flare_trigger": 3.4,
+				"flare_radius": 3.4,
+				"flare_windup": 0.75,
+				"flare_cooldown": 6.0,
+				"blink_cooldown": 7.0
 			},
 			"anims": {
 				"_help": "DarkSneak loops through the dark phase (1.6 s = ~1.2 cycles). Sidesteps are IN PLACE: code moves the root sidestep_distance over sidestep_time. SidestepL = character LEFT (-X local). spit_recover = seconds the Spit thrust/recoil plays before the sidestep.",
@@ -164,6 +543,116 @@
 				"light_range": 6.0,
 				"dark_energy": 0.15,
 				"beam_energy": 3.0
+			},
+			"legacy_hp_mult": 4.5,
+			"ttk": 56,
+			"stages": [
+				0.66,
+				0.33
+			],
+			"enrage_timer": 140,
+			"damage": {
+				"melee": 0.25,
+				"spit": 0.38,
+				"spit_fan": 0.3,
+				"gloam_tick": 0.05,
+				"lantern_blast": 0.45
+			},
+			"echo": {
+				"hp_mult": 0.4,
+				"speed_mult": 1.1,
+				"damage_mult": 0.7,
+				"kill_points_mult": 1.0,
+				"gravemark_reward": 0,
+				"lifetime": 18.0
+			},
+			"colors": {
+				"main": [
+					1.0,
+					0.85,
+					0.25,
+					0.55
+				],
+				"zone": [
+					0.5,
+					0.9,
+					0.2,
+					0.5
+				],
+				"bomb": [
+					0.95,
+					0.6,
+					0.15,
+					0.55
+				],
+				"blink": [
+					0.8,
+					0.4,
+					1.0,
+					0.55
+				]
+			},
+			"frenzy": {
+				"damage_mult": 1.3,
+				"cooldown_mult": 0.7
+			},
+			"sfx": {
+				"stage": [
+					"boss_lantern_stage",
+					"zombie_aggro_scream"
+				],
+				"frenzy_warn": [
+					"boss_frenzy_warn",
+					"zombie_aggro_scream"
+				],
+				"frenzy": [
+					"boss_frenzy",
+					"zombie_aggro_scream"
+				],
+				"summon": [
+					"boss_summon",
+					"zombie_idle_groan"
+				],
+				"spit_windup": [
+					"boss_lantern_beam_windup",
+					"gallspitter_windup"
+				],
+				"spit_fire": [
+					"boss_lantern_spit_fire",
+					"gallspitter_spit"
+				],
+				"flare_windup": [
+					"boss_lantern_flare_windup",
+					"gallspitter_windup"
+				],
+				"flare_hit": [
+					"boss_lantern_flare_hit",
+					"frag_explode"
+				],
+				"bombs_windup": [
+					"boss_lantern_bomb_windup",
+					"grenade_throw"
+				],
+				"bomb_arm": [
+					"boss_lantern_bomb_arm",
+					"grenade_tallyhook_charge"
+				],
+				"gloam_arm": [
+					"boss_lantern_gloam_arm",
+					"gall_puddle_sizzle"
+				],
+				"dark_start": [
+					"boss_lantern_dark_start",
+					"zombie_aggro_scream"
+				],
+				"blink_mark": [
+					"boss_lantern_blink_mark",
+					"grenade_tallyhook_charge"
+				],
+				"blink_jump": [
+					"boss_lantern_blink_jump",
+					"dash"
+				]
 			}
 		}
 	},
@@ -177,5 +666,6 @@
 			"choir_host",
 			"lantern_stalker"
 		]
-	}
+	},
+	"_help_events": "Boss events (net_boss_state tail): see BOSS_REWORK.md"
 }

@@ -8,7 +8,8 @@ const ART := preload("res://scripts/enemies/boss_art.gd")
 
 
 ## Apply catalog mults after the wave spawner called setup(). Call before add_child.
-static func apply_identity(enemy: Node, boss_id: String, round_n: int, difficulty_id: String = "") -> void:
+## Boss rework: HP comes only from the TTK model (BossCatalog.boss_hp; `players` / `boss_count` = co-op party + bosses this round).
+static func apply_identity(enemy: Node, boss_id: String, round_n: int, difficulty_id: String = "", players: int = 1, boss_count: int = -1) -> void:
 	var b: Dictionary = CATALOG.get_boss(boss_id)
 	if b.is_empty():
 		return
@@ -16,11 +17,7 @@ static func apply_identity(enemy: Node, boss_id: String, round_n: int, difficult
 	enemy.set_meta("boss_round", round_n)
 	enemy.set_meta("is_boss", true)
 	enemy.set("variant_id", "boss:" + boss_id)
-	var base_h := int(enemy.get("max_health"))
-	# Prefer catalog HP so it matches tests even if setup used normal HP.
-	var hp := CATALOG.boss_hp(boss_id, round_n, 90, 35, difficulty_id)
-	# If caller already passed scaled HP via setup, keep the larger (Difficulty may have scaled base_health).
-	enemy.set("max_health", maxi(hp, base_h))
+	enemy.set("max_health", CATALOG.boss_hp(boss_id, round_n, 0, 0, difficulty_id, players, boss_count))
 	enemy.set("speed", float(enemy.get("speed")) * float(b.get("speed_mult", 1.0)))
 	enemy.set("contact_damage", maxi(int(round(float(enemy.get("contact_damage")) * float(b.get("damage_mult", 1.0)))), 1))
 	if b.has("model_height"):
