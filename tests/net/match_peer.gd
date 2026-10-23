@@ -291,6 +291,23 @@ func _host() -> void:
 	await _sleep(0.5)
 	Net.broadcast_event(&"t_cmd", cara, {"op": "hp_check", "min_gain": 15})
 	await _sleep(0.5)
+	# --- G6: host-decided grenade cooldown refund (Requiem mark kill) -> the owner's own machine, under Player's 60% cap
+	Net.broadcast_event(&"t_cmd", cara, {"op": "rf_mark"})
+	await _sleep(0.5)
+	var rtx0: int = P.stats.refund_tx
+	check(NetGate.grant_grenade_refund(P.avatar(cara), 0.2, "requiem") and P.stats.refund_tx == rtx0 + 1, "host: grant_grenade_refund handled in co-op and relayed to Cara (refund_tx %d)" % P.stats.refund_tx)
+	await _sleep(0.5)
+	Net.broadcast_event(&"t_cmd", cara, {"op": "rf_check", "lo": 11.0, "hi": 15.6, "rx": 1})
+	await _sleep(0.5)
+	P.host_refund(P.avatar(cara), 0.9, "requiem") # 0.2 already used: only 0.4 more fits under the 60% / 5 s cap
+	await _sleep(0.5)
+	Net.broadcast_event(&"t_cmd", cara, {"op": "rf_check", "lo": 2.5, "hi": 7.6, "rx": 2})
+	await _sleep(0.5)
+	main.player.grenade_cooldown = 20.0
+	main.player._grenade_cd = 19.0
+	main.player._refund_log.clear()
+	check(NetGate.grant_grenade_refund(main.player, 0.2, "requiem") and main.player._grenade_cd <= 15.5 and main.player._grenade_cd >= 14.0,
+		"host: its own player's refund applies locally (19 -> %.1f s)" % main.player._grenade_cd)
 	await _host_grenades(bob, cara, target_z)
 	# --- downed + revive
 	Net.broadcast_event(&"t_cmd", bob, {"op": "die"})
@@ -586,6 +603,14 @@ func _do(c: Dictionary) -> void:
 			Net.projectiles.request_throw(bad)
 		"hp_mark":
 			health_before_dmg = int(main.player.health)
+		"rf_mark": # G6: a long grenade cooldown to refund against
+			main.player.grenade_cooldown = 20.0
+			main.player._grenade_cd = 19.0
+			main.player._refund_log.clear()
+		"rf_check":
+			var cd: float = main.player._grenade_cd
+			check(Net.match_players.stats.refund_rx >= int(c.rx) and cd >= float(c.lo) and cd <= float(c.hi),
+				"client: host grenade refund #%d applied to my own player (cooldown %.1f s in %.1f..%.1f)" % [int(c.rx), cd, float(c.lo), float(c.hi)])
 		"hp_check":
 			check(int(main.player.health) - health_before_dmg >= int(c.min_gain) and Net.match_players.stats.heal_rx >= 2, "client: host heals applied to my own player (%d -> %d)" % [health_before_dmg, int(main.player.health)])
 		"gequip": # a rolled Rookery item (IP 140, 2 Fittings) into the grenade slot -> grenade_equipped -> the host
