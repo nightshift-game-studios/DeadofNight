@@ -13,21 +13,21 @@
 			"id": "rustwell_foundry",
 			"display_name": "Rustwell Foundry",
 			"scene": "res://maps/rustwell_foundry/rustwell_foundry.tscn",
-			"description": "Overrun steel works. Start in the Loading Yard and buy doors (750 / 1000 / 1250) to open the Rail Spur, Warehouse, Foundry Hall and Tank Farm.",
+			"description": "Overrun steel works. Fight from the Loading Yard through the Warehouse to the Foundry Hall and Tank Farm.",
 			"difficulty": "medium"
 		},
 		{
 			"id": "lockout_substation",
 			"display_name": "Lockout Substation",
 			"scene": "res://maps/lockout_substation/lockout_substation.tscn",
-			"description": "Quarantined municipal substation. Open switchyard with a grated deck; buy the Vault Hatch (750) for the 20×12 m battery vault boss floor.",
+			"description": "Quarantined municipal substation. Open switchyard, a grated deck, and a sealed battery vault where the boss waits.",
 			"difficulty": "hard"
 		},
 		{
 			"id": "ironside_depot",
 			"display_name": "Ironside Freight Depot",
 			"scene": "res://maps/ironside_depot/ironside_depot.tscn",
-			"description": "Night rail depot, the biggest map yet: ten rooms from the Platform Concourse to the Roundhouse. Buy 14 doors (750 to 1750), fight across boxcar roofs and catwalks, and take on the boss at the turntable pit.",
+			"description": "Night rail depot, our biggest yard: ten rooms, boxcar roofs and catwalks, and a boss at the turntable pit.",
 			"difficulty": "medium"
 		}
 	]
