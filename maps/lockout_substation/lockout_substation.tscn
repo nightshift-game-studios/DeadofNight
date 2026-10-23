@@ -2,11 +2,6 @@
 
 [ext_resource type="Script" path="res://maps/common/map_root.gd" id="1_y13m4"]
 [ext_resource type="Texture2D" path="res://maps/common/night/hdri/dikhololo_night_2k.hdr" id="2_xf3i3"]
-[ext_resource type="PackedScene" path="res://maps/rustwell_foundry/assets/models/desi/prop_rubble_medium.glb" id="3_j4q2t"]
-[ext_resource type="PackedScene" path="res://maps/rustwell_foundry/assets/models/desi/prop_rubble_small.glb" id="4_8t7uj"]
-[ext_resource type="PackedScene" path="res://maps/rustwell_foundry/assets/models/desi/prop_scrap_rebar.glb" id="5_q7mtw"]
-[ext_resource type="PackedScene" path="res://maps/rustwell_foundry/assets/models/desi/prop_slag_heap.glb" id="6_ei3jx"]
-[ext_resource type="PackedScene" path="res://maps/rustwell_foundry/assets/models/desi/prop_ingot_stack.glb" id="7_mdvo0"]
 [ext_resource type="PackedScene" path="res://maps/rustwell_foundry/assets/models/desi/prop_car_wreck_01.glb" id="8_kmdtc"]
 [ext_resource type="Script" path="res://maps/common/desi_lod_prop.gd" id="8_qla6n"]
 [ext_resource type="PackedScene" path="res://maps/rustwell_foundry/assets/models/desi/prop_car_wreck_01_lod.glb" id="9_8lrrx"]
@@ -5754,68 +5749,6 @@ metadata/surface = "metal"
 
 [node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/Geometry/BattRackE" unique_id=1290631077]
 shape = SubResource("136_s")
-
-[node name="DesiDebris" type="Node3D" parent="NavigationRegion3D/Geometry" unique_id=2066013629]
-
-[node name="Rubble_DeckS" type="Marker3D" parent="NavigationRegion3D/Geometry/DesiDebris" unique_id=159166898]
-transform = Transform3D(0.921061, 0, -0.38941833, 0, 1, 0, 0.38941833, 0, 0.921061, 4.5, 0, 11)
-metadata/prop = "prop_rubble_medium"
-
-[node name="prop_rubble_medium" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_DeckS" unique_id=297753036 instance=ExtResource("3_j4q2t")]
-
-[node name="Rubble_DeckApproach" type="Marker3D" parent="NavigationRegion3D/Geometry/DesiDebris" unique_id=746964398]
-transform = Transform3D(0.87758255, 0, 0.47942555, 0, 1, 0, -0.47942555, 0, 0.87758255, -3, 0, 12.5)
-metadata/prop = "prop_rubble_small"
-
-[node name="prop_rubble_small" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_DeckApproach" unique_id=1194108200 instance=ExtResource("4_8t7uj")]
-
-[node name="Rubble_West" type="Marker3D" parent="NavigationRegion3D/Geometry/DesiDebris" unique_id=302035278]
-transform = Transform3D(0.45359612, 0, -0.89120734, 0, 1, 0, 0.89120734, 0, 0.45359612, -14, 0, 8)
-metadata/prop = "prop_rubble_small"
-
-[node name="prop_rubble_small" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_West" unique_id=1275456814 instance=ExtResource("4_8t7uj")]
-
-[node name="Rubble_East" type="Marker3D" parent="NavigationRegion3D/Geometry/DesiDebris" unique_id=936698960]
-transform = Transform3D(0.9553365, 0, -0.29552022, 0, 1, 0, 0.29552022, 0, 0.9553365, 14, 0, 6)
-metadata/prop = "prop_rubble_medium"
-
-[node name="prop_rubble_medium" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_East" unique_id=146971853 instance=ExtResource("3_j4q2t")]
-
-[node name="Rubble_VaultDoor" type="Marker3D" parent="NavigationRegion3D/Geometry/DesiDebris" unique_id=299922570]
-transform = Transform3D(0.9800666, 0, -0.19866933, 0, 1, 0, 0.19866933, 0, 0.9800666, -3.5, 0, -8.2)
-metadata/prop = "prop_rubble_small"
-
-[node name="prop_rubble_small" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Rubble_VaultDoor" unique_id=1945434908 instance=ExtResource("4_8t7uj")]
-
-[node name="Scrap_Chimney" type="Marker3D" parent="NavigationRegion3D/Geometry/DesiDebris" unique_id=1106660961]
-transform = Transform3D(0.8253356, 0, 0.5646425, 0, 1, 0, -0.5646425, 0, 0.8253356, -1, 0, -5.5)
-metadata/prop = "prop_scrap_rebar"
-
-[node name="prop_scrap_rebar" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Scrap_Chimney" unique_id=1997764183 instance=ExtResource("5_q7mtw")]
-
-[node name="Scrap_Yard" type="Marker3D" parent="NavigationRegion3D/Geometry/DesiDebris" unique_id=74708772]
-transform = Transform3D(0.36235777, 0, -0.9320391, 0, 1, 0, 0.9320391, 0, 0.36235777, 8, 0, 14)
-metadata/prop = "prop_scrap_rebar"
-
-[node name="prop_scrap_rebar" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Scrap_Yard" unique_id=928666203 instance=ExtResource("5_q7mtw")]
-
-[node name="Slag_SE" type="Marker3D" parent="NavigationRegion3D/Geometry/DesiDebris" unique_id=185171591]
-transform = Transform3D(0.9553365, 0, -0.29552022, 0, 1, 0, 0.29552022, 0, 0.9553365, 15, 0, 15)
-metadata/prop = "prop_slag_heap"
-
-[node name="prop_slag_heap" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Slag_SE" unique_id=647827612 instance=ExtResource("6_ei3jx")]
-
-[node name="Ingot_Yard" type="Marker3D" parent="NavigationRegion3D/Geometry/DesiDebris" unique_id=851895231]
-transform = Transform3D(0.6967067, 0, 0.7173561, 0, 1, 0, -0.7173561, 0, 0.6967067, -10, 0, 10)
-metadata/prop = "prop_ingot_stack"
-
-[node name="prop_ingot_stack" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Ingot_Yard" unique_id=1506522456 instance=ExtResource("7_mdvo0")]
-
-[node name="Slag_Yard" type="Marker3D" parent="NavigationRegion3D/Geometry/DesiDebris" unique_id=1536749057]
-transform = Transform3D(0.921061, 0, 0.38941833, 0, 1, 0, -0.38941833, 0, 0.921061, -15, 0, 14)
-metadata/prop = "prop_slag_heap"
-
-[node name="prop_slag_heap" type="Node3D" parent="NavigationRegion3D/Geometry/DesiDebris/Slag_Yard" unique_id=1771730605 instance=ExtResource("6_ei3jx")]
 
 [node name="DesiCars" type="Node3D" parent="NavigationRegion3D/Geometry" unique_id=1759596902]
 

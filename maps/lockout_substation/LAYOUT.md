@@ -52,6 +52,7 @@ CC0 triplanar materials + dusk fog/SSAO/glow from Rustwell textures (`maps/rustw
 - **Spawn pressure:** 8 start spawns (incl. Spawn10); pressure ring ~9–12 m from deck core; ≥3 LOS-hidden from SwitchDeck (Spawn1/2/3).
 - **Riskier vertical:** RampDeckE removed — deck escapes are S + W only (≥2.0 m zombie width). East deck edge fully railed (no jump-off route). ControlLedge / BusGantry still have ≥2.5 m zombie ramps.
 - Buy D1 (750) for vault boss floor with perk / box / arena hooks.
+- **v0.8.0 declutter:** removed the 10 off-theme Rustwell steelworks props (DesiDebris: rubble, rebar, slag, ingot) from the yard; no layout, ramp, deck, gantry, wall-jump or vault change.
 
 ## Gravecrew (Hard)
 - Shared kit: `maps/common/night/` (HDRI dikhololo_night, flicker/spark scripts, hard preset).
