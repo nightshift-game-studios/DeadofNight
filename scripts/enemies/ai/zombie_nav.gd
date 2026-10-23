@@ -29,6 +29,7 @@ const DEFAULTS := {
 	"ramp_carve": {"enabled": true, "from_height": 0.3, "width": 0.5, "extra_height": 0.3},
 }
 const WORLD_MASK := 1
+const HeadStandScr := preload("res://scripts/enemies/ai/head_stand.gd") ## playtest #18: player standing on a zombie's head
 
 static var _data: Dictionary = {}
 
@@ -101,6 +102,7 @@ var _direct_t: float = 0.0 ## seconds since the last line check
 var _direct_ban_t: float = 0.0
 var _direct_wall_t: float = 0.0 ## seconds spent pressed against static geometry while walking direct
 static var _direct_shape: CapsuleShape3D = null
+var head: RefCounted ## HeadStand: reach / hold / shake-off for a player standing on this zombie's head (data/ai.json head_stand)
 var debug_freeze: bool = false ## test hook: zero the zombie's walking velocity (forces the stuck escalation)
 
 
@@ -156,6 +158,7 @@ func _setup(e: CharacterBody3D) -> void:
 	avoid_cfg = _section("avoidance", kind)
 	body_cfg = _section("body", kind)
 	stuck_cfg = _section("stuck", kind)
+	head = HeadStandScr.make(e, self, kind, data())
 	e.floor_max_angle = deg_to_rad(float(body_cfg.floor_max_angle_deg))
 	e.floor_snap_length = float(body_cfg.floor_snap_length)
 	e.floor_constant_speed = bool(body_cfg.floor_constant_speed)
@@ -682,6 +685,17 @@ func path_remaining() -> float:
 # ------------------------------------------------------------------ per-frame
 
 ## The one per-frame call (host / authority only). desired = flat walking velocity (move_dir * speed).
+## enemy.in_attack_reach(): the player's feet are on this zombie's head (see head_stand.gd). False when disabled.
+func head_reach(dist_h: float, dy: float, extra: float = 0.0, t: Node = null) -> bool:
+	return head != null and head.reach(dist_h, dy, extra, t)
+
+
+## enemy._physics_process(), every frame with a target: true while the target stands on the head and the zombie must hold
+## still (no chase / steering / avoidance - it would walk out from under the player or shove them off the capsule).
+func head_stand_tick(delta: float, t: Node3D, dist_h: float, dy: float) -> bool:
+	return head != null and head.tick(delta, t, dist_h, dy)
+
+
 func tick(delta: float, desired: Vector3) -> void:
 	var frame := Engine.get_physics_frames()
 	if _spread_pending: # first host tick without a query yet: spread the first queries over repath_interval

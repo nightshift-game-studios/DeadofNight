@@ -495,8 +495,7 @@ func _chase_direction(to_player: Vector3) -> Vector3:
 
 ## True while it means to walk (tests: a Gallspitter that wants to move must not stand still).
 func wants_move() -> bool:
-	if target and is_instance_valid(target) and VC.flat_dist(target.global_position, global_position) <= attack_range \
-			and absf(target.global_position.y - global_position.y) < attack_max_dy:
+	if target and is_instance_valid(target) and in_attack_reach(VC.flat_dist(target.global_position, global_position), target.global_position.y - global_position.y):
 		return false # in arm's reach it fights (enemy.gd melee), it doesn't walk
 	return mode == Mode.APPROACH or mode == Mode.MOVE or mode == Mode.RETREAT
 
@@ -543,6 +542,9 @@ func _decide(delta: float) -> void:
 		mode = Mode.HOLD
 		return
 	if mode == Mode.SPIT:
+		return
+	if nav != null and nav.head != null and nav.head.on_head and bool(nav.head.cfg.get("hold", true)):
+		mode = Mode.HOLD # playtest #18: a player standing on its head: it stays put and swipes (enemy.gd melee), never backs out from under them
 		return
 	var d := VC.flat_dist(target.global_position, global_position)
 	var rushed := d < VC.num(b, "retreat_range", 6.0)
