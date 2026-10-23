@@ -5,9 +5,10 @@ extends RefCounted
 ##
 ## REACH   enemy.in_attack_reach() = the old flat + |dy| < attack_max_dy test OR reach(): the target's feet are within
 ##         [capsule top - below_tol, capsule top + above_tol] of the zombie's origin, and flat distance <= zombie capsule
-##         radius + target capsule radius + radius_slack (+ the swing's `extra`). The capsule top comes from the zombie's own
+##         radius + target capsule radius + radius_slack (+ the swing's `extra`), and no level geometry (world layer) on the line from the
+##         zombie's head to the target's feet (occluded(): a gantry / deck / ledge beside or over the zombie is not a head). The capsule top comes from the zombie's own
 ##         CollisionShape3D (per-variant capsules included), not a constant. A player jumping well above it is out of reach.
-## HOLD    while the player is on the head (hold = true) the zombie stands still: no chase / steering / avoidance, so it never
+## HOLD    once the player has been on the head for hold_delay s (hold = true) the zombie stands still: no chase / steering / avoidance, so it never
 ##         walks out from under the player or shoves them off the capsule; it keeps swinging (enemy.gd melee).
 ## SHAKE   optional, modest: stood on for shake.after s -> a shake.telegraph s rear-back (shaking = true, model leans) ->
 ##         a shove (shove_speed flat + shove_up) on the player and a lurch of the zombie the other way; then shake.cooldown s
@@ -22,6 +23,8 @@ const DEFAULTS := {
 	"radius_slack": 0.15,
 	"target_radius": 0.4,
 	"grace": 0.4,
+	"hold_delay": 0.25,
+	"world_mask": 1,
 	"shake": {"enabled": true, "after": 4.0, "telegraph": 0.7, "cooldown": 10.0, "shove_speed": 5.5, "shove_up": 3.0, "lurch": 4.0, "lean": 0.35},
 }
 
@@ -107,11 +110,29 @@ func reach(dist_h: float, dy: float, extra: float = 0.0, t: Node = null) -> bool
 	return dist_h <= head_radius(t) + extra and dy >= top - float(cfg.below_tol) and dy <= top + float(cfg.above_tol)
 
 
+## reach() plus the world-occlusion test against the target's real position: what the game uses (ZombieNav.head_reach / tick).
+## reach() stays pure geometry (tests feed it abstract numbers).
+func reach_checked(dist_h: float, dy: float, extra: float = 0.0, t: Node = null) -> bool:
+	return reach(dist_h, dy, extra, t) and (t == null or not occluded(t, head_top()))
+
+
+## True when level geometry (a deck / ledge / wall layer) lies between the zombie's head and the target's feet: the target then
+## stands on that geometry beside / above the zombie, not on its head (the swing would go through the deck, and holding still
+## would freeze a zombie that should be pathing to the stairs). Ray from inside the head (0.1 m under the top: a deck can't overlap the capsule) to just over the feet.
+func occluded(t: Node, top: float) -> bool:
+	if not (t is Node3D) or not enemy.is_inside_tree() or not (t as Node3D).is_inside_tree():
+		return false
+	var from := enemy.global_position + Vector3(0.0, top - 0.1, 0.0)
+	var to := (t as Node3D).global_position + Vector3(0.0, 0.05, 0.0)
+	var q := PhysicsRayQueryParameters3D.create(from, to, int(cfg.get("world_mask", 1)))
+	return not enemy.get_world_3d().direct_space_state.intersect_ray(q).is_empty()
+
+
 ## Called every physics frame by enemy.gd (via ZombieNav.head_stand_tick). Returns true when the zombie should hold still
 ## (the target is on its head and hold is on).
 func tick(delta: float, t: Node3D, dist_h: float, dy: float) -> bool:
 	_cd_tick(delta)
-	var on: bool = enabled() and t != null and is_instance_valid(t) and t.get("dead") != true and reach(dist_h, dy, 0.0, t)
+	var on: bool = enabled() and t != null and is_instance_valid(t) and t.get("dead") != true and reach_checked(dist_h, dy, 0.0, t)
 	on_head = on
 	if on:
 		stood_t += delta
@@ -136,7 +157,7 @@ func tick(delta: float, t: Node3D, dist_h: float, dy: float) -> bool:
 	elif shaking:
 		_end_shake()
 	_lean(shaking, delta)
-	return on and bool(cfg.get("hold", true))
+	return on and bool(cfg.get("hold", true)) and stood_t >= float(cfg.get("hold_delay", 0.25)) # a fly-by / hop over a head does not freeze the zombie
 
 
 func _cd_tick(delta: float) -> void:

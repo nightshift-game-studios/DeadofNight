@@ -195,6 +195,66 @@ func _geometry_checks() -> void:
 	check(not z.nav.head.reach(0.0, _top(z), 0.0, pl) and not z.nav.head_reach(0.0, _top(z)), "head_stand.enabled = false: never in reach")
 	await _clear()
 	ZN.reload_data({})
+	await _deck_geometry_checks()
+
+
+## Regression (ai_nav_test review, 2026-10-23): a player on a deck / gantry / ledge whose surface sits at head height must not count as
+## "on the head": level geometry between the head and the feet means the swing would pass through it and a hold would freeze the zombie.
+func _deck_geometry_checks() -> void:
+	var z = _spawn(SPOT)
+	await wait(3)
+	var h = z.nav.head
+	var top: float = _top(z)
+	var feet: Vector3 = z.global_position + Vector3(0, top, 0)
+	_hold_player(feet)
+	check(h.reach_checked(0.0, top, 0.0, pl) and not h.occluded(pl, top), "(control) feet at the head, nothing in between: in reach, not occluded")
+	# thin deck 0.1 m over the zombie's head, the player stands on it (surface = head height + 0.3 -> inside the reach window)
+	var deck := _box(z.global_position + Vector3(0, top + 0.2, 0), Vector3(4, 0.2, 4))
+	await wait(3)
+	var stand_y := top + 0.3
+	_hold_player(z.global_position + Vector3(0, stand_y, 0))
+	check(h.occluded(pl, top) and h.reach(0.0, stand_y, 0.0, pl) and not h.reach_checked(0.0, stand_y, 0.0, pl) and not z.nav.head_reach(0.0, stand_y, 0.0, pl), "a deck over the head, player on the deck (dy %.2f within the window): occluded, not in reach" % stand_y)
+	deck.queue_free()
+	# ledge: the zombie stands against a wall, the player on the ledge beside its head
+	var wall := _box(z.global_position + Vector3(0.8, 1.0, 0), Vector3(0.6, 2.4, 4)) # x 0.5..1.1, top at 2.2 above the origin
+	await wait(3)
+	var ledge := Vector3(0.8, 2.2, 0)
+	_hold_player(z.global_position + ledge)
+	check(Vector2(ledge.x, ledge.z).length() <= h.head_radius(pl) and ledge.y > top - 0.35 and ledge.y < top + 0.6, "(setup) the ledge position is inside the head window (dist %.2f, dy %.2f)" % [ledge.x, ledge.y])
+	check(h.occluded(pl, top) and h.reach(ledge.x, ledge.y, 0.0, pl) and not h.reach_checked(ledge.x, ledge.y, 0.0, pl), "player on a ledge beside the head, wall in between: occluded, not in reach")
+	wall.queue_free()
+	await wait(3)
+	_hold_player(z.global_position + ledge)
+	check(h.reach_checked(ledge.x, ledge.y, 0.0, pl), "(control) the wall removed: the same spot is in reach again")
+	# hold needs hold_delay s on the head: a fly-by / hop does not freeze the zombie
+	await _clear()
+	z = _spawn(SPOT)
+	z.set_physics_process(false) # ticked by hand below
+	await wait(3)
+	h = z.nav.head
+	_hold_player(z.global_position + Vector3(0, _top(z), 0))
+	var held_early: bool = h.tick(0.05, pl, 0.0, _top(z))
+	for i in 3:
+		held_early = held_early or h.tick(0.05, pl, 0.0, _top(z))
+	var held_late := false
+	for i in 4:
+		held_late = h.tick(0.05, pl, 0.0, _top(z))
+	check(not held_early and held_late, "hold waits hold_delay (%.2f s): 0.2 s on the head -> not held, 0.4 s -> held (stood %.2f s)" % [float(h.cfg.hold_delay), h.stood_t])
+	await _clear()
+	ZN.reload_data({})
+
+
+func _box(pos: Vector3, size: Vector3) -> StaticBody3D:
+	var b := StaticBody3D.new()
+	b.collision_layer = 1
+	var cs := CollisionShape3D.new()
+	var bs := BoxShape3D.new()
+	bs.size = size
+	cs.shape = bs
+	b.add_child(cs)
+	main.add_child(b)
+	b.global_position = pos
+	return b
 
 
 # ------------------------------------------------------------------ melee
@@ -220,6 +280,20 @@ func _melee_checks() -> void:
 		await physics_frame
 		_pin(_head_pos(z, 1.6))
 	check(pl.health == hp0, "1.6 m above the head: not hit (%d -> %d)" % [hp0, pl.health])
+	await _clear()
+	# a player standing on a deck right over the zombie's head: no swing through the deck, and the zombie is not frozen under it
+	z = _spawn(SPOT)
+	await wait(3)
+	var deck := _box(z.global_position + Vector3(0, _top(z) + 0.2, 0), Vector3(1.4, 0.2, 1.4))
+	await wait(3)
+	var dpos: Vector3 = z.global_position + Vector3(0, _top(z) + 0.3, 0)
+	_hold_player(dpos)
+	hp0 = pl.health
+	for i in secs(3.0):
+		await physics_frame
+		_pin(dpos)
+	check(pl.health == hp0 and not z.nav.head.on_head, "player on a deck over the head: not hit through the deck (%d -> %d), not 'on the head'" % [hp0, pl.health])
+	deck.queue_free()
 	await _clear()
 	# disabled: the old behaviour, no hit
 	_data_with({"enabled": false})

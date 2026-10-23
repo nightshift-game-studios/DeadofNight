@@ -687,7 +687,7 @@ func path_remaining() -> float:
 ## The one per-frame call (host / authority only). desired = flat walking velocity (move_dir * speed).
 ## enemy.in_attack_reach(): the player's feet are on this zombie's head (see head_stand.gd). False when disabled.
 func head_reach(dist_h: float, dy: float, extra: float = 0.0, t: Node = null) -> bool:
-	return head != null and head.reach(dist_h, dy, extra, t)
+	return head != null and head.reach_checked(dist_h, dy, extra, t)
 
 
 ## enemy._physics_process(), every frame with a target: true while the target stands on the head and the zombie must hold

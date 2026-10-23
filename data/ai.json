@@ -94,7 +94,7 @@
 		}
 	},
 	"head_stand": {
-		"_help": "Player standing on a zombie's head (Skillz, playtest 2026-10-22 #18; scripts/enemies/ai/head_stand.gd). REACH: enemy.in_attack_reach() also true when the target's feet are within [capsule top - below_tol, capsule top + above_tol] of the zombie's origin (capsule top = the zombie's own CollisionShape3D, per variant) and flat distance <= zombie capsule radius + target capsule radius (fallback target_radius) + radius_slack (+ the swing's landing slack): a player jumping well above (> above_tol over the head) is out of reach. HOLD (hold true): while the target is on the head the zombie stands still (no chase / steering / avoidance), so it never walks out from under the player or pushes them off, and keeps swinging. SHAKE-OFF (shake.enabled): stood on for shake.after s -> shake.telegraph s rear-back (model leans shake.lean rad, enemy meta head_shake) -> the player is shoved shake.shove_speed m/s (flat, host-seeded random direction) + shake.shove_up m/s and the zombie lurches shake.lurch m/s the other way; shake.cooldown s before the next one. No extra damage. grace: seconds off the head before the stand timer resets / a telegraph is abandoned (a hop does not reset it). enabled false = old behaviour (the zombie cannot hit a player on its head and keeps chasing). Per kind: kinds.<k>.head_stand.",
+		"_help": "Player standing on a zombie's head (Skillz, playtest 2026-10-22 #18; scripts/enemies/ai/head_stand.gd). REACH: enemy.in_attack_reach() also true when the target's feet are within [capsule top - below_tol, capsule top + above_tol] of the zombie's origin (capsule top = the zombie's own CollisionShape3D, per variant) and flat distance <= zombie capsule radius + target capsule radius (fallback target_radius) + radius_slack (+ the swing's landing slack): a player jumping well above (> above_tol over the head) is out of reach. HOLD (hold true): while the target is on the head the zombie stands still (no chase / steering / avoidance), so it never walks out from under the player or pushes them off, and keeps swinging. SHAKE-OFF (shake.enabled): stood on for shake.after s -> shake.telegraph s rear-back (model leans shake.lean rad, enemy meta head_shake) -> the player is shoved shake.shove_speed m/s (flat, host-seeded random direction) + shake.shove_up m/s and the zombie lurches shake.lurch m/s the other way; shake.cooldown s before the next one. No extra damage. hold_delay: seconds on the head before the zombie holds still (a fly-by or hop does not freeze it). world_mask: physics layers that count as level geometry; reach is false when one lies on the line from the zombie's head to the target's feet (the target is on a deck / ledge beside or over the zombie, not on its head). grace: seconds off the head before the stand timer resets / a telegraph is abandoned (a hop does not reset it). enabled false = old behaviour (the zombie cannot hit a player on its head and keeps chasing). Per kind: kinds.<k>.head_stand.",
 		"enabled": true,
 		"hold": true,
 		"below_tol": 0.35,
@@ -102,6 +102,8 @@
 		"radius_slack": 0.15,
 		"target_radius": 0.4,
 		"grace": 0.4,
+		"hold_delay": 0.25,
+		"world_mask": 1,
 		"shake": {
 			"enabled": true,
 			"after": 4.0,
