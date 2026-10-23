@@ -1,0 +1,45 @@
+{
+ "delete": [
+  "Lights/FoundryFillPit",
+  "Lights/RailFill",
+  "Lights/YardFill",
+  "Lights/YardFillW",
+  "NightKit/FurnaceGlow",
+  "NightKit/InteractableLights/ChestGlow0",
+  "NightKit/InteractableLights/ChestGlow1",
+  "NightKit/InteractableLights/ChestGlow2",
+  "NightKit/InteractableLights/ChestGlow3",
+  "NightKit/InteractableLights/ChestGlow4",
+  "NightKit/InteractableLights/PickupGlow0",
+  "NightKit/InteractableLights/PickupGlow1",
+  "NightKit/InteractableLights/PickupGlow2",
+  "NightKit/InteractableLights/PickupGlow3"
+ ],
+ "delete_nodes": [
+  "NightKit/SodiumWH/Head",
+  "NightKit/SodiumWH/Pole",
+  "NightKit/WorkFoundry/Cage",
+  "NightKit/WorkYard/Cage"
+ ],
+ "snap": [
+  "Lights/FurnaceGlow",
+  "Lights/PitGlow",
+  "NightKit/Spark_WH_Rack/Flash",
+  "NightKit/Spark_FoundryPanel/Flash"
+ ],
+ "keep": [
+  "NightKit/BarrelYard",
+  "NightKit/BarrelRail"
+ ],
+ "poles": [
+  "NightKit/SodiumYard",
+  "NightKit/SodiumRail",
+  "NightKit/SodiumTank"
+ ],
+ "shadow_keep": [
+  "Lights/FurnaceGlow",
+  "Lights/YardFloodW",
+  "Lights/YardFloodE",
+  "NightKit/SodiumYard/Light"
+ ]
+}

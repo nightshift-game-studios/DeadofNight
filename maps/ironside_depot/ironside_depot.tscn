@@ -92,9 +92,6 @@
 [ext_resource type="Script" path="res://maps/common/desi_strip_col_visuals.gd" id="69_r"]
 [ext_resource type="Script" path="res://maps/ironside_depot/scripts/strip_prop_colliders.gd" id="70_r"]
 [ext_resource type="Texture2D" path="res://maps/ironside_depot/assets/decals/grime_streak.png" id="71_r"]
-[ext_resource type="PackedScene" path="res://maps/rustwell_foundry/assets/models/security_light/security_light.gltf" id="72_r"]
-[ext_resource type="PackedScene" path="res://maps/rustwell_foundry/assets/models/mounted_fluorescent_lights/mounted_fluorescent_lights.gltf" id="73_r"]
-[ext_resource type="PackedScene" path="res://maps/rustwell_foundry/assets/models/hanging_industrial_lamp/hanging_industrial_lamp.gltf" id="74_r"]
 [ext_resource type="Script" path="res://maps/common/night/scripts/night_spark_burst.gd" id="75_r"]
 [ext_resource type="PackedScene" path="res://maps/rustwell_foundry/assets/models/utility_box_01/utility_box_01.gltf" id="76_r"]
 [ext_resource type="PackedScene" path="res://maps/rustwell_foundry/assets/models/desi/prop_barricade_wall_breach.glb" id="77_r"]
@@ -121,6 +118,12 @@
 [ext_resource type="Texture2D" path="res://maps/common/night/hdri/dikhololo_night_2k.hdr" id="98_r"]
 [ext_resource type="Script" path="res://maps/common/map_root.gd" id="99_r"]
 [ext_resource type="Script" path="res://maps/common/props_root.gd" id="100_r"]
+[ext_resource type="PackedScene" path="res://assets/models/props/light_lantern_hook.glb" id="119_llv84"]
+[ext_resource type="PackedScene" path="res://assets/models/props/light_caged_work_light.glb" id="120_4yhj8"]
+[ext_resource type="PackedScene" path="res://assets/models/props/light_wall_sconce.glb" id="121_vcvty"]
+[ext_resource type="PackedScene" path="res://assets/models/props/light_ceiling_lamp.glb" id="122_dm6ut"]
+[ext_resource type="PackedScene" path="res://assets/models/props/light_floor_work_lamp.glb" id="123_7ec6v"]
+[ext_resource type="PackedScene" path="res://assets/models/props/light_hanging_lamp.glb" id="124_l624c"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_3320"]
 panorama = ExtResource("98_r")
@@ -147,159 +150,6 @@ fog_light_color = Color(0.2, 0.22, 0.32, 1)
 fog_sun_scatter = 0.1
 fog_density = 0.011
 fog_sky_affect = 0.7
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_30"]
-albedo_color = Color(1, 0.75, 0.4, 1)
-roughness = 0.5
-emission_enabled = true
-emission = Color(1, 0.62, 0.25, 1)
-emission_energy_multiplier = 4.0
-
-[sub_resource type="BoxMesh" id="BoxMesh_3287"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_31"]
-albedo_color = Color(0.8, 0.9, 1, 1)
-roughness = 0.5
-emission_enabled = true
-emission = Color(0.75, 0.88, 1, 1)
-emission_energy_multiplier = 3.0
-
-[sub_resource type="BoxMesh" id="BoxMesh_3288"]
-material = SubResource("StandardMaterial3D_31")
-size = Vector3(1.2, 0.04, 0.12)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3289"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3290"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3291"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3292"]
-material = SubResource("StandardMaterial3D_31")
-size = Vector3(1.2, 0.04, 0.12)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3293"]
-material = SubResource("StandardMaterial3D_31")
-size = Vector3(1.2, 0.04, 0.12)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3294"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3295"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3296"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3297"]
-material = SubResource("StandardMaterial3D_31")
-size = Vector3(1.2, 0.04, 0.12)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3298"]
-material = SubResource("StandardMaterial3D_31")
-size = Vector3(1.2, 0.04, 0.12)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3299"]
-material = SubResource("StandardMaterial3D_31")
-size = Vector3(1.2, 0.04, 0.12)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3300"]
-material = SubResource("StandardMaterial3D_31")
-size = Vector3(1.2, 0.04, 0.12)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3301"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3302"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_32"]
-albedo_color = Color(0.4, 0.02, 0.02, 1)
-roughness = 0.5
-emission_enabled = true
-emission = Color(1, 0.08, 0.04, 1)
-emission_energy_multiplier = 2.5
-
-[sub_resource type="BoxMesh" id="BoxMesh_3303"]
-material = SubResource("StandardMaterial3D_32")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3304"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3305"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3306"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3307"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3308"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3309"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3310"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3311"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3312"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3313"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3314"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3315"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3316"]
-material = SubResource("StandardMaterial3D_31")
-size = Vector3(1.2, 0.04, 0.12)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3317"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3318"]
-material = SubResource("StandardMaterial3D_30")
-size = Vector3(0.22, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="BoxMesh_3319"]
-material = SubResource("StandardMaterial3D_32")
-size = Vector3(0.5, 0.15, 0.5)
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_3323"]
 geometry_parsed_geometry_type = 1
@@ -4325,6 +4175,13 @@ _surfaces = [{
 "vertex_data": PackedByteArray("mpndwTMzE0AzMy9CrkfdwTMzE0DNzCRCrkfdwTMzE0AzMy9CmpndwTMzE0DNzCRCmpndwQAAAAAzMy9CrkfdwQAAAADNzCRCrkfdwQAAAAAzMy9CmpndwQAAAADNzCRCrkfdwTMzE0AzMy9CmpndwTMzE0DNzCRCrkfdwTMzE0DNzCRCmpndwTMzE0AzMy9CrkfdwQAAAAAzMy9CmpndwQAAAADNzCRCrkfdwQAAAADNzCRCmpndwQAAAAAzMy9CrkfdwTMzE0AzMy9CmpndwQAAAAAzMy9CmpndwTMzE0AzMy9CrkfdwQAAAAAzMy9CrkfdwTMzE0DNzCRCmpndwQAAAADNzCRCmpndwTMzE0DNzCRCrkfdwQAAAADNzCRCcT1qQDMzE0AzMy9CzcxsQDMzE0DNzCRCzcxsQDMzE0AzMy9CcT1qQDMzE0DNzCRCcT1qQAAAAAAzMy9CzcxsQAAAAADNzCRCzcxsQAAAAAAzMy9CcT1qQAAAAADNzCRCzcxsQDMzE0AzMy9CcT1qQDMzE0DNzCRCzcxsQDMzE0DNzCRCcT1qQDMzE0AzMy9CzcxsQAAAAAAzMy9CcT1qQAAAAADNzCRCzcxsQAAAAADNzCRCcT1qQAAAAAAzMy9CzcxsQDMzE0AzMy9CcT1qQAAAAAAzMy9CcT1qQDMzE0AzMy9CzcxsQAAAAAAzMy9CzcxsQDMzE0DNzCRCcT1qQAAAAADNzCRCcT1qQDMzE0DNzCRCzcxsQAAAAADNzCRCcT1qQDMzE0BmZo5BzcxsQDMzE0AzM3NBzcxsQDMzE0BmZo5BcT1qQDMzE0AzM3NBcT1qQAAAAABmZo5BzcxsQAAAAAAzM3NBzcxsQAAAAABmZo5BcT1qQAAAAAAzM3NBzcxsQDMzE0BmZo5BcT1qQDMzE0AzM3NBzcxsQDMzE0AzM3NBcT1qQDMzE0BmZo5BzcxsQAAAAABmZo5BcT1qQAAAAAAzM3NBzcxsQAAAAAAzM3NBcT1qQAAAAABmZo5BzcxsQDMzE0BmZo5BcT1qQAAAAABmZo5BcT1qQDMzE0BmZo5BzcxsQAAAAABmZo5BzcxsQDMzE0AzM3NBcT1qQAAAAAAzM3NBcT1qQDMzE0AzM3NBzcxsQAAAAAAzM3NBZmbawTMzE0A0M1tBmpnFwTMzE0Bcj1pBmpnFwTMzE0A0M1tBZmbawTMzE0Bcj1pBZmbawQAAAAA0M1tBmpnFwQAAAABcj1pBmpnFwQAAAAA0M1tBZmbawQAAAABcj1pBmpnFwTMzE0A0M1tBZmbawTMzE0Bcj1pBmpnFwTMzE0Bcj1pBZmbawTMzE0A0M1tBmpnFwQAAAAA0M1tBZmbawQAAAABcj1pBmpnFwQAAAABcj1pBZmbawQAAAAA0M1tBmpnFwTMzE0A0M1tBZmbawQAAAAA0M1tBZmbawTMzE0A0M1tBmpnFwQAAAAA0M1tBmpnFwTMzE0Bcj1pBZmbawQAAAABcj1pBZmbawTMzE0Bcj1pBmpnFwQAAAABcj1pB/3//f////7//////AAD/v/9//3////+//////wAA/7//f/9/////v/////8AAP+//3//f////7//////AAD/v///AID/////AAAAgP9//7///wCA/////wAAAID/f/+///8AgP////8AAACA/3//v///AID/////AAAAgP9//78AgP//AAD/vwCAAAD///+/AID//wAA/78AgAAA////vwCA//8AAP+/AIAAAP///78AgP//AAD/vwCAAAD///+//3//f////7//////AAD/v/9//3////+//////wAA/7//f/9/////v/////8AAP+//3//f////7//////AAD/v///AID/////AAAAgP9//7///wCA/////wAAAID/f/+///8AgP////8AAACA/3//v///AID/////AAAAgP9//78AgP//AAD/vwCAAAD///+/AID//wAA/78AgAAA////vwCA//8AAP+/AIAAAP///78AgP//AAD/vwCAAAD///+//3//f////7//////AAD/v/9//3////+//////wAA/7//f/9/////v/////8AAP+//3//f////7//////AAD/v///AID/////AAAAgP9//7///wCA/////wAAAID/f/+///8AgP////8AAACA/3//v///AID/////AAAAgP9//78AgP//AAD/vwCAAAD///+/AID//wAA/78AgAAA////vwCA//8AAP+/AIAAAP///78AgP//AAD/vwCAAAD///+//3//f////7//////AAD/v/9//3////+//////wAA/7//f/9/////v/////8AAP+//3//f////7//////AAD/v///AID/////AAAAgP9//7///wCA/////wAAAID/f/+///8AgP////8AAACA/3//v///AID/////AAAAgP9//78AgP//AAD/vwCAAAD///+/AID//wAA/78AgAAA////vwCA//8AAP+/AIAAAP///78AgP//AAD/vwCAAAD///+/")
 }]
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_32"]
+albedo_color = Color(0.4, 0.02, 0.02, 1)
+roughness = 0.5
+emission_enabled = true
+emission = Color(1, 0.08, 0.04, 1)
+emission_energy_multiplier = 2.5
+
 [sub_resource type="ArrayMesh" id="ArrayMesh_voxup"]
 _surfaces = [{
 "aabb": AABB(-27.69, 2.51, 13.63, 31.380001, 0.17999983, 28.96),
@@ -4724,6 +4581,13 @@ _surfaces = [{
 "vertex_data": PackedByteArray("ZuaKQgAA+ECamQlAAICLQgAA+EDNzOw/AICLQgAA+ECamQlAZuaKQgAA+EDNzOw/ZuaKQmZm7kCamQlAAICLQmZm7kDNzOw/AICLQmZm7kCamQlAZuaKQmZm7kDNzOw/AICLQgAA+ECamQlAZuaKQgAA+EDNzOw/AICLQgAA+EDNzOw/ZuaKQgAA+ECamQlAAICLQmZm7kCamQlAZuaKQmZm7kDNzOw/AICLQmZm7kDNzOw/ZuaKQmZm7kCamQlAAICLQgAA+ECamQlAZuaKQmZm7kCamQlAZuaKQgAA+ECamQlAAICLQmZm7kCamQlAAICLQgAA+EDNzOw/ZuaKQmZm7kDNzOw/ZuaKQgAA+EDNzOw/AICLQmZm7kDNzOw//3//f////7//////AAD/v/9//3////+//////wAA/7//f/9/////v/////8AAP+//3//f////7//////AAD/v///AID/////AAAAgP9//7///wCA/////wAAAID/f/+///8AgP////8AAACA/3//v///AID/////AAAAgP9//78AgP//AAD/vwCAAAD///+/AID//wAA/78AgAAA////vwCA//8AAP+/AIAAAP///78AgP//AAD/vwCAAAD///+/")
 }]
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_30"]
+albedo_color = Color(1, 0.75, 0.4, 1)
+roughness = 0.5
+emission_enabled = true
+emission = Color(1, 0.62, 0.25, 1)
+emission_energy_multiplier = 4.0
+
 [sub_resource type="ArrayMesh" id="ArrayMesh_037wn"]
 _surfaces = [{
 "aabb": AABB(-50.8, 9.85, 49.75, 101.6, 0.29999924, 0.5),
@@ -4752,6 +4616,32 @@ _surfaces = [{
 "vertex_data": PackedByteArray("AAB0QpDC9T2PwuXAAADyQpDC9T3rUejAAADyQpDC9T2PwuXAAAB0QpDC9T3rUejAAAB0QgrXo7yPwuXAAADyQgrXo7zrUejAAADyQgrXo7yPwuXAAAB0QgrXo7zrUejAAADyQpDC9T2PwuXAAAB0QpDC9T3rUejAAADyQpDC9T3rUejAAAB0QpDC9T2PwuXAAADyQgrXo7yPwuXAAAB0QgrXo7zrUejAAADyQgrXo7zrUejAAAB0QgrXo7yPwuXAAADyQpDC9T2PwuXAAAB0QgrXo7yPwuXAAAB0QpDC9T2PwuXAAADyQgrXo7yPwuXAAADyQpDC9T3rUejAAAB0QgrXo7zrUejAAAB0QpDC9T3rUejAAADyQgrXo7zrUejAAAB0QpDC9T0VrrfAAADyQpDC9T1xPbrAAADyQpDC9T0VrrfAAAB0QpDC9T1xPbrAAAB0QgrXo7wVrrfAAADyQgrXo7xxPbrAAADyQgrXo7wVrrfAAAB0QgrXo7xxPbrAAADyQpDC9T0VrrfAAAB0QpDC9T1xPbrAAADyQpDC9T1xPbrAAAB0QpDC9T0VrrfAAADyQgrXo7wVrrfAAAB0QgrXo7xxPbrAAADyQgrXo7xxPbrAAAB0QgrXo7wVrrfAAADyQpDC9T0VrrfAAAB0QgrXo7wVrrfAAAB0QpDC9T0VrrfAAADyQgrXo7wVrrfAAADyQpDC9T1xPbrAAAB0QgrXo7xxPbrAAAB0QpDC9T1xPbrAAADyQgrXo7xxPbrAAAB0QpDC9T3hejRAAADyQpDC9T0pXC9AAADyQpDC9T3hejRAAAB0QpDC9T0pXC9AAAB0QgrXo7zhejRAAADyQgrXo7wpXC9AAADyQgrXo7zhejRAAAB0QgrXo7wpXC9AAADyQpDC9T3hejRAAAB0QpDC9T0pXC9AAADyQpDC9T0pXC9AAAB0QpDC9T3hejRAAADyQgrXo7zhejRAAAB0QgrXo7wpXC9AAADyQgrXo7wpXC9AAAB0QgrXo7zhejRAAADyQpDC9T3hejRAAAB0QgrXo7zhejRAAAB0QpDC9T3hejRAAADyQgrXo7zhejRAAADyQpDC9T0pXC9AAAB0QgrXo7wpXC9AAAB0QpDC9T0pXC9AAADyQgrXo7wpXC9AAAB0QpDC9T3rUYhAAADyQpDC9T2PwoVAAADyQpDC9T3rUYhAAAB0QpDC9T2PwoVAAAB0QgrXo7zrUYhAAADyQgrXo7yPwoVAAADyQgrXo7zrUYhAAAB0QgrXo7yPwoVAAADyQpDC9T3rUYhAAAB0QpDC9T2PwoVAAADyQpDC9T2PwoVAAAB0QpDC9T3rUYhAAADyQgrXo7zrUYhAAAB0QgrXo7yPwoVAAADyQgrXo7yPwoVAAAB0QgrXo7zrUYhAAADyQpDC9T3rUYhAAAB0QgrXo7zrUYhAAAB0QpDC9T3rUYhAAADyQgrXo7zrUYhAAADyQpDC9T2PwoVAAAB0QgrXo7yPwoVAAAB0QpDC9T2PwoVAAADyQgrXo7yPwoVA/3//f////7//////AAD/v/9//3////+//////wAA/7//f/9/////v/////8AAP+//3//f////7//////AAD/v///AID/////AAAAgP9//7///wCA/////wAAAID/f/+///8AgP////8AAACA/3//v///AID/////AAAAgP9//78AgP//AAD/vwCAAAD///+/AID//wAA/78AgAAA////vwCA//8AAP+/AIAAAP///78AgP//AAD/vwCAAAD///+//3//f////7//////AAD/v/9//3////+//////wAA/7//f/9/////v/////8AAP+//3//f////7//////AAD/v///AID/////AAAAgP9//7///wCA/////wAAAID/f/+///8AgP////8AAACA/3//v///AID/////AAAAgP9//78AgP//AAD/vwCAAAD///+/AID//wAA/78AgAAA////vwCA//8AAP+/AIAAAP///78AgP//AAD/vwCAAAD///+//3//f////7//////AAD/v/9//3////+//////wAA/7//f/9/////v/////8AAP+//3//f////7//////AAD/v///AID/////AAAAgP9//7///wCA/////wAAAID/f/+///8AgP////8AAACA/3//v///AID/////AAAAgP9//78AgP//AAD/vwCAAAD///+/AID//wAA/78AgAAA////vwCA//8AAP+/AIAAAP///78AgP//AAD/vwCAAAD///+//3//f////7//////AAD/v/9//3////+//////wAA/7//f/9/////v/////8AAP+//3//f////7//////AAD/v///AID/////AAAAgP9//7///wCA/////wAAAID/f/+///8AgP////8AAACA/3//v///AID/////AAAAgP9//78AgP//AAD/vwCAAAD///+/AID//wAA/78AgAAA////vwCA//8AAP+/AIAAAP///78AgP//AAD/vwCAAAD///+/")
 }]
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rv55j"]
+albedo_color = Color(0.13, 0.12, 0.11, 1)
+metallic = 0.6
+roughness = 0.65
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_mt64k"]
+material = SubResource("StandardMaterial3D_rv55j")
+top_radius = 0.07
+bottom_radius = 0.09
+height = 8.0
+radial_segments = 8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_6qdgm"]
+material = SubResource("StandardMaterial3D_rv55j")
+top_radius = 0.07
+bottom_radius = 0.09
+height = 7.0
+radial_segments = 8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_4lyvh"]
+material = SubResource("StandardMaterial3D_rv55j")
+top_radius = 0.07
+bottom_radius = 0.09
+height = -7.0
+radial_segments = 8
+
 [node name="IronsideDepot" type="Node3D" unique_id=1123486374]
 script = ExtResource("99_r")
 map_id = &"ironside_depot"
@@ -4779,8 +4669,8 @@ metadata/note = "Moon (contract name Sun): the only shadowed directional light"
 
 [node name="Lights" type="Node3D" parent="." unique_id=213598896]
 
-[node name="PlatformFlood" type="SpotLight3D" parent="Lights" unique_id=142684009]
-transform = Transform3D(0.746295, 0.185655, -0.639199, 0, 0.960313, 0.278923, 0.665615, -0.208159, 0.716678, -26.5, 7.2, 42.5)
+[node name="PlatformFlood" type="SpotLight3D" parent="Lights" unique_id=142684009 groups=["light_mounted"]]
+transform = Transform3D(0.7769411, 0.1351817, -0.61488897, 0, 0.97667575, 0.21471953, 0.62957335, -0.16682443, 0.7588195, -26.5, 6.42, 43.21)
 light_color = Color(1, 0.66, 0.34, 1)
 light_energy = 7.0
 shadow_enabled = true
@@ -4792,12 +4682,8 @@ spot_range = 42.0
 spot_attenuation = 0.9
 spot_angle = 48.0
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/PlatformFlood" unique_id=732967305]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3287")
-
-[node name="ShedFlood" type="SpotLight3D" parent="Lights" unique_id=285760454]
-transform = Transform3D(1, 0, 0, 0, 0.835705, 0.549178, 0, -0.549178, 0.835705, -12, 9.2, 10)
+[node name="ShedFlood" type="SpotLight3D" parent="Lights" unique_id=285760454 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 0.98142445, 0.1918492, 0, -0.1918492, 0.98142445, -12, 6.385, 13.26)
 light_color = Color(0.72, 0.84, 1, 1)
 light_energy = 5.0
 shadow_enabled = true
@@ -4809,12 +4695,8 @@ spot_range = 26.0
 spot_attenuation = 0.9
 spot_angle = 48.0
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/ShedFlood" unique_id=390740535]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3288")
-
-[node name="PitLamp" type="SpotLight3D" parent="Lights" unique_id=169497022]
-transform = Transform3D(1, 0, 0, 0, 0.000806451, 1, 0, -1, 0.000806451, -6, 11.4, -29)
+[node name="PitLamp" type="SpotLight3D" parent="Lights" unique_id=169497022 groups=["light_mounted"]]
+transform = Transform3D(0, 0.9998404, 0.017863534, -0.08861691, -0.017793255, 0.99590683, 0.99606574, -0.0015830111, 0.08860277, -5.894645, 6.885, -28.490786)
 light_color = Color(1, 0.78, 0.52, 1)
 light_energy = 6.0
 shadow_enabled = true
@@ -4825,12 +4707,8 @@ spot_range = 20.0
 spot_attenuation = 0.9
 spot_angle = 48.0
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/PitLamp" unique_id=169813939]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3289")
-
-[node name="PlatformLampE" type="OmniLight3D" parent="Lights" unique_id=1168040557]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.5, 20)
+[node name="PlatformLampE" type="OmniLight3D" parent="Lights" unique_id=1168040557 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.51, 5.42, 20)
 light_color = Color(1, 0.66, 0.34, 1)
 light_energy = 1.8
 distance_fade_enabled = true
@@ -4838,12 +4716,8 @@ distance_fade_length = 12.0
 omni_range = 16.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/PlatformLampE" unique_id=1516774165]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3290")
-
-[node name="CanopyLamp" type="OmniLight3D" parent="Lights" unique_id=1183806905]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 4.2, 28)
+[node name="CanopyLamp" type="OmniLight3D" parent="Lights" unique_id=1183806905 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.339999, 4.12, 28)
 light_color = Color(1, 0.66, 0.34, 1)
 light_energy = 1.4
 distance_fade_enabled = true
@@ -4851,12 +4725,8 @@ distance_fade_length = 12.0
 omni_range = 10.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/CanopyLamp" unique_id=2084032834]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3291")
-
-[node name="OfficeTube1" type="OmniLight3D" parent="Lights" unique_id=689660773]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -44, 7, 22)
+[node name="OfficeTube1" type="OmniLight3D" parent="Lights" unique_id=689660773 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -44, 4.112, 17.09)
 light_color = Color(0.72, 0.84, 1, 1)
 light_energy = 1.5
 distance_fade_enabled = true
@@ -4864,12 +4734,8 @@ distance_fade_length = 12.0
 omni_range = 15.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/OfficeTube1" unique_id=812112428]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3292")
-
-[node name="OfficeTube2" type="OmniLight3D" parent="Lights" unique_id=2068643494]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -44, 7, 37)
+[node name="OfficeTube2" type="OmniLight3D" parent="Lights" unique_id=2068643494 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -44, 2.312, 32.09)
 light_color = Color(0.72, 0.84, 1, 1)
 light_energy = 1.3
 distance_fade_enabled = true
@@ -4877,24 +4743,16 @@ distance_fade_length = 12.0
 omni_range = 15.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/OfficeTube2" unique_id=2134377303]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3293")
-
-[node name="GalleryLamp" type="OmniLight3D" parent="Lights" unique_id=1577933674]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -57, 6.5, 30)
+[node name="GalleryLamp" type="OmniLight3D" parent="Lights" unique_id=1577933674 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -59.51, 6.42, 30)
 light_color = Color(1, 0.78, 0.52, 1)
 distance_fade_enabled = true
 distance_fade_length = 12.0
 omni_range = 10.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/GalleryLamp" unique_id=1535964699]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3294")
-
-[node name="DockLampW" type="OmniLight3D" parent="Lights" unique_id=1789441830]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 6.5, 40)
+[node name="DockLampW" type="OmniLight3D" parent="Lights" unique_id=1789441830 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 6.42, 43.51)
 light_color = Color(1, 0.66, 0.34, 1)
 light_energy = 1.8
 distance_fade_enabled = true
@@ -4902,12 +4760,8 @@ distance_fade_length = 12.0
 omni_range = 16.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/DockLampW" unique_id=810072867]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3295")
-
-[node name="DockLampE" type="OmniLight3D" parent="Lights" unique_id=586510257]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 6.5, 24)
+[node name="DockLampE" type="OmniLight3D" parent="Lights" unique_id=586510257 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 31.51, 6.42, 24)
 light_color = Color(1, 0.66, 0.34, 1)
 light_energy = 1.6
 distance_fade_enabled = true
@@ -4918,12 +4772,8 @@ script = ExtResource("68_r")
 base_energy = 1.6
 jitter = 0.25
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/DockLampE" unique_id=1775315212]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3296")
-
-[node name="ColdTube1" type="OmniLight3D" parent="Lights" unique_id=384696098]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 42, 8, 26)
+[node name="ColdTube1" type="OmniLight3D" parent="Lights" unique_id=384696098 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40.69, 4.112, 26)
 light_color = Color(0.72, 0.84, 1, 1)
 light_energy = 1.4
 distance_fade_enabled = true
@@ -4931,12 +4781,8 @@ distance_fade_length = 12.0
 omni_range = 15.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/ColdTube1" unique_id=706937826]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3297")
-
-[node name="ColdTube2" type="OmniLight3D" parent="Lights" unique_id=1433743570]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 52, 8, 38)
+[node name="ColdTube2" type="OmniLight3D" parent="Lights" unique_id=1433743570 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 52, 6.512, 43.61)
 light_color = Color(0.72, 0.84, 1, 1)
 light_energy = 1.2
 distance_fade_enabled = true
@@ -4944,12 +4790,8 @@ distance_fade_length = 12.0
 omni_range = 14.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/ColdTube2" unique_id=1380260674]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3298")
-
-[node name="ShedTube2" type="OmniLight3D" parent="Lights" unique_id=1574071579]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 8.5, -8)
+[node name="ShedTube2" type="OmniLight3D" parent="Lights" unique_id=1574071579 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 6.512, -13.61)
 light_color = Color(0.72, 0.84, 1, 1)
 light_energy = 1.2
 distance_fade_enabled = true
@@ -4957,12 +4799,8 @@ distance_fade_length = 12.0
 omni_range = 14.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/ShedTube2" unique_id=5283452]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3299")
-
-[node name="ShedTube3" type="OmniLight3D" parent="Lights" unique_id=99088492]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 8.5, 8)
+[node name="ShedTube3" type="OmniLight3D" parent="Lights" unique_id=99088492 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.61, 6.512, 8)
 light_color = Color(0.72, 0.84, 1, 1)
 light_energy = 1.2
 distance_fade_enabled = true
@@ -4970,12 +4808,8 @@ distance_fade_length = 12.0
 omni_range = 14.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/ShedTube3" unique_id=682151974]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3300")
-
-[node name="YardLampW" type="OmniLight3D" parent="Lights" unique_id=1048099480]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 7, 10)
+[node name="YardLampW" type="OmniLight3D" parent="Lights" unique_id=1048099480 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 6.42, 13.51)
 light_color = Color(1, 0.66, 0.34, 1)
 light_energy = 2.0
 distance_fade_enabled = true
@@ -4983,12 +4817,8 @@ distance_fade_length = 12.0
 omni_range = 18.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/YardLampW" unique_id=208385114]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3301")
-
-[node name="YardLampC" type="OmniLight3D" parent="Lights" unique_id=118276013]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 7, -11)
+[node name="YardLampC" type="OmniLight3D" parent="Lights" unique_id=118276013 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 6.42, -13.51)
 light_color = Color(1, 0.66, 0.34, 1)
 light_energy = 1.8
 distance_fade_enabled = true
@@ -4996,12 +4826,8 @@ distance_fade_length = 12.0
 omni_range = 18.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/YardLampC" unique_id=587426588]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3302")
-
-[node name="SignalLamp" type="OmniLight3D" parent="Lights" unique_id=277449775]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 55.5, 6, 0)
+[node name="SignalLamp" type="OmniLight3D" parent="Lights" unique_id=277449775 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 59.51, 5.92, 0)
 light_color = Color(1, 0.25, 0.15, 1)
 light_energy = 1.4
 distance_fade_enabled = true
@@ -5011,12 +4837,8 @@ omni_attenuation = 1.2
 script = ExtResource("68_r")
 jitter = 0.5
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/SignalLamp" unique_id=2056890931]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3303")
-
-[node name="CoalLampW" type="OmniLight3D" parent="Lights" unique_id=505808998]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -52, 7, 10)
+[node name="CoalLampW" type="OmniLight3D" parent="Lights" unique_id=505808998 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -52, 6.42, 13.51)
 light_color = Color(1, 0.66, 0.34, 1)
 light_energy = 1.8
 distance_fade_enabled = true
@@ -5024,12 +4846,8 @@ distance_fade_length = 12.0
 omni_range = 17.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/CoalLampW" unique_id=1110431671]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3304")
-
-[node name="CoalLampN" type="OmniLight3D" parent="Lights" unique_id=835123432]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40, 7, -10)
+[node name="CoalLampN" type="OmniLight3D" parent="Lights" unique_id=835123432 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40, 6.42, -13.51)
 light_color = Color(1, 0.66, 0.34, 1)
 light_energy = 1.6
 distance_fade_enabled = true
@@ -5040,12 +4858,8 @@ script = ExtResource("68_r")
 base_energy = 1.6
 jitter = 0.35
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/CoalLampN" unique_id=659075656]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3305")
-
-[node name="EngineLamp1" type="OmniLight3D" parent="Lights" unique_id=1530762243]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40, 9, -30)
+[node name="EngineLamp1" type="OmniLight3D" parent="Lights" unique_id=1530762243 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -45.21, 6.512, -32.19533)
 light_color = Color(1, 0.78, 0.52, 1)
 light_energy = 1.6
 distance_fade_enabled = true
@@ -5053,12 +4867,8 @@ distance_fade_length = 12.0
 omni_range = 16.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/EngineLamp1" unique_id=1809242641]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3306")
-
-[node name="EngineLamp2" type="OmniLight3D" parent="Lights" unique_id=665261395]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -54, 8, -20)
+[node name="EngineLamp2" type="OmniLight3D" parent="Lights" unique_id=665261395 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -54, 6.512, -14.39)
 light_color = Color(1, 0.78, 0.52, 1)
 light_energy = 1.2
 distance_fade_enabled = true
@@ -5069,12 +4879,8 @@ script = ExtResource("68_r")
 base_energy = 1.2
 jitter = 0.3
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/EngineLamp2" unique_id=507623377]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3307")
-
-[node name="RoundhouseLampW" type="OmniLight3D" parent="Lights" unique_id=44404981]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 10, -38)
+[node name="RoundhouseLampW" type="OmniLight3D" parent="Lights" unique_id=44404981 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 6.512, -43.61)
 light_color = Color(1, 0.78, 0.52, 1)
 light_energy = 1.4
 distance_fade_enabled = true
@@ -5082,12 +4888,8 @@ distance_fade_length = 12.0
 omni_range = 16.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/RoundhouseLampW" unique_id=1845877302]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3308")
-
-[node name="RoundhouseLampE" type="OmniLight3D" parent="Lights" unique_id=1295941440]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 10, -24)
+[node name="RoundhouseLampE" type="OmniLight3D" parent="Lights" unique_id=1295941440 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.61, 6.512, -24)
 light_color = Color(1, 0.78, 0.52, 1)
 light_energy = 1.4
 distance_fade_enabled = true
@@ -5095,12 +4897,8 @@ distance_fade_length = 12.0
 omni_range = 16.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/RoundhouseLampE" unique_id=653131797]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3309")
-
-[node name="FuelLampN" type="OmniLight3D" parent="Lights" unique_id=1607167015]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 7, -40)
+[node name="FuelLampN" type="OmniLight3D" parent="Lights" unique_id=1607167015 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 6.42, -43.51)
 light_color = Color(1, 0.66, 0.34, 1)
 light_energy = 1.8
 distance_fade_enabled = true
@@ -5108,12 +4906,8 @@ distance_fade_length = 12.0
 omni_range = 18.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/FuelLampN" unique_id=342569570]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3310")
-
-[node name="FuelLampE" type="OmniLight3D" parent="Lights" unique_id=1321177741]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40, 7, -22)
+[node name="FuelLampE" type="OmniLight3D" parent="Lights" unique_id=1321177741 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 39.80723, 6.885, -21.893978)
 light_color = Color(1, 0.66, 0.34, 1)
 light_energy = 1.8
 distance_fade_enabled = true
@@ -5121,12 +4915,8 @@ distance_fade_length = 12.0
 omni_range = 18.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/FuelLampE" unique_id=1384714027]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3311")
-
-[node name="FuelLampC" type="OmniLight3D" parent="Lights" unique_id=678875883]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36, 7, -37)
+[node name="FuelLampC" type="OmniLight3D" parent="Lights" unique_id=678875883 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 41.809998, 6.42, -37)
 light_color = Color(1, 0.66, 0.34, 1)
 light_energy = 1.6
 distance_fade_enabled = true
@@ -5134,12 +4924,8 @@ distance_fade_length = 12.0
 omni_range = 16.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/FuelLampC" unique_id=1027095829]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3312")
-
-[node name="EngineLamp3" type="OmniLight3D" parent="Lights" unique_id=727595665]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -50, 8, -34)
+[node name="EngineLamp3" type="OmniLight3D" parent="Lights" unique_id=727595665 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -46.190002, 6.512, -34)
 light_color = Color(1, 0.78, 0.52, 1)
 light_energy = 1.4
 distance_fade_enabled = true
@@ -5147,12 +4933,8 @@ distance_fade_length = 12.0
 omni_range = 15.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/EngineLamp3" unique_id=1668789028]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3313")
-
-[node name="RoundhouseLampS" type="OmniLight3D" parent="Lights" unique_id=1031580865]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 9, -38)
+[node name="RoundhouseLampS" type="OmniLight3D" parent="Lights" unique_id=1031580865 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 6.512, -43.61)
 light_color = Color(1, 0.78, 0.52, 1)
 light_energy = 1.3
 distance_fade_enabled = true
@@ -5160,24 +4942,16 @@ distance_fade_length = 12.0
 omni_range = 16.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/RoundhouseLampS" unique_id=919209031]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3314")
-
-[node name="PumpLamp" type="OmniLight3D" parent="Lights" unique_id=807075739]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 53, 3.3, -37)
+[node name="PumpLamp" type="OmniLight3D" parent="Lights" unique_id=807075739 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 53, 3.6, -37)
 light_color = Color(1, 0.78, 0.52, 1)
 distance_fade_enabled = true
 distance_fade_length = 12.0
 omni_range = 9.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/PumpLamp" unique_id=214822335]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3315")
-
-[node name="ShedWallWash" type="OmniLight3D" parent="Lights" unique_id=1649806885]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 2.8, -8)
+[node name="ShedWallWash" type="OmniLight3D" parent="Lights" unique_id=1649806885 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.56, 2.685, -8)
 light_color = Color(0.72, 0.84, 1, 1)
 light_energy = 2.2
 distance_fade_enabled = true
@@ -5185,12 +4959,8 @@ distance_fade_length = 12.0
 omni_range = 11.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/ShedWallWash" unique_id=1978851807]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3316")
-
-[node name="EngineWallWash" type="OmniLight3D" parent="Lights" unique_id=2017725257]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -58.5, 3.5, -31)
+[node name="EngineWallWash" type="OmniLight3D" parent="Lights" unique_id=2017725257 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -58.5, 3.8000002, -31)
 light_color = Color(1, 0.78, 0.52, 1)
 light_energy = 1.2
 distance_fade_enabled = true
@@ -5198,12 +4968,8 @@ distance_fade_length = 12.0
 omni_range = 8.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/EngineWallWash" unique_id=128528872]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3317")
-
-[node name="FuelYardWash" type="OmniLight3D" parent="Lights" unique_id=718967122]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 46, 3, -38)
+[node name="FuelYardWash" type="OmniLight3D" parent="Lights" unique_id=718967122 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 42.79, 2.92, -38)
 light_color = Color(1, 0.66, 0.34, 1)
 light_energy = 1.8
 distance_fade_enabled = true
@@ -5211,22 +4977,14 @@ distance_fade_length = 12.0
 omni_range = 10.0
 omni_attenuation = 1.2
 
-[node name="Lamp" type="MeshInstance3D" parent="Lights/FuelYardWash" unique_id=1300729028]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3318")
-
-[node name="TowerBeacon" type="OmniLight3D" parent="Lights" unique_id=1532735162]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28, 14.6, -29)
+[node name="TowerBeacon" type="OmniLight3D" parent="Lights" unique_id=1532735162 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 27.847189, 6.8849998, -28.841732)
 light_color = Color(1, 0.1, 0.05, 1)
 light_energy = 2.0
 distance_fade_enabled = true
 distance_fade_length = 12.0
 omni_range = 7.0
 omni_attenuation = 1.2
-
-[node name="Lamp" type="MeshInstance3D" parent="Lights/TowerBeacon" unique_id=2057064817]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_3319")
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="." unique_id=1358911132]
 navigation_mesh = SubResource("NavigationMesh_3323")
@@ -9960,166 +9718,6 @@ shape = SubResource("BoxShape3D_529")
 [node name="Props" type="Node3D" parent="." unique_id=1231574647]
 script = ExtResource("100_r")
 
-[node name="security_light_2460" type="Node3D" parent="Props" unique_id=746947769 instance=ExtResource("72_r")]
-transform = Transform3D(-1.34333, 0, 1.19811, 0, 1.8, 0, -1.19811, 0, -1.34333, -26.5, 7.2, 42.5)
-metadata/vis_end = 90.0
-metadata/cast_shadow = false
-
-[node name="security_light_2462" type="Node3D" parent="Props" unique_id=239198058 instance=ExtResource("72_r")]
-transform = Transform3D(-1.8, 0, 2.20436e-16, 0, 1.8, 0, -2.20436e-16, 0, -1.8, -12, 9.2, 10)
-metadata/vis_end = 90.0
-metadata/cast_shadow = false
-
-[node name="security_light_2464" type="Node3D" parent="Props" unique_id=1272475683 instance=ExtResource("72_r")]
-transform = Transform3D(-1.8, 0, 2.20436e-16, 0, 1.8, 0, -2.20436e-16, 0, -1.8, -6, 11.4, -29)
-metadata/vis_end = 90.0
-metadata/cast_shadow = false
-
-[node name="security_light_2468" type="Node3D" parent="Props" unique_id=637097748 instance=ExtResource("72_r")]
-transform = Transform3D(9.79717e-17, 0, 1.6, 0, 1.6, 0, -1.6, 0, 9.79717e-17, 0, 5.75, 20)
-metadata/vis_end = 90.0
-metadata/cast_shadow = false
-
-[node name="security_light_2470" type="Node3D" parent="Props" unique_id=105826709 instance=ExtResource("72_r")]
-transform = Transform3D(0.328561, 0, -1.5659, 0, 1.6, 0, 1.5659, 0, 0.328561, -12, 4.4, 28)
-metadata/vis_end = 90.0
-metadata/cast_shadow = false
-
-[node name="mounted_fluorescent_lights_2471" type="Node3D" parent="Props" unique_id=225717787 instance=ExtResource("73_r")]
-transform = Transform3D(2.2, 0, 0, 0, 2.2, 0, 0, 0, 2.2, -44, 7.1, 22)
-metadata/vis_end = 55.0
-metadata/cast_shadow = false
-
-[node name="mounted_fluorescent_lights_2474" type="Node3D" parent="Props" unique_id=2002226075 instance=ExtResource("73_r")]
-transform = Transform3D(2.2, 0, 0, 0, 2.2, 0, 0, 0, 2.2, -44, 7.1, 37)
-metadata/vis_end = 55.0
-metadata/cast_shadow = false
-
-[node name="hanging_industrial_lamp_2477" type="Node3D" parent="Props" unique_id=714096425 instance=ExtResource("74_r")]
-transform = Transform3D(0.964286, 0, 0, 0, 0.964286, 0, 0, 0, 0.964286, -57, 7.89214, 30)
-metadata/vis_end = 60.0
-metadata/cast_shadow = false
-
-[node name="security_light_2481" type="Node3D" parent="Props" unique_id=1505385776 instance=ExtResource("72_r")]
-transform = Transform3D(1.6, 0, -3.91887e-16, 0, 1.6, 0, 3.91887e-16, 0, 1.6, 10, 6.75, 40)
-metadata/vis_end = 90.0
-metadata/cast_shadow = false
-
-[node name="security_light_2484" type="Node3D" parent="Props" unique_id=883001542 instance=ExtResource("72_r")]
-transform = Transform3D(9.79717e-17, 0, 1.6, 0, 1.6, 0, -1.6, 0, 9.79717e-17, 26, 6.75, 24)
-metadata/vis_end = 90.0
-metadata/cast_shadow = false
-
-[node name="mounted_fluorescent_lights_2485" type="Node3D" parent="Props" unique_id=186368917 instance=ExtResource("73_r")]
-transform = Transform3D(2.2, 0, 0, 0, 2.2, 0, 0, 0, 2.2, 42, 8.1, 26)
-metadata/vis_end = 55.0
-metadata/cast_shadow = false
-
-[node name="mounted_fluorescent_lights_2488" type="Node3D" parent="Props" unique_id=1940366198 instance=ExtResource("73_r")]
-transform = Transform3D(2.2, 0, 0, 0, 2.2, 0, 0, 0, 2.2, 52, 8.1, 38)
-metadata/vis_end = 55.0
-metadata/cast_shadow = false
-
-[node name="mounted_fluorescent_lights_2491" type="Node3D" parent="Props" unique_id=1954204191 instance=ExtResource("73_r")]
-transform = Transform3D(2.2, 0, 0, 0, 2.2, 0, 0, 0, 2.2, -20, 8.6, -8)
-metadata/vis_end = 55.0
-metadata/cast_shadow = false
-
-[node name="mounted_fluorescent_lights_2494" type="Node3D" parent="Props" unique_id=1383328934 instance=ExtResource("73_r")]
-transform = Transform3D(2.2, 0, 0, 0, 2.2, 0, 0, 0, 2.2, -2, 8.6, 8)
-metadata/vis_end = 55.0
-metadata/cast_shadow = false
-
-[node name="security_light_2499" type="Node3D" parent="Props" unique_id=1479275728 instance=ExtResource("72_r")]
-transform = Transform3D(1.6, 0, -3.91887e-16, 0, 1.6, 0, 3.91887e-16, 0, 1.6, 12, 7.25, 10)
-metadata/vis_end = 90.0
-metadata/cast_shadow = false
-
-[node name="security_light_2502" type="Node3D" parent="Props" unique_id=1756214163 instance=ExtResource("72_r")]
-transform = Transform3D(-1.6, 0, 1.95943e-16, 0, 1.6, 0, -1.95943e-16, 0, -1.6, 30, 7.25, -11)
-metadata/vis_end = 90.0
-metadata/cast_shadow = false
-
-[node name="security_light_2505" type="Node3D" parent="Props" unique_id=825407095 instance=ExtResource("72_r")]
-transform = Transform3D(9.79717e-17, 0, 1.6, 0, 1.6, 0, -1.6, 0, 9.79717e-17, 55.5, 6.25, 0)
-metadata/vis_end = 90.0
-metadata/cast_shadow = false
-
-[node name="security_light_2508" type="Node3D" parent="Props" unique_id=1296953455 instance=ExtResource("72_r")]
-transform = Transform3D(1.6, 0, -3.91887e-16, 0, 1.6, 0, 3.91887e-16, 0, 1.6, -52, 7.25, 10)
-metadata/vis_end = 90.0
-metadata/cast_shadow = false
-
-[node name="security_light_2511" type="Node3D" parent="Props" unique_id=342520801 instance=ExtResource("72_r")]
-transform = Transform3D(-1.6, 0, 1.95943e-16, 0, 1.6, 0, -1.95943e-16, 0, -1.6, -40, 7.25, -10)
-metadata/vis_end = 90.0
-metadata/cast_shadow = false
-
-[node name="hanging_industrial_lamp_2512" type="Node3D" parent="Props" unique_id=318729803 instance=ExtResource("74_r")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40, 10.44, -30)
-metadata/vis_end = 60.0
-metadata/cast_shadow = false
-
-[node name="hanging_industrial_lamp_2514" type="Node3D" parent="Props" unique_id=1790570883 instance=ExtResource("74_r")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -54, 9.44, -20)
-metadata/vis_end = 60.0
-metadata/cast_shadow = false
-
-[node name="hanging_industrial_lamp_2516" type="Node3D" parent="Props" unique_id=1609570477 instance=ExtResource("74_r")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 11.44, -38)
-metadata/vis_end = 60.0
-metadata/cast_shadow = false
-
-[node name="hanging_industrial_lamp_2518" type="Node3D" parent="Props" unique_id=1927227858 instance=ExtResource("74_r")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 11.44, -24)
-metadata/vis_end = 60.0
-metadata/cast_shadow = false
-
-[node name="security_light_2522" type="Node3D" parent="Props" unique_id=1334316194 instance=ExtResource("72_r")]
-transform = Transform3D(-1.6, 0, 1.95943e-16, 0, 1.6, 0, -1.95943e-16, 0, -1.6, 22, 7.25, -40)
-metadata/vis_end = 90.0
-metadata/cast_shadow = false
-
-[node name="security_light_2524" type="Node3D" parent="Props" unique_id=899806582 instance=ExtResource("72_r")]
-transform = Transform3D(0.932818, 0, -1.29994, 0, 1.6, 0, 1.29994, 0, 0.932818, 40, 7.2, -22)
-metadata/vis_end = 90.0
-metadata/cast_shadow = false
-
-[node name="security_light_2527" type="Node3D" parent="Props" unique_id=1173771362 instance=ExtResource("72_r")]
-transform = Transform3D(9.79717e-17, 0, 1.6, 0, 1.6, 0, -1.6, 0, 9.79717e-17, 36, 7.25, -37)
-metadata/vis_end = 90.0
-metadata/cast_shadow = false
-
-[node name="hanging_industrial_lamp_2528" type="Node3D" parent="Props" unique_id=2024116041 instance=ExtResource("74_r")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -50, 9.44, -34)
-metadata/vis_end = 60.0
-metadata/cast_shadow = false
-
-[node name="hanging_industrial_lamp_2530" type="Node3D" parent="Props" unique_id=1783216298 instance=ExtResource("74_r")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 10.44, -38)
-metadata/vis_end = 60.0
-metadata/cast_shadow = false
-
-[node name="hanging_industrial_lamp_2532" type="Node3D" parent="Props" unique_id=139638875 instance=ExtResource("74_r")]
-transform = Transform3D(0.4, 0, 0, 0, 0.4, 0, 0, 0, 0.4, 53, 3.936, -37)
-metadata/vis_end = 60.0
-metadata/cast_shadow = false
-
-[node name="mounted_fluorescent_lights_2533" type="Node3D" parent="Props" unique_id=813656405 instance=ExtResource("73_r")]
-transform = Transform3D(2.2, 0, 0, 0, 2.2, 0, 0, 0, 2.2, 1, 2.9, -8)
-metadata/vis_end = 55.0
-metadata/cast_shadow = false
-
-[node name="hanging_industrial_lamp_2536" type="Node3D" parent="Props" unique_id=91730265 instance=ExtResource("74_r")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -58.5, 4.94, -31)
-metadata/vis_end = 60.0
-metadata/cast_shadow = false
-
-[node name="security_light_2540" type="Node3D" parent="Props" unique_id=1300341560 instance=ExtResource("72_r")]
-transform = Transform3D(-2.93915e-16, 0, -1.6, 0, 1.6, 0, 1.6, 0, -2.93915e-16, 46, 3.25, -38)
-metadata/vis_end = 90.0
-metadata/cast_shadow = false
-
 [node name="utility_box_01_2541" type="Node3D" parent="Props" unique_id=1230417763 instance=ExtResource("76_r")]
 transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, -12, 1.5, -2.88)
 metadata/vis_end = 50.0
@@ -12068,7 +11666,7 @@ explosiveness = 0.95
 process_material = SubResource("ParticleProcessMaterial_3072")
 draw_pass_1 = SubResource("QuadMesh_3074")
 
-[node name="Flash" type="OmniLight3D" parent="NightKit/Spark_Amb_ShedSpark" unique_id=532183690]
+[node name="Flash" type="OmniLight3D" parent="NightKit/Spark_Amb_ShedSpark" unique_id=532183690 groups=["light_fixture"]]
 light_color = Color(0.7, 0.85, 1, 1)
 light_energy = 0.0
 omni_range = 4.5
@@ -12086,7 +11684,7 @@ explosiveness = 0.95
 process_material = SubResource("ParticleProcessMaterial_3072")
 draw_pass_1 = SubResource("QuadMesh_3074")
 
-[node name="Flash" type="OmniLight3D" parent="NightKit/Spark_Amb_SignalSpark" unique_id=1867208597]
+[node name="Flash" type="OmniLight3D" parent="NightKit/Spark_Amb_SignalSpark" unique_id=1867208597 groups=["light_fixture"]]
 light_color = Color(0.7, 0.85, 1, 1)
 light_energy = 0.0
 omni_range = 4.5
@@ -12104,7 +11702,7 @@ explosiveness = 0.95
 process_material = SubResource("ParticleProcessMaterial_3072")
 draw_pass_1 = SubResource("QuadMesh_3074")
 
-[node name="Flash" type="OmniLight3D" parent="NightKit/Spark_Amb_RoundhouseSpark" unique_id=322827976]
+[node name="Flash" type="OmniLight3D" parent="NightKit/Spark_Amb_RoundhouseSpark" unique_id=322827976 groups=["light_fixture"]]
 light_color = Color(0.7, 0.85, 1, 1)
 light_energy = 0.0
 omni_range = 4.5
@@ -13104,3 +12702,770 @@ mesh = SubResource("ArrayMesh_037wn")
 [node name="outside_179" type="MeshInstance3D" parent="Merged" unique_id=1907986287]
 cast_shadow = 0
 mesh = SubResource("ArrayMesh_thint")
+
+[node name="LightFixtures" type="Node3D" parent="." unique_id=1814403756]
+
+[node name="Fx_PlatformFlood" type="Node3D" parent="LightFixtures" unique_id=1592995418 groups=["light_fixture"]]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -26.5, 6.5, 43.71)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_PlatformFlood" unique_id=349380247 instance=ExtResource("119_llv84")]
+
+[node name="Fx_ShedFlood" type="Node3D" parent="LightFixtures" unique_id=307083105 groups=["light_fixture"]]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -12, 6.5, 13.71)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_ShedFlood" unique_id=1796848898 instance=ExtResource("120_4yhj8")]
+
+[node name="Fx_PitLamp" type="Node3D" parent="LightFixtures" unique_id=742306877 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, -1, -29)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_PitLamp" unique_id=1377160483 instance=ExtResource("120_4yhj8")]
+transform = Transform3D(0.97926044, 0, 0.2026056, 0, 1, 0, -0.2026056, 0, 0.97926044, 0.014182568, 8, 0.0685482)
+
+[node name="Pole" type="MeshInstance3D" parent="LightFixtures/Fx_PitLamp" unique_id=964890501]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, 0)
+mesh = SubResource("CylinderMesh_mt64k")
+
+[node name="Fx_PlatformLampE" type="Node3D" parent="LightFixtures" unique_id=760325980 groups=["light_fixture"]]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 3.71, 5.5, 20)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_PlatformLampE" unique_id=1046869575 instance=ExtResource("119_llv84")]
+
+[node name="Fx_CanopyLamp" type="Node3D" parent="LightFixtures" unique_id=110961787 groups=["light_fixture"]]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -8.139999, 4.2, 28)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_CanopyLamp" unique_id=1288987 instance=ExtResource("119_llv84")]
+
+[node name="Fx_OfficeTube1" type="Node3D" parent="LightFixtures" unique_id=265898459 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -44, 4.1, 16.99)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_OfficeTube1" unique_id=384331791 instance=ExtResource("121_vcvty")]
+
+[node name="Fx_OfficeTube2" type="Node3D" parent="LightFixtures" unique_id=993191273 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -44, 2.3, 31.99)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_OfficeTube2" unique_id=708053073 instance=ExtResource("121_vcvty")]
+
+[node name="Fx_GalleryLamp" type="Node3D" parent="LightFixtures" unique_id=268933313 groups=["light_fixture"]]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -59.71, 6.5, 30)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_GalleryLamp" unique_id=1943642384 instance=ExtResource("119_llv84")]
+
+[node name="Fx_DockLampW" type="Node3D" parent="LightFixtures" unique_id=1275949579 groups=["light_fixture"]]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 10, 6.5, 43.71)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_DockLampW" unique_id=565872813 instance=ExtResource("119_llv84")]
+
+[node name="Fx_DockLampE" type="Node3D" parent="LightFixtures" unique_id=194172347 groups=["light_fixture"]]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 31.710001, 6.5, 24)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_DockLampE" unique_id=527327469 instance=ExtResource("119_llv84")]
+
+[node name="Fx_ColdTube1" type="Node3D" parent="LightFixtures" unique_id=461464504 groups=["light_fixture"]]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 40.59, 4.1, 26)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_ColdTube1" unique_id=45674728 instance=ExtResource("121_vcvty")]
+
+[node name="Fx_ColdTube2" type="Node3D" parent="LightFixtures" unique_id=2009017226 groups=["light_fixture"]]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 52, 6.5, 43.71)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_ColdTube2" unique_id=1823910796 instance=ExtResource("121_vcvty")]
+
+[node name="Fx_ShedTube2" type="Node3D" parent="LightFixtures" unique_id=1952958058 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 6.5, -13.71)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_ShedTube2" unique_id=132289400 instance=ExtResource("121_vcvty")]
+
+[node name="Fx_ShedTube3" type="Node3D" parent="LightFixtures" unique_id=2122803677 groups=["light_fixture"]]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 3.7099998, 6.5, 8)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_ShedTube3" unique_id=875957304 instance=ExtResource("121_vcvty")]
+
+[node name="Fx_YardLampW" type="Node3D" parent="LightFixtures" unique_id=1243210684 groups=["light_fixture"]]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 12, 6.5, 13.71)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_YardLampW" unique_id=1246522284 instance=ExtResource("119_llv84")]
+
+[node name="Fx_YardLampC" type="Node3D" parent="LightFixtures" unique_id=353967445 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 6.5, -13.71)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_YardLampC" unique_id=1899483392 instance=ExtResource("119_llv84")]
+
+[node name="Fx_SignalLamp" type="Node3D" parent="LightFixtures" unique_id=278687594 groups=["light_fixture"]]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 59.71, 6, 0)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_SignalLamp" unique_id=873350602 instance=ExtResource("119_llv84")]
+
+[node name="Fx_CoalLampW" type="Node3D" parent="LightFixtures" unique_id=1854476704 groups=["light_fixture"]]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -52, 6.5, 13.71)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_CoalLampW" unique_id=1666153899 instance=ExtResource("119_llv84")]
+
+[node name="Fx_CoalLampN" type="Node3D" parent="LightFixtures" unique_id=1087217514 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40, 6.5, -13.71)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_CoalLampN" unique_id=241945740 instance=ExtResource("119_llv84")]
+
+[node name="Fx_EngineLamp1" type="Node3D" parent="LightFixtures" unique_id=1978583179 groups=["light_fixture"]]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -45.309998, 6.5, -32.19533)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_EngineLamp1" unique_id=2080573744 instance=ExtResource("121_vcvty")]
+
+[node name="Fx_EngineLamp2" type="Node3D" parent="LightFixtures" unique_id=597218924 groups=["light_fixture"]]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -54, 6.5, -14.29)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_EngineLamp2" unique_id=401588001 instance=ExtResource("121_vcvty")]
+
+[node name="Fx_RoundhouseLampW" type="Node3D" parent="LightFixtures" unique_id=38054103 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 6.5, -43.71)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_RoundhouseLampW" unique_id=657334542 instance=ExtResource("121_vcvty")]
+
+[node name="Fx_RoundhouseLampE" type="Node3D" parent="LightFixtures" unique_id=716590661 groups=["light_fixture"]]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 15.71, 6.5, -24)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_RoundhouseLampE" unique_id=829006527 instance=ExtResource("121_vcvty")]
+
+[node name="Fx_FuelLampN" type="Node3D" parent="LightFixtures" unique_id=90607620 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 6.5, -43.71)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_FuelLampN" unique_id=332581610 instance=ExtResource("119_llv84")]
+
+[node name="Fx_FuelLampE" type="Node3D" parent="LightFixtures" unique_id=1255896713 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40, 0, -22)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_FuelLampE" unique_id=1708887564 instance=ExtResource("120_4yhj8")]
+transform = Transform3D(0.48191875, 0, -0.87621593, 0, 1, 0, 0.87621593, 0, 0.48191875, -0.061336517, 7, 0.033733368)
+
+[node name="Pole" type="MeshInstance3D" parent="LightFixtures/Fx_FuelLampE" unique_id=516903562]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 0)
+mesh = SubResource("CylinderMesh_6qdgm")
+
+[node name="Fx_FuelLampC" type="Node3D" parent="LightFixtures" unique_id=23782161 groups=["light_fixture"]]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 42.01, 6.5, -37)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_FuelLampC" unique_id=1696109411 instance=ExtResource("119_llv84")]
+
+[node name="Fx_EngineLamp3" type="Node3D" parent="LightFixtures" unique_id=1822850526 groups=["light_fixture"]]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -46.090004, 6.5, -34)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_EngineLamp3" unique_id=874228383 instance=ExtResource("121_vcvty")]
+
+[node name="Fx_RoundhouseLampS" type="Node3D" parent="LightFixtures" unique_id=1310359142 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 6.5, -43.71)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_RoundhouseLampS" unique_id=1041058012 instance=ExtResource("121_vcvty")]
+
+[node name="Fx_PumpLamp" type="Node3D" parent="LightFixtures" unique_id=510467004 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 53, 3.6999998, -37)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_PumpLamp" unique_id=330344264 instance=ExtResource("122_dm6ut")]
+
+[node name="Fx_ShedWallWash" type="Node3D" parent="LightFixtures" unique_id=1109163089 groups=["light_fixture"]]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 3.71, 2.8, -8)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_ShedWallWash" unique_id=1859399388 instance=ExtResource("120_4yhj8")]
+
+[node name="Fx_EngineWallWash" type="Node3D" parent="LightFixtures" unique_id=589542221 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -58.5, 3.9, -31)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_EngineWallWash" unique_id=521914539 instance=ExtResource("122_dm6ut")]
+
+[node name="Fx_FuelYardWash" type="Node3D" parent="LightFixtures" unique_id=1664972704 groups=["light_fixture"]]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 42.59, 3, -38)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_FuelYardWash" unique_id=1956299842 instance=ExtResource("119_llv84")]
+
+[node name="Fx_TowerBeacon" type="Node3D" parent="LightFixtures" unique_id=1312473093 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28, 14, -29)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_TowerBeacon" unique_id=1777766983 instance=ExtResource("120_4yhj8")]
+transform = Transform3D(0.7194015, 0, -0.69459456, 0, 1.0000001, 0, 0.69459456, 0, 0.7194015, -0.04862213, -7, 0.05035782)
+
+[node name="Pole" type="MeshInstance3D" parent="LightFixtures/Fx_TowerBeacon" unique_id=1849789708]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -3.5, 0)
+mesh = SubResource("CylinderMesh_4lyvh")
+
+[node name="Fx_Add79" type="Node3D" parent="LightFixtures" unique_id=2107987094 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 3.6999998, -12)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add79" unique_id=1851583277 instance=ExtResource("122_dm6ut")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add79" unique_id=539512585]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.099999905, 0)
+light_color = Color(1, 0.88, 0.68, 1)
+light_energy = 2.75
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 10.4
+
+[node name="Fx_Add80" type="Node3D" parent="LightFixtures" unique_id=1708968754 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 3.6999998, -16)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add80" unique_id=113926891 instance=ExtResource("122_dm6ut")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add80" unique_id=1984322447]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.099999905, 0)
+light_color = Color(1, 0.88, 0.68, 1)
+light_energy = 2.75
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 10.4
+
+[node name="Fx_Add81" type="Node3D" parent="LightFixtures" unique_id=1224890337 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -56, 3.3000002, 24)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add81" unique_id=153405627 instance=ExtResource("122_dm6ut")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add81" unique_id=545484372]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.099999905, 0)
+light_color = Color(1, 0.88, 0.68, 1)
+light_energy = 2.75
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 10.4
+
+[node name="Fx_Add82" type="Node3D" parent="LightFixtures" unique_id=1119460110 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -50, 3.6999998, -2)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add82" unique_id=904249725 instance=ExtResource("122_dm6ut")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add82" unique_id=2047728273]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.099999905, 0)
+light_color = Color(1, 0.88, 0.68, 1)
+light_energy = 2.75
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 10.4
+
+[node name="Fx_Add83" type="Node3D" parent="LightFixtures" unique_id=1104410413 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -56, 3.3000002, 36)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add83" unique_id=1531262061 instance=ExtResource("122_dm6ut")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add83" unique_id=741810232]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.099999905, 0)
+light_color = Color(1, 0.88, 0.68, 1)
+light_energy = 2.75
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 10.4
+
+[node name="Fx_Add84" type="Node3D" parent="LightFixtures" unique_id=1375284201 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 52, 3.3000002, -6)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add84" unique_id=1768398723 instance=ExtResource("122_dm6ut")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add84" unique_id=1429605802]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.099999905, 0)
+light_color = Color(1, 0.88, 0.68, 1)
+light_energy = 2.75
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 10.4
+
+[node name="Fx_Add85" type="Node3D" parent="LightFixtures" unique_id=2025736472 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 56, 3.6999998, -34)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add85" unique_id=2057144536 instance=ExtResource("122_dm6ut")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add85" unique_id=755379837]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.099999905, 0)
+light_color = Color(1, 0.88, 0.68, 1)
+light_energy = 2.75
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 10.4
+
+[node name="Fx_Add86" type="Node3D" parent="LightFixtures" unique_id=500350537 groups=["light_fixture"]]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 6, 2.8000002, -14.29)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add86" unique_id=578721822 instance=ExtResource("120_4yhj8")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add86" unique_id=612106738]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.11500001, 0.14999962)
+light_color = Color(1, 0.93, 0.78, 1)
+light_energy = 2.75
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 9.1
+
+[node name="Fx_Add87" type="Node3D" parent="LightFixtures" unique_id=1429952915 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -42, 3.6999998, -2)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add87" unique_id=443553517 instance=ExtResource("122_dm6ut")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add87" unique_id=1509040264]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.099999905, 0)
+light_color = Color(1, 0.88, 0.68, 1)
+light_energy = 2.75
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 10.4
+
+[node name="Fx_Add88" type="Node3D" parent="LightFixtures" unique_id=1015095227 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 3.6999998, -12)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add88" unique_id=2109532808 instance=ExtResource("122_dm6ut")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add88" unique_id=322593775]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.099999905, 0)
+light_color = Color(1, 0.88, 0.68, 1)
+light_energy = 2.75
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 10.4
+
+[node name="Fx_Add89" type="Node3D" parent="LightFixtures" unique_id=1426285134 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 38, 0, 22)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add89" unique_id=1217256077 instance=ExtResource("123_7ec6v")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add89" unique_id=337002746]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.68, 0.20000076)
+light_color = Color(1, 0.96, 0.88, 1)
+light_energy = 4.0
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 15.6
+
+[node name="Fx_Add90" type="Node3D" parent="LightFixtures" unique_id=1000889380 groups=["light_fixture"]]
+transform = Transform3D(6.12323e-17, 0, 1, 0, 1, 0, -1, 0, 6.12323e-17, -24.710001, 2.8000002, -19.118378)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add90" unique_id=259666013 instance=ExtResource("120_4yhj8")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add90" unique_id=1194405405]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.11500001, 0.14999962)
+light_color = Color(1, 0.93, 0.78, 1)
+light_energy = 2.75
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 9.1
+
+[node name="Fx_Add91" type="Node3D" parent="LightFixtures" unique_id=1629270597 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 52, 3.3000002, 18)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add91" unique_id=1576661712 instance=ExtResource("122_dm6ut")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add91" unique_id=353171408]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.099999905, 0)
+light_color = Color(1, 0.88, 0.68, 1)
+light_energy = 2.75
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 10.4
+
+[node name="Fx_Add92" type="Node3D" parent="LightFixtures" unique_id=385266443 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -54, 3.969, -42)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add92" unique_id=1959402076 instance=ExtResource("124_l624c")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add92" unique_id=628695193]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.76900005, 0)
+light_color = Color(1, 0.84, 0.58, 1)
+light_energy = 2.6
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 9.0
+
+[node name="Fx_Add93" type="Node3D" parent="LightFixtures" unique_id=1789841325 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 44, 3.3000002, 36)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add93" unique_id=1163636825 instance=ExtResource("122_dm6ut")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add93" unique_id=1721466439]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.099999905, 0)
+light_color = Color(1, 0.88, 0.68, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 8.0
+
+[node name="Fx_Add94" type="Node3D" parent="LightFixtures" unique_id=1567032937 groups=["light_fixture"]]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 51.08, 2.8, 8.93)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add94" unique_id=1536165695 instance=ExtResource("120_4yhj8")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add94" unique_id=616871452]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.11500001, 0.14999962)
+light_color = Color(1, 0.93, 0.78, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 7.0
+
+[node name="Fx_Add95" type="Node3D" parent="LightFixtures" unique_id=474103677 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 48, 3.6999998, -40)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add95" unique_id=1989954302 instance=ExtResource("122_dm6ut")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add95" unique_id=320333445]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.099999905, 0)
+light_color = Color(1, 0.88, 0.68, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 8.0
+
+[node name="Fx_Add96" type="Node3D" parent="LightFixtures" unique_id=700900656 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -46, 3.3000002, 16)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add96" unique_id=1432317130 instance=ExtResource("122_dm6ut")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add96" unique_id=1195424291]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.099999905, 0)
+light_color = Color(1, 0.88, 0.68, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 8.0
+
+[node name="Fx_Add97" type="Node3D" parent="LightFixtures" unique_id=432753934 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40, 3.969, -42)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add97" unique_id=904889865 instance=ExtResource("124_l624c")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add97" unique_id=1241483539]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.76900005, 0)
+light_color = Color(1, 0.84, 0.58, 1)
+light_energy = 2.6
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 9.0
+
+[node name="Fx_Add98" type="Node3D" parent="LightFixtures" unique_id=989167069 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 56, 3.3000002, 6)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add98" unique_id=1922815402 instance=ExtResource("122_dm6ut")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add98" unique_id=322046477]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.099999905, 0)
+light_color = Color(1, 0.88, 0.68, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 8.0
+
+[node name="Fx_Add99" type="Node3D" parent="LightFixtures" unique_id=1012069874 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -56, 0, 0)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add99" unique_id=710847572 instance=ExtResource("123_7ec6v")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add99" unique_id=1495031019]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.68, 0.2)
+light_color = Color(1, 0.96, 0.88, 1)
+light_energy = 3.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 12.0
+
+[node name="Fx_Add100" type="Node3D" parent="LightFixtures" unique_id=856849823 groups=["light_fixture"]]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -18, 2.8000002, -14.29)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add100" unique_id=1158673141 instance=ExtResource("120_4yhj8")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add100" unique_id=1645773077]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.11500001, 0.14999962)
+light_color = Color(1, 0.93, 0.78, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 7.0
+
+[node name="Fx_Add101" type="Node3D" parent="LightFixtures" unique_id=1115801650 groups=["light_fixture"]]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 40.99, 2.8, -7.5857863)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add101" unique_id=920897306 instance=ExtResource("120_4yhj8")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add101" unique_id=1217081300]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.11500001, 0.15000153)
+light_color = Color(1, 0.93, 0.78, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 7.0
+
+[node name="Fx_Add102" type="Node3D" parent="LightFixtures" unique_id=1275006764 groups=["light_fixture"]]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 48.39, 2.8, 33.337257)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add102" unique_id=1585701977 instance=ExtResource("120_4yhj8")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add102" unique_id=1282324816]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.11500001, 0.15000153)
+light_color = Color(1, 0.93, 0.78, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 7.0
+
+[node name="Fx_Add103" type="Node3D" parent="LightFixtures" unique_id=1146236086 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -58, 3.3000002, 16)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add103" unique_id=135485777 instance=ExtResource("122_dm6ut")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add103" unique_id=1191878251]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.099999905, 0)
+light_color = Color(1, 0.88, 0.68, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 8.0
+
+[node name="Fx_Add104" type="Node3D" parent="LightFixtures" unique_id=512984896 groups=["light_fixture"]]
+transform = Transform3D(-6.12323e-17, 0, -1, 0, 1, 0, 1, 0, -6.12323e-17, 12.71, 2.8000002, -18.28995)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add104" unique_id=18818389 instance=ExtResource("120_4yhj8")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add104" unique_id=1749766443]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.11500001, 0.14999962)
+light_color = Color(1, 0.93, 0.78, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 7.0
+
+[node name="Fx_Add105" type="Node3D" parent="LightFixtures" unique_id=594232584 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 46, 2.8, -30.01)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add105" unique_id=1788037143 instance=ExtResource("120_4yhj8")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add105" unique_id=1188386076]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.11500001, 0.14999962)
+light_color = Color(1, 0.93, 0.78, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 7.0
+
+[node name="Fx_Add106" type="Node3D" parent="LightFixtures" unique_id=1487183392 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -58, 3.969, -38)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add106" unique_id=1969913352 instance=ExtResource("124_l624c")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add106" unique_id=1855272906]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.76900005, 0)
+light_color = Color(1, 0.84, 0.58, 1)
+light_energy = 2.6
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 9.0
+
+[node name="Fx_Add107" type="Node3D" parent="LightFixtures" unique_id=1015389798 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -54, 0, 40)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add107" unique_id=176608616 instance=ExtResource("123_7ec6v")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add107" unique_id=655583707]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.68, 0.20000076)
+light_color = Color(1, 0.96, 0.88, 1)
+light_energy = 3.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 12.0
+
+[node name="Fx_Add108" type="Node3D" parent="LightFixtures" unique_id=144729698 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40, 3.3000002, 16)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add108" unique_id=1418575279 instance=ExtResource("122_dm6ut")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add108" unique_id=266425944]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.099999905, 0)
+light_color = Color(1, 0.88, 0.68, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 8.0
+
+[node name="Fx_Add109" type="Node3D" parent="LightFixtures" unique_id=395978776 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -38, 0, 0)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add109" unique_id=1992915435 instance=ExtResource("123_7ec6v")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add109" unique_id=1252865282]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.68, 0.2)
+light_color = Color(1, 0.96, 0.88, 1)
+light_energy = 3.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 12.0
+
+[node name="Fx_Add110" type="Node3D" parent="LightFixtures" unique_id=875605432 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -34, 3.969, -42)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add110" unique_id=1362579100 instance=ExtResource("124_l624c")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add110" unique_id=1459984569]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.76900005, 0)
+light_color = Color(1, 0.84, 0.58, 1)
+light_energy = 2.6
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 9.0
+
+[node name="Fx_Add111" type="Node3D" parent="LightFixtures" unique_id=1895452669 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 3.6999998, -16)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add111" unique_id=1680022389 instance=ExtResource("122_dm6ut")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add111" unique_id=1554896332]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.099999905, 0)
+light_color = Color(1, 0.88, 0.68, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 8.0
+
+[node name="Fx_Add112" type="Node3D" parent="LightFixtures" unique_id=424605670 groups=["light_fixture"]]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 29.01, 2.8, -7.5857863)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add112" unique_id=1935900111 instance=ExtResource("120_4yhj8")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add112" unique_id=206747550]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.11500001, 0.14999962)
+light_color = Color(1, 0.93, 0.78, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 7.0
+
+[node name="Fx_Add113" type="Node3D" parent="LightFixtures" unique_id=647622045 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 38, 0, 32)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add113" unique_id=628674409 instance=ExtResource("123_7ec6v")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add113" unique_id=1853905950]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.68, 0.20000076)
+light_color = Color(1, 0.96, 0.88, 1)
+light_energy = 3.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 12.0
+
+[node name="Fx_Add114" type="Node3D" parent="LightFixtures" unique_id=1999555796 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 56, 3.6999998, -42)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add114" unique_id=967199964 instance=ExtResource("122_dm6ut")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add114" unique_id=1262769072]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.099999905, 0)
+light_color = Color(1, 0.88, 0.68, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 8.0
+
+[node name="Fx_Add115" type="Node3D" parent="LightFixtures" unique_id=735309797 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -46, 3.969, -42)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add115" unique_id=1407292900 instance=ExtResource("124_l624c")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add115" unique_id=1946051502]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.76900005, 0)
+light_color = Color(1, 0.84, 0.58, 1)
+light_energy = 2.6
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 9.0
+
+[node name="Fx_Add116" type="Node3D" parent="LightFixtures" unique_id=1980895541 groups=["light_fixture"]]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -27.710001, 2.8, -10)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add116" unique_id=1442981930 instance=ExtResource("120_4yhj8")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add116" unique_id=790561163]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.11500001, 0.14999962)
+light_color = Color(1, 0.93, 0.78, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 7.0
+
+[node name="Fx_Add117" type="Node3D" parent="LightFixtures" unique_id=1371809655 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 3.6999998, -16)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add117" unique_id=1915103646 instance=ExtResource("122_dm6ut")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add117" unique_id=1669439235]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.099999905, 0)
+light_color = Color(1, 0.88, 0.68, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 8.0
+
+[node name="Fx_Add118" type="Node3D" parent="LightFixtures" unique_id=52832373 groups=["light_fixture"]]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 32.29, 2.8, 20)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add118" unique_id=1522050911 instance=ExtResource("120_4yhj8")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add118" unique_id=1675568827]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.11500001, 0.15000153)
+light_color = Color(1, 0.93, 0.78, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 7.0
+
+[node name="Fx_Add119" type="Node3D" parent="LightFixtures" unique_id=1064556845 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 48, 3.6999998, -32)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add119" unique_id=390331940 instance=ExtResource("122_dm6ut")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add119" unique_id=1598939037]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.099999905, 0)
+light_color = Color(1, 0.88, 0.68, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 8.0
+
+[node name="Fx_Add120" type="Node3D" parent="LightFixtures" unique_id=1269009580 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 54, 2.8, 33.99)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add120" unique_id=1862127862 instance=ExtResource("120_4yhj8")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add120" unique_id=1801586742]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.11500001, 0.15000153)
+light_color = Color(1, 0.93, 0.78, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 7.0
+
+[node name="Fx_Add121" type="Node3D" parent="LightFixtures" unique_id=1885083225 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 56, 2.8, -13.71)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add121" unique_id=1549487407 instance=ExtResource("120_4yhj8")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add121" unique_id=1780266975]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.11500001, 0.14999962)
+light_color = Color(1, 0.93, 0.78, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 7.0
+
+[node name="Fx_Add122" type="Node3D" parent="LightFixtures" unique_id=239423701 groups=["light_fixture"]]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 56, 2.8, 13.71)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add122" unique_id=706694829 instance=ExtResource("120_4yhj8")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add122" unique_id=528000209]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.11500001, 0.14999962)
+light_color = Color(1, 0.93, 0.78, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 7.0
+
+[node name="Fx_Add123" type="Node3D" parent="LightFixtures" unique_id=700048414 groups=["light_fixture"]]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 59.71, 2.8, 20)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add123" unique_id=232037717 instance=ExtResource("120_4yhj8")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add123" unique_id=820211644]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.11500001, 0.15000153)
+light_color = Color(1, 0.93, 0.78, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 7.0

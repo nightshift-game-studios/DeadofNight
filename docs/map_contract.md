@@ -1,6 +1,6 @@
-# Map contract v0.4 (Mapz → G4M3N)
+# Map contract v0.5 (Mapz → G4M3N)
 
-Implemented by Rustwell Foundry (v0.2), Lockout Substation (v0.3 optional hooks) and both maps' v0.6.1 playtest pass (v0.4).
+Implemented by Rustwell Foundry (v0.2), Lockout Substation (v0.3 optional hooks) and both maps' v0.6.1 playtest pass (v0.4); light fixtures (v0.5, playtest #16).
 
 Changes since v0.3 (v0.6.1 playtest, #15 #16 #27): large maps may have 2–3 spawns per area instead of 6–10 in total; optional `ChestSpots/` relocation markers (Skillz format, below); no void holes,
 checked by `tools/godot/test_void_gaps.gd` (the meta `intended_pit` marks deliberate pits); stair railings with collision
@@ -23,7 +23,7 @@ world collision on layer 1, navmesh baked from colliders.** Everything marked *o
 <MapRoot>                Node3D + res://maps/common/map_root.gd (class_name MapRoot). Exports + metadata below
 ├─ WorldEnvironment      REQUIRED. The map owns sky (HDRI), fog and tonemap. main.gd removes its own when a map is loaded
 ├─ Sun                   REQUIRED DirectionalLight3D (the only shadowed directional light)
-├─ Lights/               optional Omni/Spot (few shadowed, the rest have distance fade)
+├─ Lights/               optional Omni/Spot, every one mounted on a fixture (v0.5, see Rules); few shadowed, the rest have distance fade
 ├─ NavigationRegion3D    REQUIRED, exact name. NavigationMesh with main.gd's params (below). Not prebaked
 │  ├─ Geometry/          StaticBody3D, collision_layer 1, mask 0. Everything walkable or blocking (+ metadata/surface)
 │  ├─ NavCarves/         NavigationObstacle3D (affect + carve navmesh, avoidance off) that remove sealed nav islands
@@ -105,6 +105,19 @@ Root metadata (mirrors the exports for engines that don't use the script): `map_
   non-MapRoot root script is stripped, so `scenes/main.tscn` can be checked read-only.
 - Stairs and raised walkways with a rise ≥ 1.5 m and an open side get railings (two bars + posts ≤ 2 m apart, rising with the stair)
   plus a thin layer-1 `RailCol_<ramp>_<side>` convex collider from the stair surface to +1.05 m. Low-rise walkways (< 1.5 m) have none.
+- **Mounted lights (v0.5, playtest #16):** no light floats. Every Light3D of the map (Player, Chests, Pickups and the runtime scenes are
+  not map lights) sits within 0.3 m of a collidable surface, or inside a fixture node (group `light_fixture`) whose bounds are within 0.3 m
+  of a collidable surface. Fixtures are Desi's `assets/models/props/light_*.glb` (wall sconce, ceiling lamp, caged work light, hanging lamp,
+  lantern on hook, floor work lamp): wall / lantern / sconce flush on a wall, ceiling lamp flush on a ceiling, hanging lamp on a visible chain
+  that reaches the ceiling, floor lamp or a pole with a caged lamp standing on the ground. The light sits at the glb's `LightPoint`.
+  Fixture parents are `LightFixtures/Fx_<name>` (or the existing pole assembly) in group `light_fixture`; fixtures are visual only (no colliders).
+  Budget: at most 4 shadowed lights per map, unshadowed omni/spot with `distance_fade` otherwise, at most 14 lights reaching one floor point.
+  Dark areas: walkable points without open sky get at least ~0.04 estimated lux (several lights summed) so zombies stay readable at 15–20 m.
+  Shadowed lights are nudged 0.3 m out of their lamp housing (a shadowed omni inside a housing blacks the scene out). Run
+  `godot --headless --path <project> -s res://tools/godot/test_light_fixtures.gd -- [<map.tscn…>] [--tol=0.3] [--max-shadowed=4] [--max-overlap=14] [--verbose]`
+  (no maps = arena `scenes/main.tscn` + Rustwell + Lockout + Ironside). It prints one `FAIL  FLOATING <path>` line per floating light, per map `MAP … lights= shadowed=
+  on_surface= on_fixture= floating=`, and `LIGHT_FIXTURES_SUITE … PASS|FAIL`; exit 1 on any failure. `tools/godot/mount_lights.gd` (with
+  `tools/godot/light_plans/<map>.json`) is the reproducible tool that mounted the lights and filled the dark areas; `light_lib.gd` is the shared helper.
 - The map does **not** contain Player, HUD, Zombies or Pickups containers (Main keeps those).
 
 ## Doors and areas

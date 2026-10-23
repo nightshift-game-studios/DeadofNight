@@ -1,0 +1,17 @@
+{
+ "delete": [
+  "NightLights/InteractWarm"
+ ],
+ "delete_nodes": [
+  "NightLights/SodiumA/Head",
+  "NightLights/SodiumB/Head",
+  "NightLights/SodiumC/Head",
+  "NightLights/SodiumD/Head"
+ ],
+ "snap": [
+  "NightLights/SparkFlash"
+ ],
+ "shadow_keep": [
+  "NightLights/SodiumA/Light"
+ ]
+}

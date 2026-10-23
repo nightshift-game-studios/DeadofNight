@@ -1,48 +1,35 @@
 [gd_scene format=3]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_am6h2"]
-emission_enabled = true
-emission = Color(1, 0.72, 0.35, 1)
-emission_energy_multiplier = 2.5
-
-[sub_resource type="BoxMesh" id="BoxMesh_y6rew"]
-material = SubResource("StandardMaterial3D_am6h2")
-size = Vector3(0.4, 0.18, 0.5)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_phi0q"]
-emission_enabled = true
-emission = Color(1, 0.72, 0.35, 1)
-emission_energy_multiplier = 2.5
-
-[sub_resource type="BoxMesh" id="BoxMesh_w6m7w"]
-material = SubResource("StandardMaterial3D_phi0q")
-size = Vector3(0.4, 0.18, 0.5)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_qpxnp"]
-emission_enabled = true
-emission = Color(1, 0.72, 0.35, 1)
-emission_energy_multiplier = 2.5
-
-[sub_resource type="BoxMesh" id="BoxMesh_0ht18"]
-material = SubResource("StandardMaterial3D_qpxnp")
-size = Vector3(0.4, 0.18, 0.5)
+[ext_resource type="PackedScene" path="res://assets/models/props/light_lantern_hook.glb" id="1_w6m7w"]
+[ext_resource type="PackedScene" path="res://assets/models/props/light_caged_work_light.glb" id="2_qpxnp"]
+[ext_resource type="PackedScene" path="res://assets/models/props/light_floor_work_lamp.glb" id="3_0ht18"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cdrdb"]
-emission_enabled = true
-emission = Color(1, 0.72, 0.35, 1)
-emission_energy_multiplier = 2.5
+albedo_color = Color(0.13, 0.12, 0.11, 1)
+metallic = 0.6
+roughness = 0.65
 
-[sub_resource type="BoxMesh" id="BoxMesh_64egt"]
+[sub_resource type="CylinderMesh" id="CylinderMesh_64egt"]
 material = SubResource("StandardMaterial3D_cdrdb")
-size = Vector3(0.4, 0.18, 0.5)
+top_radius = 0.07
+bottom_radius = 0.09
+height = 6.2
+radial_segments = 8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_if04f"]
+material = SubResource("StandardMaterial3D_cdrdb")
+top_radius = 0.07
+bottom_radius = 0.09
+height = 4.7
+radial_segments = 8
 
 [node name="ArenaNightLights" type="Node3D" unique_id=687954434]
 
 [node name="SodiumA" type="Node3D" parent="." unique_id=417728477]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 10)
 
-[node name="Light" type="OmniLight3D" parent="SodiumA" unique_id=623298954]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 6.2, 0)
+[node name="Light" type="OmniLight3D" parent="SodiumA" unique_id=623298954 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5100002, 5.52, 3.3000002)
 light_color = Color(1, 0.7, 0.35, 1)
 light_energy = 4.0
 shadow_enabled = true
@@ -50,60 +37,44 @@ distance_fade_enabled = true
 distance_fade_begin = 30.0
 omni_range = 16.0
 
-[node name="Head" type="MeshInstance3D" parent="SodiumA" unique_id=354045029]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 6.4, 0)
-mesh = SubResource("BoxMesh_y6rew")
-
 [node name="SodiumB" type="Node3D" parent="." unique_id=792467195]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, -8)
 
-[node name="Light" type="OmniLight3D" parent="SodiumB" unique_id=1003819160]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 6.2, 0)
+[node name="Light" type="OmniLight3D" parent="SodiumB" unique_id=1003819160 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8100004, 6.12, 0)
 light_color = Color(1, 0.7, 0.35, 1)
 light_energy = 4.0
 distance_fade_enabled = true
 distance_fade_begin = 30.0
 omni_range = 16.0
-
-[node name="Head" type="MeshInstance3D" parent="SodiumB" unique_id=1734236507]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 6.4, 0)
-mesh = SubResource("BoxMesh_w6m7w")
 
 [node name="SodiumC" type="Node3D" parent="." unique_id=1624880337]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, 10)
 
-[node name="Light" type="OmniLight3D" parent="SodiumC" unique_id=761227722]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 6.2, 0)
+[node name="Light" type="OmniLight3D" parent="SodiumC" unique_id=761227722 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.46723843, 6.085, -0.14293861)
 light_color = Color(1, 0.7, 0.35, 1)
 light_energy = 4.0
 distance_fade_enabled = true
 distance_fade_begin = 30.0
 omni_range = 16.0
-
-[node name="Head" type="MeshInstance3D" parent="SodiumC" unique_id=2089108886]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 6.4, 0)
-mesh = SubResource("BoxMesh_0ht18")
 
 [node name="SodiumD" type="Node3D" parent="." unique_id=2084109498]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, -10)
 
-[node name="Light" type="OmniLight3D" parent="SodiumD" unique_id=287069781]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 6.2, 0)
+[node name="Light" type="OmniLight3D" parent="SodiumD" unique_id=287069781 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12929726, 6.0849996, 0.1387825)
 light_color = Color(1, 0.7, 0.35, 1)
 light_energy = 4.0
 distance_fade_enabled = true
 distance_fade_begin = 30.0
 omni_range = 16.0
 
-[node name="Head" type="MeshInstance3D" parent="SodiumD" unique_id=1497429059]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 6.4, 0)
-mesh = SubResource("BoxMesh_64egt")
-
 [node name="Work" type="Node3D" parent="." unique_id=22082962]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, -6)
 
-[node name="Light" type="OmniLight3D" parent="Work" unique_id=238642175]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
+[node name="Light" type="OmniLight3D" parent="Work" unique_id=238642175 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.68, 0.19999981)
 light_color = Color(1, 0.92, 0.7, 1)
 light_energy = 1.6
 distance_fade_enabled = true
@@ -113,26 +84,73 @@ omni_range = 8.0
 [node name="Barrel" type="Node3D" parent="." unique_id=249674471]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, 6)
 
-[node name="Light" type="OmniLight3D" parent="Barrel" unique_id=1637906916]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+[node name="Light" type="OmniLight3D" parent="Barrel" unique_id=1637906916 groups=["light_mounted"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.68, 0.19999981)
 light_color = Color(1, 0.45, 0.15, 1)
 light_energy = 2.0
 distance_fade_enabled = true
 distance_fade_begin = 30.0
 omni_range = 7.0
 
-[node name="InteractWarm" type="OmniLight3D" parent="." unique_id=1428929697]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
-light_color = Color(1, 0.75, 0.4, 1)
-light_energy = 1.2
-distance_fade_enabled = true
-distance_fade_begin = 30.0
-omni_range = 8.0
-
-[node name="SparkFlash" type="OmniLight3D" parent="." unique_id=379296428]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.5, -14)
+[node name="SparkFlash" type="OmniLight3D" parent="." unique_id=379296428 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.12, -14)
 light_color = Color(0.7, 0.85, 1, 1)
 light_energy = 0.0
 distance_fade_enabled = true
 distance_fade_begin = 30.0
 omni_range = 4.5
+
+[node name="LightFixtures" type="Node3D" parent="." unique_id=996870409]
+
+[node name="Fx_Light" type="Node3D" parent="LightFixtures" unique_id=972153776 groups=["light_fixture"]]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 6.99, 5.6, 13.3)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Light" unique_id=349380247 instance=ExtResource("1_w6m7w")]
+
+[node name="@Node3D@129" type="Node3D" parent="LightFixtures" unique_id=2075433401 groups=["light_fixture"]]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -11.01, 6.2, -8)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/@Node3D@129" unique_id=31470039 instance=ExtResource("1_w6m7w")]
+
+[node name="@Node3D@130" type="Node3D" parent="LightFixtures" unique_id=1181057646 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.7, 0, 10)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/@Node3D@130" unique_id=1796848898 instance=ExtResource("2_qpxnp")]
+transform = Transform3D(-0.6497206, 0, 0.7601731, 0, 1, 0, -0.7601731, 0, -0.6497206, 0.053212166, 6.2, -0.04548073)
+
+[node name="Pole" type="MeshInstance3D" parent="LightFixtures/@Node3D@130" unique_id=499177802]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.1, 0)
+mesh = SubResource("CylinderMesh_64egt")
+
+[node name="@Node3D@131" type="Node3D" parent="LightFixtures" unique_id=223069660 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.3, 1.5, -10)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/@Node3D@131" unique_id=686332439 instance=ExtResource("2_qpxnp")]
+transform = Transform3D(0.6308301, 0, -0.77592105, 0, 1.0000001, 0, 0.77592105, 0, 0.6308301, -0.054314613, 4.7, 0.044157982)
+
+[node name="Pole" type="MeshInstance3D" parent="LightFixtures/@Node3D@131" unique_id=42907968]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.35, 0)
+mesh = SubResource("CylinderMesh_if04f")
+
+[node name="@Node3D@132" type="Node3D" parent="LightFixtures" unique_id=1686059127 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, -6)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/@Node3D@132" unique_id=1217256077 instance=ExtResource("3_0ht18")]
+
+[node name="@Node3D@133" type="Node3D" parent="LightFixtures" unique_id=277006588 groups=["light_fixture"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, 6)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/@Node3D@133" unique_id=1966453629 instance=ExtResource("3_0ht18")]
+
+[node name="Fx_Add8" type="Node3D" parent="LightFixtures" unique_id=310352386 groups=["light_fixture"]]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -14.81, 2.8, -12)
+
+[node name="Fixture" type="Node3D" parent="LightFixtures/Fx_Add8" unique_id=2029564919 instance=ExtResource("2_qpxnp")]
+
+[node name="Light" type="OmniLight3D" parent="LightFixtures/Fx_Add8" unique_id=1548648324]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.11500001, 0.14999962)
+light_color = Color(1, 0.93, 0.78, 1)
+light_energy = 2.2
+distance_fade_enabled = true
+distance_fade_length = 12.0
+omni_range = 7.0

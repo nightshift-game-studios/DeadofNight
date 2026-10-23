@@ -1,0 +1,12 @@
+{
+ "snap": [
+  "NightKit/Spark_Amb_ShedSpark/Flash",
+  "NightKit/Spark_Amb_SignalSpark/Flash",
+  "NightKit/Spark_Amb_RoundhouseSpark/Flash"
+ ],
+ "shadow_keep": [
+  "Lights/PlatformFlood",
+  "Lights/ShedFlood",
+  "Lights/PitLamp"
+ ]
+}
