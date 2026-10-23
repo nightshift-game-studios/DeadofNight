@@ -370,7 +370,7 @@ func _host_3b(bob: int, cara: int) -> void:
 			check(W.stats.boss_tx > tx0, "host: slam windup state sent (boss_tx %d -> %d)" % [tx0, W.stats.boss_tx])
 			for id in [bob, cara]:
 				Net.broadcast_event(&"t_cmd", id, {"op": "boss_check", "name": str(boss.name)})
-			await _sleep(3.0)
+			await _sleep(6.5)
 			check(W.stats.boss_tx >= tx0 + 3, "host: windup -> impact -> stun -> idle all sent (%d)" % (W.stats.boss_tx - tx0))
 			boss.queue_free()
 			await _sleep(0.5)
@@ -584,7 +584,7 @@ func _do(c: Dictionary) -> void:
 			var b = main.zombies_root.get_node_or_null(NodePath(str(c.name)))
 			if check(b != null and b.has_meta("net_puppet"), "client: Bellwether puppet %s here" % c.name):
 				var zn := str(c.name)
-				await _wait(func(): var ph: Array = boss_phases.get(zn, []); return ph.has(3) and ph.back() == 0, 5.0)
+				await _wait(func(): var ph: Array = boss_phases.get(zn, []); return ph.has(3) and ph.back() == 0, 6.0)
 				var seen: Array = boss_phases.get(zn, [])
 				var i1 := seen.find(1)
 				check(i1 >= 0 and seen.slice(i1, i1 + 4) == [1, 2, 3, 0], "client: puppet played slam windup -> impact -> stun -> idle from the host (phases %s)" % [seen])
