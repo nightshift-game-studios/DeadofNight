@@ -4,7 +4,7 @@ extends SceneTree
 ## Runs zombies of every variant (walker / worker / soldier / crawler / bloated / riot / echo add) and a boss through ramp,
 ## stair and obstacle courses on Arena, Rustwell Foundry, Drowned Cannery and the synthetic course
 ## (tests/ai_nav_course.tscn). The player stands at each course's goal (invulnerable); zombies start at the course's starts.
-## A zombie fails if it doesn't get within REACH_FLAT m (flat, |dy| < REACH_DY; ranged bosses: their stop distance) of the player inside the time budget, or if it
+## A zombie fails if it doesn't get within REACH_FLAT m (flat, |dy| <= REACH_DY; ranged kinds: their own attack envelope, 0.8 x attack_range flat and |dy| < attack_max_dy; ranged bosses: their stop distance) of the player inside the time budget, or if it
 ## ever stands still (< STILL_EPS m of movement) for more than STILL_MAX s while it wants to move (boss telegraphs, crawler
 ## grabs excluded). A zombie that arrives is removed 0.5 s later (the player kills it), so the goal never jams. Prints per-map reach rates and the worst still time; "--baseline" only measures.
 ## Sim speed: physics runs at 240 Hz with time_scale 4 (same 1/60 s physics step as the game, 4x wall clock).
@@ -248,10 +248,16 @@ func _run_course(main: Node, map_id: String, c: Dictionary) -> void:
 		var z := _spawn(main, k, s + off)
 		# Reach = REACH_FLAT, or the zombie's own stop distance for ranged ones (Lantern Stalker stops at 0.8 x 12 m).
 		var reach := maxf(REACH_FLAT, float(z.attack_range) * 0.8 + 0.6)
+		# Vertical reach: melee kinds stay strict (REACH_DY). Ranged kinds stop chasing once flat <= 0.8 x attack_range and
+		# |dy| < attack_max_dy (enemy.gd _physics_process), so on a continuous ramp they legitimately park at a dy between
+		# REACH_DY and attack_max_dy: that is inside their own attack envelope, count it as reached (read from the kind's config).
+		var reach_dy := REACH_DY
+		if float(z.attack_range) * 0.8 + 0.6 > REACH_FLAT:
+			reach_dy = maxf(REACH_DY, float(z.attack_max_dy) - 0.01)
 		var vd: Array = []
 		for v in c.get("vias", []):
 			vd.append(INF)
-		zs.append({"z": z, "kind": k, "reach": reach, "start": s, "anchor": s + off, "anchor_t": 0.0, "worst": 0.0, "reached_t": -1.0, "where": s, "vd": vd})
+		zs.append({"z": z, "kind": k, "reach": reach, "reach_dy": reach_dy, "start": s, "anchor": s + off, "anchor_t": 0.0, "worst": 0.0, "reached_t": -1.0, "where": s, "vd": vd})
 	var min_speed := BASE_SPEED * 0.7 * 0.85
 	var budget := clampf(max_len / min_speed * 1.6 + 10.0, 20.0, 75.0)
 	var t := 0.0
@@ -288,7 +294,7 @@ func _run_course(main: Node, map_id: String, c: Dictionary) -> void:
 				if absf(p.y - v.y) < 1.5:
 					r.vd[vi] = minf(r.vd[vi], Vector2(p.x - v.x, p.z - v.z).length())
 			var flat := Vector2(p.x - goal.x, p.z - goal.z).length()
-			if flat <= r.reach and absf(p.y - goal.y) <= REACH_DY:
+			if flat <= r.reach and absf(p.y - goal.y) <= r.reach_dy:
 				r.reached_t = t
 				continue
 			if _busy(z) or p.distance_to(r.anchor) > STILL_EPS:
