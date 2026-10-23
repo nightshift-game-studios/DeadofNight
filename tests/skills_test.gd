@@ -430,25 +430,25 @@ func _effect_checks() -> void:
 		and near(player.mod_stat("damage_out", 100.0, {"source": "gun", "is_headshot": false}), 70.0),
 		"conditional_damage: Glass Sight precision x1.5, body x0.7")
 
-	# stacking_damage (Tally Marks)
-	await reset({}, ["m_tally"])
+	# stacking_damage (Steady Cadence)
+	await reset({"mk_cadence": 1})
 	var z = zombie(Vector3(4, 0, 0))
 	await wait(1)
 	for i in 3:
 		hit(z, 10.0, {"is_headshot": true})
 	var st = eff("stacking_damage")
 	check(st != null and st.stacks == 3 and near(player.mod_stat("damage_out", 100.0, {"source": "gun"}), 109.0),
-		"stacking_damage: Tally Marks 3 stacks = +9%")
+		"stacking_damage: Steady Cadence 3 stacks = +9%")
 	player._ev(&"shot_missed", {"weapon": w})
 	check(st.stacks == 0, "stacking_damage: a miss resets the stacks")
 
-	# force_precision (Mercy Line)
-	await reset({}, ["L_mercy_line"])
+	# force_precision (Called Shot)
+	await reset({"mk_called": 1})
 	z = zombie(Vector3(4, 0, 0), 100)
 	await wait(1)
-	check(player.mod_stat("force_precision", 0.0, {"target": z}) == 0.0, "force_precision: healthy target not forced")
-	z.health = 20
-	check(player.mod_stat("force_precision", 0.0, {"target": z}) >= 1.0, "force_precision: Mercy Line under 25% health = precision")
+	check(player.mod_stat("force_precision", 0.0, {"target": z}) == 0.0, "force_precision: unmarked target not forced")
+	z.apply_status("mark", {"dur": 5.0, "amp": 0.1})
+	check(player.mod_stat("force_precision", 0.0, {"target": z}) >= 1.0, "force_precision: Called Shot marked target = precision")
 
 	# refill_mag (Steady Eye)
 	await reset({"mk_root": 1})
@@ -466,13 +466,13 @@ func _effect_checks() -> void:
 	hit(z, 100.0, {"source": "grenade"})
 	check(near(player._grenade_cd, player.grenade_cooldown * 0.8, 0.05), "refund_grenade: Short Fuse grenade kill refunds 20%")
 
-	# heal (Bloodwick Rounds)
-	await reset({}, ["v_bloodwick"])
+	# heal (Red Harvest)
+	await reset({"sv_redharvest": 1})
 	z = zombie(Vector3(4, 0, 0), 10)
 	await wait(1)
 	player.health = 50
 	hit(z, 100.0, {"is_headshot": true})
-	check(player.health == 53, "heal: Bloodwick precision kill heals 3 (%d)" % player.health)
+	check(player.health == 54, "heal: Red Harvest precision kill heals 4 (%d)" % player.health)
 
 	# grant_overshield (Scrap Plating) + overshield absorbs first
 	await reset({"sv_root": 1})
@@ -482,11 +482,11 @@ func _effect_checks() -> void:
 	player.take_damage(30.0)
 	check(near(player.overshield, 0.0) and player.health == hp0 - 10, "overshield absorbs before health (30 dmg -> 20 shield + 10 HP)")
 
-	# damage_in_mod (Grit)
-	await reset({}, ["v_grit"])
-	check(near(player.mod_stat("damage_in", 100.0), 100.0), "damage_in_mod: Grit inactive at full health")
-	player.health = int(player.max_health * 0.4)
-	check(near(player.mod_stat("damage_in", 100.0), 92.0), "damage_in_mod: Grit -8% below half health")
+	# damage_in_mod (Last Gasp)
+	await reset({"sv_gasp": 1})
+	check(near(player.mod_stat("damage_in", 100.0), 100.0), "damage_in_mod: Last Gasp inactive at full health")
+	player.health = int(player.max_health * 0.2)
+	check(near(player.mod_stat("damage_in", 100.0), 80.0), "damage_in_mod: Last Gasp -20% below 30% health")
 
 	# cheat_death (Second Heartbeat)
 	await reset({}, ["L_second_heartbeat"])
@@ -505,16 +505,14 @@ func _effect_checks() -> void:
 	player.take_damage(10.0, z)
 	check(near(z.health, 970.0), "reflect_damage: Bramble Hide returns 3x the hit (%.0f)" % z.health)
 
-	# on_event_explode: Daisy Fuse (chance), Skullburst chain, Crater Drop, Reverb Core
-	await reset({}, ["s_daisy_fuse"])
+	# on_event_explode: Rolling Thunder, Skullburst chain, Crater Drop (Reverb Core is a `reaction` card, below)
+	await reset({"sp_thunder": 1})
 	var df = eff("on_event_explode")
-	df.params = df.params.duplicate()
-	df.params["chance"] = 1.0
 	var za = zombie(Vector3(4, 0, 0), 10)
 	var zb = zombie(Vector3(4, 0, 1.0), 1000)
 	await wait(1)
 	hit(za, 100.0, {"source": "grenade"})
-	check(df.blasts == 1 and zb.health < 1000, "on_event_explode: Daisy Fuse grenade kill re-explodes (neighbour %.0f)" % zb.health)
+	check(df.blasts == 1 and zb.health < 1000, "on_event_explode: Rolling Thunder grenade kill re-explodes (neighbour %.0f)" % zb.health)
 	await reset({}, ["L_skullburst"])
 	var row := []
 	for i in 5:
@@ -533,49 +531,43 @@ func _effect_checks() -> void:
 	check(cd.blasts == 0, "on_event_explode: Crater Drop ignores soft landings")
 	player._ev(&"landed", {"fall_speed": 6.0})
 	check(cd.blasts == 1 and near(float(cd.last_blast.damage), 90.0) and z.health < 1000, "on_event_explode: Crater Drop 15 x fall speed")
-	await reset({}, ["L_reverb_core"])
-	z = zombie(Vector3(2, 0, 0), 1000)
-	await wait(1)
-	check(player.ability_charges_max == 2, "ability_mod: Reverb Core +1 ability charge")
-	player._ev(&"ability_used", {"ability": player.ability})
-	check(z.health < 1000, "on_event_explode: Reverb Core blast on ability use (%.0f)" % z.health)
 
-	# on_event_ray (Caromshot)
-	await reset({"mk_root": 1}, ["m_caromshot"])
+	# on_event_ray (Ricochet Verdict)
+	await reset({"mk_root": 1, "mk_verdict": 1})
 	za = zombie(Vector3(4, 0, 0), 10)
 	zb = zombie(Vector3(4, 0, 3), 1000)
 	await wait(1)
 	hit(za, 100.0, {"is_headshot": true})
-	check(near(zb.health, 950.0), "on_event_ray: Caromshot precision kill rays 50%% to the nearest (%.0f)" % zb.health)
+	check(near(zb.health, 940.0), "on_event_ray: Ricochet Verdict precision kill rays 60%% to the nearest (%.0f)" % zb.health)
 
-	# element_arc (Static Fork; Livewire Ballistic arcs)
-	await reset({"sp_root": 1}, ["s_static_fork"])
+	# element_arc (Volt Coil; Forked Current chains)
+	await reset({"sp_root": 1, "sp_volt_coil": 1})
 	za = zombie(Vector3(4, 0, 0), 10000)
 	zb = zombie(Vector3(4, 0, 2), 10000)
 	await wait(1)
 	hit(za, 100.0, {"element": "ballistic"})
 	check(near(zb.health, 10000.0), "element_arc: Ballistic hits do not arc")
 	hit(za, 100.0, {"element": "volt"})
-	check(near(zb.health, 9970.0), "element_arc: Static Fork Volt hit arcs 30%% (%.0f)" % zb.health)
-	await reset({"sp_root": 1}, ["L_livewire"])
+	check(near(zb.health, 9965.0), "element_arc: Volt Coil Volt hit arcs 35%% (%.0f)" % zb.health)
+	await reset({"sp_root": 1, "sp_forked": 1})
 	za = zombie(Vector3(4, 0, 0), 10000)
 	zb = zombie(Vector3(4, 0, 2), 10000)
 	var zc = zombie(Vector3(4, 0, 4), 10000)
 	await wait(1)
-	hit(za, 100.0, {"element": "ballistic"})
-	check(zb.health < 10000 and zc.health < 10000, "element_arc: Livewire chains Ballistic hits at half strength")
+	hit(za, 100.0, {"element": "volt"})
+	check(zb.health < 10000 and near(zc.health, 10000.0), "element_arc: Forked Current chains a Volt hit one hop onward")
 
-	# element_dot (Cinder Shells burn; Pyre Walker spread)
-	await reset({"sp_root": 1}, ["s_cinder"])
+	# element_dot (Kindling burn; Spreading Cinders spread)
+	await reset({"sp_root": 1, "sp_kindling": 1})
 	z = zombie(Vector3(4, 0, 0), 10000)
 	await wait(1)
 	hit(z, 100.0, {"element": "blaze"})
-	check(z.has_status("burn") and near(float(z.status("burn").dps), 15.0), "element_dot: Cinder Shells burn 15%/s of the hit")
+	check(z.has_status("burn") and near(float(z.status("burn").dps), 20.0), "element_dot: Kindling burn 20%/s of the hit")
 	var hb: float = z.health
 	await wait(70)
 	check(z.health <= hb - 14.0, "burn status ticks damage over time (%.0f -> %.0f)" % [hb, z.health])
 	# points: the ignite hit pays points-per-hit once; burn ticks pay nothing
-	await reset({"sp_root": 1}, ["s_cinder"])
+	await reset({"sp_root": 1, "sp_kindling": 1})
 	z = zombie(Vector3(4, 0, 0), 10000)
 	z.hit.connect(main._on_zombie_hit) # same wiring as main._spawn_zombie
 	await wait(2)
@@ -586,15 +578,16 @@ func _effect_checks() -> void:
 	await wait(70)
 	check(after_ignite == main.points_per_hit and main.points_per_hit > 0, "ignite hit pays points-per-hit once (%d)" % after_ignite)
 	check(z.health <= hb2 - 14.0 and player.points == after_ignite, "burn ticks pay no points per hit (%d -> %d, %.0f HP burned)" % [after_ignite, player.points, hb2 - z.health])
-	await reset({"sp_root": 1}, ["L_pyre_walker"])
+	await reset({"sp_root": 1, "sp_cinders": 1})
 	za = zombie(Vector3(4, 0, 0), 10)
 	zb = zombie(Vector3(4, 0, 1.5), 10000)
 	await wait(1)
 	za.apply_status("burn", {"dps": 5.0, "dur": 3.0, "source": player})
 	hit(za, 100.0)
-	check(zb.has_status("burn") and float(zb.status("burn").dps) >= 20.0, "element_dot: Pyre Walker spreads burn on death")
+	check(zb.has_status("burn") and float(zb.status("burn").dps) >= 10.0, "element_dot: Spreading Cinders spreads burn on death")
 
-	# trail_hazard (Pyre Walker slide)
+	# trail_hazard (Skid Marks)
+	await reset({"fr_skid": 1})
 	z = zombie(Vector3(0.8, 0, 0), 10000)
 	await wait(1)
 	player._ev(&"slide_tick", {})
@@ -652,22 +645,15 @@ func _effect_checks() -> void:
 	hit(z, 100.0)
 	check(player.ability_charges == 1, "ability_refund: kill within 1 s of a Breach Rush refunds a charge")
 
-	# grenade_mod (Powder Keg Frame charges/cd, Cluster Doctrine)
+	# grenade_mod (Powder Keg Frame charges/cd, Bomblet Packing)
 	await reset({})
 	var gcd: float = player.grenade_cooldown
 	await reset({"sp_key": 1})
 	check(player.grenade_charges_max == 2 and near(player.grenade_cooldown, gcd * 1.4, 0.05), "grenade_mod: Powder Keg Frame 2 charges, cooldown x1.4")
-	await reset({}, ["L_cluster"])
+	await reset({"sp_bomblet": 1})
 	player._ev(&"grenade_detonated", {"pos": player.global_position + Vector3(5, 0, 0), "data": player.grenade_data})
-	check(eff("grenade_mod").bomblets == 3, "grenade_mod: Cluster Doctrine 3 bomblets")
+	check(eff("grenade_mod").bomblets == 2, "grenade_mod: Bomblet Packing 2 bomblets")
 
-	# slide_mod + refill_mag full (Undertow Glide)
-	await reset({}, ["L_undertow"])
-	check(near(player.slide_floor_time, 1.5), "slide_mod: Undertow Glide slide floor 1.5 s")
-	w.ammo = 0
-	w.reserve = 100
-	player._ev(&"slide_started", {})
-	check(w.ammo == w.mag_size(), "refill_mag: Undertow Glide slide refills the magazine")
 
 	# shot_counter (Phantom Mag)
 	await reset({}, ["L_phantom_mag"])
@@ -678,17 +664,13 @@ func _effect_checks() -> void:
 	check(sc.phantom and w.ammo == 6 and near(player.mod_stat("damage_out", 100.0, {"source": "gun"}), 200.0),
 		"shot_counter: Phantom Mag 6th shot is free and +100%")
 
-	# cooldown_reset (Grave Feast)
-	await reset({})
-	var md: float = player.melee_damage
-	await reset({}, ["L_grave_feast"])
-	check(near(player.melee_damage, md * 2.0, 0.5), "stat_mod: Grave Feast melee x2 (%.0f -> %.0f)" % [md, player.melee_damage])
+	# cooldown_reset (Marrow Gnaw)
+	await reset({"sv_marrow": 1})
 	z = zombie(Vector3(1.5, 0, 0), 10)
 	await wait(1)
 	player._melee_cd = 1.0
-	player.health = 50
 	hit(z, 1000.0, {"source": "melee"})
-	check(player._melee_cd == 0.0 and player.health == 75, "cooldown_reset: Grave Feast melee kill resets melee + heals 25")
+	check(player._melee_cd == 0.0, "cooldown_reset: Marrow Gnaw melee kill resets melee")
 
 	# unlock_cards / offer_weight / offer_mod
 	await reset({"mk_root": 1, "mk_aim": 1, "mk_spotter": 1, "mk_legend": 1})
@@ -775,8 +757,9 @@ func _effect_checks() -> void:
 	var focus_k: float = float(player.get_stat_effects().from_armor.ability_cd_mult) if player.has_method("get_stat_effects") \
 		else 1.0 - float(player.armor_stats.get("focus", 0)) * 0.004 # armor Focus scales the +4 s too (pre-§21b: linear)
 	check(near(player.ability.cooldown, acd0 + 4.0 * focus_k, 0.3), "Racing Heart drawback: +4 s Hare's Break cooldown (x%.2f Focus: %.1f vs %.1f)" % [focus_k, player.ability.cooldown, acd0])
-	player._ev(&"ability_used", {"ability": player.ability})
-	check(player.ability_active_time() >= 7.9 and player.mod_stat("force_precision", 0.0, {}) >= 1.0, "Redline: Hare's Break lasts 8 s, every hit precision")
+	check(player.mod_stat("force_precision", 0.0, {}) == 0.0, "Redline: no forced precision before the ability")
+	player.set_ability_active_time(5.0)
+	check(player.ability_active_time() > 0.0 and player.mod_stat("force_precision", 0.0, {}) >= 1.0, "Redline: while Hare's Break is active every hit is precision")
 	player.set_ability_active_time(0.0)
 	await reset({"so_ram": 1, "so_twin": 1, "so_breacher": 1}, ["L_breakline"])
 	z = zombie(Vector3(2, 0, 0), 1000)
@@ -820,40 +803,323 @@ func _card_checks() -> void:
 		check(ok and txt and moved, "card %s (%s): %d effect(s) at rank %d, text fills, stats move" % [id, c.name, got, int(c.ranks)])
 	_equip_ability("", "")
 	# specific card behaviour not covered above
-	await reset({})
-	player.health = 30
-	rs.add_card("c_patched")
-	check(player.health == player.max_health, "Patched Up: picking it heals to full")
-	await reset({"mk_root": 1}, ["m_heel_round"])
-	check(near(player.mod_stat("damage_out", 100.0, {"source": "gun", "last_round": true}), 140.0)
-		and near(player.mod_stat("damage_out", 100.0, {"source": "gun", "last_round": false}), 100.0), "Heel Round: last round in the mag +40%")
-	await reset({"mk_root": 1}, ["m_still_water"])
-	check(near(player.mod_stat("damage_out", 100.0, {"source": "gun", "still": true}), 108.0) and near(player.mod_stat("spread_mult", 1.0, {"still": true}), 0.8),
-		"Still Water: standing still +8% damage, -20% spread")
-	await reset({"fr_root": 1}, ["f_updraft_aim", "f_slide_guard"])
-	check(near(player.mod_stat("damage_out", 100.0, {"source": "gun", "airborne": true}), 110.0), "Updraft Aim: +10% airborne")
+	await _card_rework_checks()
+	await reset({"fr_root": 1}, ["f_slide_guard"])
 	check(near(player.mod_stat("damage_in", 100.0, {"sliding": true}), 80.0) and near(player.mod_stat("damage_in", 100.0, {"sliding": false}), 100.0),
 		"Slide Guard: -20% damage while sliding")
-	await reset({"fr_root": 1}, ["f_rail_slide"])
-	var w = player.current_weapon()
-	w.ammo = 0
-	w.reserve = 100
-	player._ev(&"slide_started", {})
-	check(w.ammo == int(ceil(w.mag_size() * 0.2)), "Rail Slide: slide moves 20% of a mag from reserve")
-	await reset({"sv_root": 1}, ["v_kill_plating"])
-	for i in 10:
-		var z = zombie(Vector3(4, 0, i * 0.5), 10)
-		await wait(1)
-		hit(z, 100.0)
-	check(near(player.overshield, 10.0), "Kill Plating: 10 kills -> +10 overshield")
-	await reset({"sv_root": 1}, ["L_scrapwall"])
-	check(near(player.overshield_cap, 100.0), "Scrapwall: overshield cap 100")
-	player.grant_overshield(5.0)
-	check(near(player.mod_stat("damage_out", 100.0, {"source": "gun"}), 115.0), "Scrapwall: +15% damage while shielded")
-	await reset({})
-	var pk: int = main.points_per_kill
+
+
+# ---------------------------------------------------------------- Field Card dedupe rework (playtest #12 line 15)
+
+func _kill_ev(extra: Dictionary = {}) -> void:
+	_ev(&"enemy_killed", {"source": "gun", "damage": 10.0, "is_headshot": false, "element": "ballistic"}.merged(extra, true))
+
+
+func _hurt_ev(dealt: int = 5) -> void:
+	_ev(&"damage_taken", {"raw": dealt, "dealt": dealt, "absorbed": 0, "attacker": null, "health_frac": float(player.health) / maxf(float(player.max_health), 1.0)})
+
+
+func _card_rework_checks() -> void:
+	var w
+	var z
+	# Deep Pockets: free shots for the first seconds of a round (free_shots)
+	await reset({}, ["c_deep_pockets"])
+	w = player.current_weapon()
+	w.ammo = 5
+	_ev(&"shot_fired", {"weapon": w})
+	check(w.ammo == 5, "Deep Pockets: no round-start window yet, a shot costs its round")
+	_ev(&"round_started", {"round": 1})
+	w.ammo = 5
+	_ev(&"shot_fired", {"weapon": w, "ammo_after": 5})
+	check(w.ammo == 6 and eff("free_shots").refunded == 1, "Deep Pockets: a shot in the window refunds its round")
+	eff("free_shots").left = 0.0
+	_ev(&"shot_fired", {"weapon": w})
+	check(w.ammo == 6, "Deep Pockets: window over, shots cost ammo again")
+	# Greased Hands: reload with a crowd around you slams a shockwave (reaction @crowded)
+	await reset({}, ["c_greased"])
+	w = player.current_weapon()
+	var crowd := []
+	for i in 4:
+		crowd.append(zombie(Vector3(3, 0, i * 0.5), 10000))
+	await wait(1)
+	_ev(&"reload_finished", {"weapon": w})
+	check(crowd[0].health < 10000 and eff("reaction").fired == 1, "Greased Hands: reloading in a crowd slams a shockwave (%.0f)" % crowd[0].health)
+	var hp_c: float = crowd[0].health
+	_ev(&"reload_finished", {"weapon": w})
+	check(near(crowd[0].health, hp_c), "Greased Hands: internal cooldown (4 s) blocks the repeat")
+	await reset({}, ["c_greased"])
+	z = zombie(Vector3(3, 0, 0), 10000)
+	await wait(1)
+	_ev(&"reload_finished", {"weapon": player.current_weapon()})
+	check(near(z.health, 10000.0), "Greased Hands: a lone zombie is not a crowd, no shockwave")
+	# Patched Up: once per round, dropping under 30% heals
+	await reset({}, ["c_patched"])
+	player.health = 25
+	_hurt_ev()
+	check(player.health == 55, "Patched Up: under 30%% health heals 30 (%d)" % player.health)
+	player.health = 20
+	_hurt_ev()
+	check(player.health == 20, "Patched Up: only once per round")
+	_ev(&"round_started", {"round": 2})
+	_hurt_ev()
+	check(player.health == 50, "Patched Up: a new round re-arms it (%d)" % player.health)
+	await reset({}, ["c_patched"])
+	player.health = 80
+	_hurt_ev()
+	check(player.health == 80, "Patched Up: healthy players get nothing")
+	player.health = 0
+	_hurt_ev()
+	check(player.health == 0, "Patched Up: never undoes a lethal hit")
+	# Bounty Ledger: headshot kills pay flat bonus points
 	await reset({}, ["c_bounty"])
-	check(near(player.mod_stat("points_kill_mult", 1.0) * pk, pk * 1.2), "Bounty Ledger: +20% kill points")
+	var pts0: int = player.points
+	_kill_ev({"is_headshot": true})
+	check(player.points == pts0 + 15, "Bounty Ledger: headshot kill pays 15 bonus points (%d)" % (player.points - pts0))
+	_kill_ev()
+	check(player.points == pts0 + 15, "Bounty Ledger: a body kill pays nothing extra")
+	check(near(player.mod_stat("points_kill_mult", 1.0), 1.0), "Bounty Ledger: no permanent kill-points multiplier any more")
+	# Knuckle Wraps: damage taken -> melee x2 for 4 s (timed_buff, melee only)
+	await reset({}, ["c_knuckles"])
+	check(near(player.mod_stat("damage_out", 100.0, {"source": "melee"}), 100.0), "Knuckle Wraps: no bonus until you are hit")
+	_hurt_ev()
+	check(near(player.mod_stat("damage_out", 100.0, {"source": "melee"}), 200.0) and near(player.mod_stat("damage_out", 100.0, {"source": "gun"}), 100.0),
+		"Knuckle Wraps: after a hit melee x2, guns untouched")
+	eff("timed_buff").left = 0.0
+	check(near(player.mod_stat("damage_out", 100.0, {"source": "melee"}), 100.0), "Knuckle Wraps: the bonus ends")
+	# Quick Pin: a grenade throw refills the mag, then rests
+	await reset({}, ["c_quick_pin"])
+	w = player.current_weapon()
+	w.ammo = 3
+	_ev(&"grenade_thrown", {})
+	check(w.ammo == w.mag_size(), "Quick Pin: throwing a grenade refills the magazine")
+	w.ammo = 3
+	_ev(&"grenade_thrown", {})
+	check(w.ammo == 3, "Quick Pin: 8 s internal cooldown")
+	# Steady Pulse / Fast Mender
+	await reset({}, ["c_steady_pulse"])
+	_ev(&"ability_used", {"ability": player.ability})
+	check(near(player.overshield, 20.0), "Steady Pulse: using the class ability grants 20 overshield")
+	await reset({}, ["c_mender"])
+	player.health = 20
+	_ev(&"round_cleared", {"round": 1})
+	check(player.health == 52, "Fast Mender: clearing a round heals 40%% of missing HP (%d)" % player.health)
+	# Dead Reckoning: headshot kill opens a window where every hit is precision
+	await reset({"mk_root": 1}, ["m_caromshot"])
+	z = zombie(Vector3(4, 0, 0), 10000)
+	await wait(1)
+	check(player.mod_stat("force_precision", 0.0, {"target": z}) == 0.0, "Dead Reckoning: nothing before a precision kill")
+	_kill_ev({"is_headshot": true})
+	check(player.mod_stat("force_precision", 0.0, {"target": z}) >= 1.0, "Dead Reckoning: after a headshot kill every hit is precision")
+	eff("timed_buff").left = 0.0
+	check(player.mod_stat("force_precision", 0.0, {"target": z}) == 0.0, "Dead Reckoning: the window closes")
+	# Held Breath: hold aim to charge the next shot
+	await reset({"mk_root": 1}, ["m_heel_round"])
+	w = player.current_weapon()
+	check(near(player.mod_stat("damage_out", 100.0, {"source": "gun", "last_round": true}), 100.0), "Held Breath: no last-round bonus any more")
+	player.ads_active = true
+	eff("armed_shot").tick(0.5)
+	_ev(&"shot_fired", {"weapon": w})
+	check(near(player.mod_stat("damage_out", 100.0, {"source": "gun"}), 100.0), "Held Breath: half a second of aim is not enough")
+	eff("armed_shot").tick(0.6)
+	_ev(&"shot_fired", {"weapon": w})
+	check(near(player.mod_stat("damage_out", 100.0, {"source": "gun"}), 220.0), "Held Breath: aimed 1 s, the next shot +120%% (%.0f)" % player.mod_stat("damage_out", 100.0, {"source": "gun"}))
+	player._ev(&"shot_fired", {"weapon": w})
+	check(near(player.mod_stat("damage_out", 100.0, {"source": "gun"}), 100.0), "Held Breath: the charge is spent")
+	player.ads_active = false
+	# Cold Open: first shot of a round
+	await reset({"mk_root": 1}, ["m_still_water"])
+	w = player.current_weapon()
+	_ev(&"shot_fired", {"weapon": w})
+	check(near(player.mod_stat("damage_out", 100.0, {"source": "gun", "still": true}), 100.0), "Cold Open: no standing-still bonus, nothing armed before a round starts")
+	_ev(&"round_started", {"round": 1})
+	_ev(&"shot_fired", {"weapon": w})
+	check(near(player.mod_stat("damage_out", 100.0, {"source": "gun"}), 300.0), "Cold Open: first shot of the round +200%")
+	_ev(&"shot_fired", {"weapon": w})
+	check(near(player.mod_stat("damage_out", 100.0, {"source": "gun"}), 100.0), "Cold Open: only the first shot")
+	_ev(&"round_started", {"round": 2})
+	eff("armed_shot")._armed_at -= 30.0
+	_ev(&"shot_fired", {"weapon": w})
+	check(near(player.mod_stat("damage_out", 100.0, {"source": "gun"}), 100.0), "Cold Open: the charge fades after its 10 s window")
+	# Tally Marks: 4 headshot kills in 6 s refill the mag + overshield
+	await reset({}, ["m_tally"])
+	w = player.current_weapon()
+	w.ammo = 1
+	for i in 3:
+		_kill_ev({"is_headshot": true})
+	check(w.ammo == 1 and near(player.overshield, 0.0), "Tally Marks: 3 precision kills is not a chain yet")
+	_kill_ev({"is_headshot": false})
+	_kill_ev({"is_headshot": true})
+	check(w.ammo == w.mag_size() and near(player.overshield, 10.0) and eff("kill_chain").chains == 1, "Tally Marks: the 4th precision kill refills the mag + 10 overshield")
+	# Powder Burn: a grenade going off near you grants overshield
+	await reset({"sp_root": 1}, ["s_daisy_fuse"])
+	_ev(&"grenade_detonated", {"pos": player.global_position + Vector3(30, 0, 0), "data": player.grenade_data})
+	check(near(player.overshield, 0.0), "Powder Burn: a far-off blast does nothing")
+	_ev(&"grenade_detonated", {"pos": player.global_position + Vector3(4, 0, 0), "data": player.grenade_data})
+	check(near(player.overshield, 20.0), "Powder Burn: a grenade within 8 m grants 20 overshield")
+	# Static Fork: volt kills slow neighbours
+	await reset({"sp_root": 1}, ["s_static_fork"])
+	var za = zombie(Vector3(4, 0, 0), 10000)
+	var zb = zombie(Vector3(4, 0, 2), 10000)
+	var zc = zombie(Vector3(4, 0, 12), 10000)
+	await wait(1)
+	_kill_ev({"element": "ballistic", "target": za})
+	check(not zb.has_status("slow"), "Static Fork: ballistic kills do nothing")
+	_kill_ev({"element": "volt", "target": za})
+	check(zb.has_status("slow") and not zc.has_status("slow"), "Static Fork: a volt kill slows zombies within 5 m")
+	# Cinder Stride: blaze kill -> move speed
+	await reset({"sp_root": 1}, ["s_cinder"])
+	var ms0: float = player.mod_stat("move_speed", 1.0)
+	_kill_ev({"element": "ballistic"})
+	check(near(player.mod_stat("move_speed", 1.0), ms0), "Cinder Stride: only blaze kills")
+	_kill_ev({"element": "blaze"})
+	check(player.mod_stat("move_speed", 1.0) > ms0 + 0.1, "Cinder Stride: a blaze kill grants +15%% move speed (%.2f -> %.2f)" % [ms0, player.mod_stat("move_speed", 1.0)])
+	# Widow's Wage: low-health kills pay points
+	await reset({"sv_root": 1}, ["v_bloodwick"])
+	pts0 = player.points
+	_kill_ev()
+	check(player.points == pts0, "Widow's Wage: healthy kills pay nothing extra")
+	player.health = 30
+	_kill_ev()
+	check(player.points == pts0 + 10, "Widow's Wage: a kill under 40%% health pays 10 bonus points (%d)" % (player.points - pts0))
+	# Kill Plating: kills soon after taking damage grant overshield
+	await reset({"sv_root": 1}, ["v_kill_plating"])
+	var shield0: float = player.overshield
+	_kill_ev()
+	check(near(player.overshield, shield0), "Kill Plating: no recent damage, no shield")
+	player.take_damage(5.0)
+	var shield1: float = player.overshield
+	_kill_ev()
+	check(near(player.overshield, shield1 + 8.0), "Kill Plating: a kill right after being hit grants 8 overshield")
+	# Clean Sheet: flawless round pays
+	await reset({}, ["v_grit"])
+	player.health = 50
+	pts0 = player.points
+	_ev(&"round_started", {"round": 3})
+	_ev(&"round_cleared", {"round": 3})
+	check(player.points == pts0 + 15, "Clean Sheet: and 5 points x the round number (%d)" % (player.points - pts0))
+	check(near(player.overshield, 25.0) and player.health == 70 and eff("flawless_round").paid == 1, "Clean Sheet: untouched round pays overshield + heal (%.0f / %d)" % [player.overshield, player.health])
+	await reset({}, ["v_grit"])
+	_ev(&"round_started", {"round": 3})
+	_hurt_ev(8)
+	_ev(&"round_cleared", {"round": 3})
+	check(eff("flawless_round").paid == 0 and near(player.overshield, 0.0), "Clean Sheet: a round where you lost health pays nothing")
+	# Gleaner: every 12th kill drops a pickup
+	await reset({"sv_root": 1}, ["v_gleaner"])
+	for i in 11:
+		_kill_ev()
+	check(eff("kill_chain").dropped == 0, "Gleaner: 11 kills drop nothing")
+	_kill_ev()
+	check(eff("kill_chain").dropped == 1, "Gleaner: the 12th kill drops a pickup")
+	# Rail Slide / Spring Heels / Updraft Aim
+	await reset({"fr_root": 1}, ["f_rail_slide"])
+	w = player.current_weapon()
+	_ev(&"slide_ended", {})
+	_ev(&"shot_fired", {"weapon": w})
+	check(near(player.mod_stat("damage_out", 100.0, {"source": "gun"}), 140.0), "Rail Slide: the first shot after a slide +40%")
+	_ev(&"shot_fired", {"weapon": w})
+	check(near(player.mod_stat("damage_out", 100.0, {"source": "gun"}), 100.0), "Rail Slide: only one shot")
+	await reset({"fr_root": 1}, ["f_spring_heels"])
+	var jm0: float = player.mod_stat("jump_mult", 1.0)
+	_ev(&"slide_ended", {})
+	check(player.mod_stat("jump_mult", 1.0) > jm0 + 0.2, "Spring Heels: after a slide you jump higher (%.2f -> %.2f)" % [jm0, player.mod_stat("jump_mult", 1.0)])
+	eff("timed_buff").left = 0.0
+	check(near(player.mod_stat("jump_mult", 1.0), jm0), "Spring Heels: the boost ends")
+	await reset({"fr_root": 1}, ["f_updraft_aim"])
+	check(near(player.mod_stat("spread_mult", 1.0, {}), 1.0), "Updraft Aim: no spread change on the ground")
+	_ev(&"jumped", {})
+	check(near(player.mod_stat("spread_mult", 1.0, {}), 0.25), "Updraft Aim: a jump tightens spread to 25% for a moment")
+	# Lantern Hours: growth resets under 30% health
+	await reset({}, ["t_lantern_hours"])
+	var rg = eff("round_growth")
+	_ev(&"round_cleared", {"round": 1})
+	_ev(&"round_cleared", {"round": 2})
+	check(rg.rounds == 2 and near(player.mod_stat("damage_out", 100.0, {"source": "gun"}), 104.0), "Lantern Hours: +2% per cleared round")
+	player.health = 60
+	_hurt_ev()
+	check(rg.rounds == 2, "Lantern Hours: a scratch keeps the growth")
+	player.health = 20
+	_hurt_ev()
+	check(rg.rounds == 0 and near(player.mod_stat("damage_out", 100.0, {"source": "gun"}), 100.0), "Lantern Hours: dropping under 30%% health wipes the growth")
+	# Reverb Core
+	await reset({}, ["L_reverb_core"])
+	z = zombie(Vector3(2, 0, 0), 1000)
+	await wait(1)
+	_ev(&"ability_used", {"ability": player.ability})
+	check(z.health < 1000, "Reverb Core: a shockwave on ability use (%.0f)" % z.health)
+	# Mercy Line: finish weak zombies, never a boss
+	await reset({"mk_root": 1}, ["L_mercy_line"])
+	z = zombie(Vector3(4, 0, 0), 100)
+	await wait(1)
+	z.health = 24
+	var res := hit(z, 5.0)
+	check(res.killed or z.health <= 0, "Mercy Line: a hit leaving a zombie under 20%% health finishes it")
+	var zh = zombie(Vector3(4, 0, 3), 100)
+	await wait(1)
+	hit(zh, 5.0)
+	check(zh.health > 0, "Mercy Line: a healthy zombie is not executed")
+	# Livewire Lattice: standing still zaps nearby zombies
+	await reset({"sp_root": 1}, ["L_livewire"])
+	za = zombie(Vector3(4, 0, 0), 10000)
+	zb = zombie(Vector3(4, 0, 3), 10000)
+	await wait(1)
+	player.velocity = Vector3.ZERO
+	await wait(70)
+	check(za.health < 10000 and zb.health < 10000 and eff("aura_zap").zaps >= 1, "Livewire Lattice: standing still zaps nearby zombies (%.0f / %.0f)" % [za.health, zb.health])
+	# Pyre Walker: taking damage ignites the crowd
+	await reset({"sp_root": 1}, ["L_pyre_walker"])
+	za = zombie(Vector3(3, 0, 0), 10000)
+	await wait(1)
+	_hurt_ev()
+	check(za.has_status("burn"), "Pyre Walker: taking damage ignites zombies within 5 m")
+	# Surveyor's Charge
+	await reset({"sp_root": 1}, ["L_cluster"])
+	za = zombie(Vector3(4, 0, 0), 10000)
+	await wait(1)
+	_ev(&"grenade_detonated", {"pos": za.global_position, "data": player.grenade_data})
+	check(za.has_status("mark"), "Surveyor's Charge: a detonation marks zombies in the blast")
+	# Scrapwall: breaking your shield buys 2 s of invulnerability and a shockwave
+	await reset({"sv_root": 1}, ["L_scrapwall"])
+	z = zombie(Vector3(2, 0, 0), 10000)
+	await wait(1)
+	player.overshield = 0.0
+	_ev(&"damage_taken", {"raw": 10, "dealt": 10, "absorbed": 0, "attacker": null, "health_frac": 0.9})
+	check(player.invulnerable_t <= 0.1, "Scrapwall: a hit that did not break a shield does nothing")
+	_ev(&"damage_taken", {"raw": 10, "dealt": 5, "absorbed": 5, "attacker": null, "health_frac": 0.9})
+	check(player.invulnerable_t >= 1.9 and z.health < 10000, "Scrapwall: breaking the shield gives 2 s invulnerability + shockwave")
+	# Grave Feast
+	await reset({"sv_root": 1}, ["L_grave_feast"])
+	w = player.current_weapon()
+	player.health = 40
+	player._melee_cd = 1.0
+	for i in 2:
+		_kill_ev({"source": "melee"})
+	check(player.health == 40, "Grave Feast: 2 melee kills is not a chain")
+	_kill_ev({"source": "gun"})
+	_kill_ev({"source": "melee"})
+	check(player.health == player.max_health and player._melee_cd == 0.0, "Grave Feast: the 3rd melee kill heals fully and resets melee")
+	# Undertow Glide
+	await reset({}, ["L_undertow"])
+	z = zombie(Vector3(4, 0, 0), 10000)
+	await wait(1)
+	_ev(&"slide_started", {})
+	check(z.has_status("slow"), "Undertow Glide: starting a slide slows zombies nearby")
+	# Unstruck Colors / Chalk Outline
+	_equip_ability("soldier", "rally_banner")
+	await reset({}, ["L_unstruck"])
+	check(near(player.mod_stat("damage_out", 100.0, {"source": "gun"}), 100.0), "Unstruck Colors: nothing before the ability")
+	_ev(&"ability_used", {"ability": player.ability})
+	check(near(player.mod_stat("damage_out", 100.0, {"source": "gun"}), 125.0), "Unstruck Colors: ability use gives +25% damage for 8 s")
+	_equip_ability("scout", "chalk_mark")
+	await reset({"sc_fed": 1}, ["L_chalk_outline"], "scout")
+	z = zombie(Vector3(4, 0, 0), 10000)
+	await wait(1)
+	player._ability_cd = 20.0
+	_kill_ev({"target": z})
+	check(player._ability_cd == 20.0, "Chalk Outline: killing an unmarked zombie does nothing")
+	z.apply_status("mark", {"dur": 5.0, "amp": 0.1})
+	_kill_ev({"target": z})
+	check(player._ability_cd == 0.0, "Chalk Outline: killing a marked zombie resets the ability cooldown")
+	_equip_ability("", "")
 
 
 # ---------------------------------------------------------------- 60% / 5 s refund cap
@@ -886,7 +1152,6 @@ func _refund_cap_checks() -> void:
 func _time_scale_checks() -> void:
 	# Kite String, flag OFF: slow aura + 15% damage reduction, no Engine.time_scale change
 	await reset({"fr_root": 1, "fr_step": 1, "fr_battery": 1, "fr_legend": 1}, ["L_kite_string"])
-	var mw: int = player.max_wall_jumps
 	var home: Vector3 = player.global_position
 	var z = zombie(Vector3(4, 0, 0), 10000)
 	await wait(2)
@@ -895,7 +1160,7 @@ func _time_scale_checks() -> void:
 	check(player.is_airborne() and Engine.time_scale == 1.0, "Kite String flag off: airborne, time scale untouched")
 	check(z.has_status("slow"), "Kite String flag off: slows zombies near you")
 	check(near(player.mod_stat("damage_in", 100.0), 85.0), "Kite String flag off: -15% damage taken while airborne")
-	check(near(player.mod_stat("damage_out", 100.0, {"source": "gun", "airborne": true}), 125.0), "Kite String: +25% gun damage airborne")
+	check(near(player.mod_stat("damage_out", 100.0, {"source": "gun", "airborne": true}), 100.0), "Kite String: no permanent airborne damage bonus any more")
 	player.global_position = home
 	player.velocity = Vector3.ZERO
 	await wait(10)
@@ -913,7 +1178,6 @@ func _time_scale_checks() -> void:
 			break
 	await wait(3)
 	check(Engine.time_scale == 1.0, "Kite String flag on: time scale restored on landing")
-	check(mw >= 0 and player.max_wall_jumps > 0, "Kite String: wall jumps raised")
 	ProjectSettings.set_setting("skills/allow_time_scale", false)
 
 	# Second Breath, flag OFF: slow aura + 30% DR for 2.5 s

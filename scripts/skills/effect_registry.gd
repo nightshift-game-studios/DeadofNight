@@ -3,6 +3,13 @@ class_name EffectRegistry
 ## in scripts/skills/effects/. To add an effect: write effects/<id>.gd (extends SkillEffect) and add it here.
 
 const SCRIPTS := {
+	"reaction": preload("res://scripts/skills/effects/reaction.gd"),
+	"armed_shot": preload("res://scripts/skills/effects/armed_shot.gd"),
+	"kill_chain": preload("res://scripts/skills/effects/kill_chain.gd"),
+	"free_shots": preload("res://scripts/skills/effects/free_shots.gd"),
+	"execute": preload("res://scripts/skills/effects/execute.gd"),
+	"aura_zap": preload("res://scripts/skills/effects/aura_zap.gd"),
+	"flawless_round": preload("res://scripts/skills/effects/flawless_round.gd"),
 	"stat_mod": preload("res://scripts/skills/effects/stat_mod.gd"),
 	"conditional_damage": preload("res://scripts/skills/effects/conditional_damage.gd"),
 	"stacking_damage": preload("res://scripts/skills/effects/stacking_damage.gd"),

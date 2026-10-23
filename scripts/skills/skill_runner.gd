@@ -283,6 +283,12 @@ func cond(name: String, ctx: Dictionary, p: Dictionary = {}) -> bool:
 		"target_in_field":
 			var tf = ctx.get("target")
 			return pl != null and tf is Node3D and is_instance_valid(tf) and _in_own_field((tf as Node3D).global_position)
+		"recent_damage": # the player lost health within params.within seconds (Kill Plating)
+			return pl != null and float(pl._since_damage) <= float(p.get("within", 2.0))
+		"shield_broke": # damage_taken that emptied the overshield
+			return pl != null and float(ctx.get("absorbed", 0.0)) > 0.0 and pl.overshield <= 0.0
+		"near_event": # ctx.pos within params.radius metres of the player (Powder Burn)
+			return pl != null and ctx.get("pos") is Vector3 and (ctx.pos as Vector3).distance_to(pl.global_position) <= float(p.get("radius", 8.0))
 		"ability_source": # §23: the hit / kill came from a class ability
 			return str(ctx.get("source", "")) == "ability"
 	push_warning("SkillRunner: unknown condition '%s'" % name)

@@ -1,6 +1,6 @@
 extends SkillEffect
 ## Reactive Field Card (card type "reactive", playtest #13): an event (JSON "on", e.g. reload_finished) grants
-## `stat` add / mult for `duration` seconds (re-triggering refreshes). Stats folded in recalc_stats (move_speed,
+## `stat` add / mult for `duration` seconds (re-triggering refreshes; `sources` limits a damage_out buff to those ctx.source values). Stats folded in recalc_stats (move_speed,
 ## reload_speed, ...) are re-applied when the buff starts and ends.
 
 var left: float = 0.0
@@ -43,9 +43,11 @@ func priority() -> int:
 	return 10 if params.has("mult") else 0
 
 
-func modify(_stat: String, value: float, _ctx: Dictionary) -> float:
+func modify(stat: String, value: float, ctx: Dictionary) -> float:
 	if left <= 0.0:
 		return value
+	if stat == "damage_out" and params.has("sources") and not (str(ctx.get("source", "gun")) in params.sources):
+		return value ## e.g. Knuckle Wraps: sources ["melee"]
 	if params.has("add"):
 		value += float(p("add", 0.0))
 	if params.has("mult"):

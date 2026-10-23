@@ -94,7 +94,7 @@ data/perks.json                Weapon perks
 data/loot_tables.json          Drop tables (zombie, chest, ...), rarity weights, Item Power curve
 data/grenades.json             Grenade types (frag, Tremor Charge = "pulse")
 data/skill_tree.json           Meta skill tree v2 (35 nodes, 7 branches, x/y grid, ranks, choices, class strips)
-data/run_picks.json            Field Cards: 24 normal + 16 legendary run picks + offer economy
+data/run_picks.json            Field Cards: 52 temporary field cards (normal + legendary) + offer economy
 data/maps.json                 Map list (arena = built-in, rustwell_foundry) + default
 data/zombies.json              Zombie variants (model, height, stat multipliers) + wave mix per round
 data/armor_models.json         Armor slot -> skinned / display model paths
@@ -131,6 +131,7 @@ resources/classes/*.tres       Soldier, Scout (stats, ability, grenade type)
 resources/items/*.tres         Consumables: Health Pack, Primary Ammo, Heavy Ammo
 tests/smoke_test.gd            Automated headless test (see the end of this file)
 tests/skills_test.gd           Headless skills test: every effect script, node and card, offers, refund cap, time-scale flag
+tests/field_card_audit_test.gd Data-only audit: no field card duplicates a skill / perk / armor stat / card name, all cards temporary
 tests/input_test.gd            Headless mouse-look / menu pause regression test (full checks under a display)
 tests/art_test.gd              Headless art-wiring test: boss GLBs/clips/sockets, echo height, guns per archetype, WeaponRig attachments, Mine Lamp light, IP breakdown
 tests/compile_check.gd         Loads every script under scripts/ and tests/ and reports parse errors
@@ -397,6 +398,12 @@ The skills test runs separately (about 249 checks: every effect script, node and
 the refund cap, the time-scale flag on and off, v1 save migration, choice and keystone exclusivity, respec and the round flow):
 ```
 godot --headless --path . -s res://tests/skills_test.gd
+```
+
+`field_card_audit_test.gd` (data only, runs without a scene) fails if any field card in `data/run_picks.json` has the same effect signature
+(`scripts/skills/effect_signature.gd`) or name as a skill node, weapon perk, armor stat or another card, or is a permanent bump. Run it after editing cards:
+```
+godot --headless --path . -s res://tests/field_card_audit_test.gd
 ```
 
 The exit code is the number of failures. It saves to a separate test file and deletes it afterwards, so your real progress isn't touched.
